@@ -84,34 +84,38 @@ function showMessage(text) {
   grid.innerHTML = `<p class="empty">${escapeHTML(text)}</p>`;
 }
 
-function buildPlayerUrl(movie) {
+function buildPlayerUrl(show) {
   const params = new URLSearchParams({
-    vk: "movie",
-    tmdb: String(movie.id),
-    title: movie.title || movie.original_title || "Movie",
+    vk: "tv",
+    tmdb: String(show.id),
+    title: show.name || show.original_name || "Series",
+    season: "1",
+    episode: "1",
+    nextEpisode: "true",
+    episodeSelector: "true",
     autoPlay: "true",
     color: "3ba0ff",
   });
-  if (movie.poster_path) {
-    params.set("poster", IMG_BASE + movie.poster_path);
+  if (show.poster_path) {
+    params.set("poster", IMG_BASE + show.poster_path);
   }
   return `/player.html?${params.toString()}`;
 }
 
-function createCard(movie) {
-  const title = movie.title || movie.original_title || movie.name || "Untitled";
-  const year = (movie.release_date || "").slice(0, 4);
-  const rating = Number(movie.vote_average || 0).toFixed(1);
-  const hasRating = Number(movie.vote_count || 0) > 0;
-  const overview = truncate(movie.overview, 140);
-  const posterUrl = movie.poster_path ? IMG_BASE + movie.poster_path : null;
+function createCard(show) {
+  const title = show.name || show.original_name || "Untitled";
+  const year = (show.first_air_date || "").slice(0, 4);
+  const rating = Number(show.vote_average || 0).toFixed(1);
+  const hasRating = Number(show.vote_count || 0) > 0;
+  const overview = truncate(show.overview, 140);
+  const posterUrl = show.poster_path ? IMG_BASE + show.poster_path : null;
 
   const link = document.createElement("a");
   link.className = "card";
-  link.href = buildPlayerUrl(movie);
+  link.href = buildPlayerUrl(show);
   link.target = "_blank";
   link.rel = "noopener";
-  link.dataset.tmdbId = movie.id;
+  link.dataset.tmdbId = show.id;
   link.dataset.title = title;
   link.title = title;
 
@@ -128,7 +132,7 @@ function createCard(movie) {
       <p class="title">${escapeHTML(title)}</p>
       ${facts.length ? `<p class="sub">${escapeHTML(facts.join(" • "))}</p>` : ""}
       ${overview ? `<p class="overview">${escapeHTML(overview)}</p>` : ""}
-      <div class="actions"><span class="watch">▶ Play with VidKing</span></div>
+      <div class="actions"><span class="watch">▶ Stream on VidKing</span></div>
     </div>
   `;
 
@@ -139,38 +143,38 @@ function render(list = []) {
   grid.innerHTML = "";
   const fragment = document.createDocumentFragment();
   let count = 0;
-  for (const movie of list) {
-    if (!movie || !movie.id) continue;
-    fragment.appendChild(createCard(movie));
+  for (const show of list) {
+    if (!show || !show.id) continue;
+    fragment.appendChild(createCard(show));
     count += 1;
   }
   if (!count) {
-    showMessage("No movies found.");
+    showMessage("No shows found.");
     return;
   }
   grid.appendChild(fragment);
 }
 
 async function loadTrending() {
-  showMessage("Loading trending movies…");
+  showMessage("Loading trending series…");
   try {
-    const data = await requestTmdb("trending/movie/week");
+    const data = await requestTmdb("trending/tv/week");
     render(data.results || []);
   } catch (err) {
     if (err.name === "AbortError") return;
     console.error(err);
-    showMessage("Unable to load trending movies right now.");
+    showMessage("Unable to load trending series right now.");
   }
 }
 
-async function searchMovies(query) {
+async function searchSeries(query) {
   if (!query) {
     loadTrending();
     return;
   }
   showMessage(`Searching for “${escapeHTML(query)}”…`);
   try {
-    const data = await requestTmdb("search/movie", { query });
+    const data = await requestTmdb("search/tv", { query });
     render(data.results || []);
   } catch (err) {
     if (err.name === "AbortError") return;
@@ -183,7 +187,7 @@ if (search) {
   search.addEventListener("input", () => {
     const value = search.value.trim();
     if (searchTimer) clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => searchMovies(value), 350);
+    searchTimer = setTimeout(() => searchSeries(value), 350);
   });
 }
 
