@@ -1,0 +1,263 @@
+:root{
+  --bg:#0b1117; --card:#121a22; --ink:#dbe6ff; --muted:#8aa0b5; --ring:#375a7f; --accent:#3ba0ff;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,Segoe UI,Roboto,Ubuntu,sans-serif}
+
+.topbar{
+  position:sticky;top:0;z-index:5;background:linear-gradient(180deg,#0b1117,#0b111700);
+  display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #111923;
+}
+.topbar h1{margin:0;font-size:20px}
+.topbar .right{display:flex;gap:10px;align-items:center}
+.topbar input{
+  background:#0e1620;border:1px solid #1c2a37;color:var(--ink);padding:8px 10px;border-radius:8px;min-width:200px;outline:none;
+}
+.topbar button{
+  background:var(--accent);color:#001428;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600;
+}
+
+main{padding:18px}
+.grid{
+  display:grid;gap:14px;
+  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+}
+.card{
+  background:var(--card);border:1px solid #131f2a;border-radius:14px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.25);
+  transition:transform .12s ease, box-shadow .12s ease; cursor:pointer;
+}
+.card:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(0,0,0,.35)}
+.thumb{width:100%;aspect-ratio:16/9;background:#0e141b;display:block;object-fit:cover}
+.meta{padding:10px}
+.title{font-size:14px;font-weight:600;margin:0 0 6px 0;color:var(--ink)}
+.sub{font-size:12px;color:var(--muted);margin:0}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center}
+.modal.hidden{display:none}
+.modal-card{background:var(--card);border:1px solid #1b2834;border-radius:16px;max-width:min(1100px,92vw);width:100%;padding:14px;position:relative}
+.modal-card video{width:100%;max-height:70vh;background:black;border-radius:10px}
+.close{position:absolute;top:10px;right:10px;background:#0f1720;border:1px solid #253446;color:#9fb6cc;border-radius:8px;padding:6px 8px;cursor:pointer}
+.np{margin-top:8px;color:var(--muted)}
+
+/* === No white focus border on the video === */
+.modal-card video:focus,
+.modal-card video:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Just in case browsers add a ring on container */
+.modal-card:focus,
+.modal-card:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* A tiny HUD that we can toggle to show actions (e.g., +5s) */
+.hud {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  pointer-events: none; opacity: 0; transition: opacity .12s ease;
+}
+.hud.show { opacity: 1; }
+.hud .bubble {
+  background: rgba(0,0,0,.55); color: #e6f0ff; font-weight: 700;
+  padding: 6px 10px; border-radius: 999px; font-size: 14px;
+  border: 1px solid #263545;
+}
+/* keep the close button clickable above the video */
+.close{ z-index:1000; }
+.modal-card{ position:relative; }
+.close{ z-index:1000; }
+.modal-card{ position:relative; }
+.close{ z-index:1000; }
+.modal-card{ position:relative; }
+#resume-bar-wrap{ margin-top:6px; }
+.close{ z-index:1000; }
+.modal-card{ position:relative; }
+#resume-bar-wrap{ margin-top:6px; }
+
+/* Home grid watch progress */
+.card-progress {
+  width: 100%;
+  height: 4px;
+  background: #1b2430;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.card-progress > .fill {
+  height: 100%;
+  width: 0%;
+  background: #ff2d2d;
+  transition: width .12s linear;
+}
+/* Show progress only on cards, never inside the modal player */
+.modal-card #resume-bar-wrap{ display:none !important; }
+
+/* Home-card progress bar (thin YouTube-style) */
+.card-progress{
+  width:100%; height:4px; background:#1b2430;
+  border-radius:999px; overflow:hidden; margin-top:6px;
+}
+.card-progress>.fill{ height:100%; width:0%; background:#ff2d2d; transition:width .12s linear; }
+
+/* --- mobile landscape sizing for player --- */
+#player:fullscreen, :fullscreen #player {
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain;
+  background: black;
+}
+
+@media (orientation: landscape) {
+  .modal-card {
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+  #player {
+    width: 100vw !important;
+    height: 100vh !important;
+    object-fit: contain;
+    background: black;
+  }
+}
+
+/* --- hardened modal styles (safe if still present) --- */
+.modal { position: fixed; inset: 0; display: none; background: rgba(0,0,0,.85); z-index: 9999; }
+.modal:not(.hidden){ display:block; }
+.modal .modal-card{ width: min(96vw, 1200px); height: min(96vh, 96vh); margin: 2vh auto; background: #111; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+.modal video{ width:100%; height:100%; object-fit:contain; background:#000; }
+.no-scroll { overflow: hidden; }
+button.close{ position:absolute; top:10px; right:10px; z-index:2; }
+
+/* Player-page safety: always keep object-fit and click-through working */
+.player-page video, #player {
+  object-fit: contain !important;
+  pointer-events: auto !important;
+}
+
+/* If you still have an old modal, ensure its overlay doesn't block clicks when hidden */
+.modal.hidden { display: none !important; pointer-events: none !important; }
+
+
+/* Mini-player layout & post-fullscreen fix */
+.modal-card video{
+  width: 100% !important;
+  height: auto !important;
+  max-height: 70vh !important;
+  aspect-ratio: 16/9;
+  object-fit: contain;
+}
+
+/* Mini-player size after exiting fullscreen */
+.modal-card {
+  max-width: min(1100px, 96vw);
+  margin: 4vh auto;
+}
+.modal-card video{
+  width: 100% !important;
+  height: auto !important;
+  max-height: 76vh !important;
+  aspect-ratio: 16/9;
+  object-fit: contain;
+  background: #000;
+}
+/* Mini-player: keep aspect, never stretch */
+.modal-card { display:flex; align-items:center; justify-content:center; }
+.modal-card > * { max-width:100%; }
+
+.modal-card video#player {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 78vh !important;
+  aspect-ratio: 16/9 !important;
+  object-fit: contain !important;
+  background: #000;
+}
+/* Mini-player: keep aspect and avoid stretch after fullscreen */
+.modal-card { display:flex; align-items:center; justify-content:center; }
+.modal-card video#player{
+  width: 100% !important;
+  height: auto !important;
+  max-height: 78vh !important;
+  aspect-ratio: 16/9 !important;
+  object-fit: contain !important;
+  background: #000;
+}
+/* Mini-player: keep aspect & avoid stretch after fullscreen */
+.modal-card{display:flex;align-items:center;justify-content:center}
+.modal-card video#player{
+  width:100%!important;height:auto!important;max-height:78vh!important;
+  aspect-ratio:16/9!important;object-fit:contain!important;background:#000
+}
+
+/* === mini-player anti-stretch (id:ms-mini-v2) === */
+.modal, .modal-card { display:flex; align-items:center; justify-content:center; }
+.modal video#player,
+.modal-card video#player {
+  width:100% !important;
+  height:auto !important;
+  max-height:78vh !important;
+  aspect-ratio:16/9 !important;
+  object-fit:contain !important;
+  background:#000;
+}
+/* Modal title tidy */
+.modal-card .np,#nowPlaying{
+  margin:8px auto 0; max-width:96%;
+  text-align:center; color:#eaeaea; font-weight:600;
+  font-size:clamp(14px,2.2vw,18px);
+  overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+}
+/* Keep video contained after fullscreen */
+.modal-card{display:flex; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.modal-card video#player{
+  width:100%!important; height:auto!important; max-height:78vh!important;
+  aspect-ratio:16/9!important; object-fit:contain!important; background:#000;
+}
+.modal{ z-index: 9999; }
+
+/* === UI UPGRADE OVERRIDES (2025-09-03) === */
+:root{
+  --bg:#0b1117; --card:#121a22; --ink:#dbe6ff; --muted:#8aa0b5; --ring:#375a7f; --accent:#3ba0ff;
+}
+
+/* Grid sizing & spacing */
+.grid{ gap:18px; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); }
+
+/* Modern cards */
+.card{ background:var(--card); border:1px solid #131f2a; border-radius:16px; overflow:hidden;
+       box-shadow:0 6px 18px rgba(0,0,0,.25); transition:transform .15s ease, box-shadow .15s ease;
+       cursor:pointer; display:flex; flex-direction:column; }
+.card:hover{ transform:translateY(-4px); box-shadow:0 12px 28px rgba(0,0,0,.40); }
+.card .thumb{ width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }
+.card .meta{ padding:12px; }
+.card .title{ font-size:15px; font-weight:600; margin:0 0 6px 0; color:var(--ink); }
+.card .sub{ font-size:12px; color:var(--muted); margin:0; }
+
+/* Hover overlay pill */
+.card .overlay{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+                background:rgba(0,0,0,.35); opacity:0; transition:opacity .2s; }
+.card:hover .overlay{ opacity:1; }
+.card .overlay span{ background:#3ba0ff; color:#001428; padding:8px 14px; border-radius:20px; font-weight:700; font-size:14px; }
+
+/* Topbar polish */
+.topbar h1{ margin:0; font-size:22px; font-weight:700; color:var(--accent); }
+.topbar input{ background:#0e1620; border:1px solid #1c2a37; color:var(--ink); padding:8px 12px; border-radius:10px;
+               min-width:220px; outline:none; transition:border .15s ease, background .15s ease; }
+.topbar input:focus{ border:1px solid var(--accent); background:#101a26; }
+
+/* Modal refinement */
+.modal-card{ background:var(--card); border:1px solid #1b2834; border-radius:18px;
+             max-width:min(1200px,92vw); width:100%; padding:16px; position:relative;
+             box-shadow:0 12px 36px rgba(0,0,0,.55); }
+.modal-card video{ width:100%; max-height:75vh; background:#000; border-radius:12px; }
+
+/* Progress bar (slimmer + smoother) */
+.card-progress{ width:100%; height:3px; background:#1b2430; border-radius:999px; overflow:hidden; margin-top:4px; }
+.card-progress > .fill{ height:100%; width:0%; background:#ff2d2d; transition: width .15s ease-in-out; }
+/* === end UI UPGRADE OVERRIDES === */

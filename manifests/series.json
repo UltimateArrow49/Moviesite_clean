@@ -1,0 +1,24 @@
+{
+  "items": [
+    {
+      "slug": "fallout",
+      "title": "fallout",
+      "thumb": "/thumbs/series/fallout.jpg"
+    },
+    {
+      "slug": "rick-and-morty",
+      "title": "rick.and.morty",
+      "thumb": "/thumbs/series/rick.and.morty.jpg"
+    },
+    {
+      "slug": "solar-opposites",
+      "title": "solar.opposites",
+      "thumb": "/thumbs/series/solar.opposites.jpg"
+    },
+    {
+      "slug": "wednesday",
+      "title": "wednesday",
+      "thumb": "/thumbs/series/wednesday.jpg"
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "show": "wednesday",
+  "slug": "wednesday",
+  "seasons": [
+    {
+      "number": 1,
+      "name": "Season 1",
+      "episodes": [
+        {
+          "file": "wednesday/s1/Wednesday _ S1E1 - [2022].mp4",
+          "title": "Wednesday _ S1E1 - [2022]",
+          "epNumber": 1,
+          "size": 252499886
+        },
+        {
+          "file": "wednesday/s1/Wednesday _ S1E2 - [2022].mp4",
+          "title": "Wednesday _ S1E2 - [2022]",
+          "epNumber": 1,
+          "size": 255770367
+        },
+        {
+          "file": "wednesday/s1/Wednesday _ S1E3 - [2022].mp4",
+          "title": "Wednesday _ S1E3 - [2022]",
+          "epNumber": 1,
+          "size": 186340170
+        },
+        {
+          "file": "wednesday/s1/Wednesday _ S1E4 - [2022].mp4",
+          "title": "Wednesday _ S1E4 - [2022]",
+          "epNumber": 1,
+          "size": 207375757
+        },
+        {
+          "file": "wednesday/s1/Wednesday _ S1E5 - [2022].mp4",
+          "title": "Wednesday _ S1E5 - [2022]",
+          "epNumber": 1,
+          "size": 176084411
+        },
+        {
+          "file": "wednesday/s1/Wednesday _ S1E6 - [2022].mp4",
+          "title": "Wednesday _ S1E6 - [2022]",
+          "epNumber": 1,
+          "size": 156673041
+        },
+        {
+          "file": "wednesday/s1/Wednesday _ S1E7 - [2022].mp4",
+          "title": "Wednesday _ S1E7 - [2022]",
+          "epNumber": 1,
+          "size": 148011113
+        },
+        {
+          "file": "wednesday/s1/Wednesday _ S1E8 - [2022].mp4",
+          "title": "Wednesday _ S1E8 - [2022]",
+          "epNumber": 1,
+          "size": 153025096
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "name": "Season 2",
+      "episodes": [
+        {
+          "file": "wednesday/s2/Wednesday _ S2E1 - [2022].mp4",
+          "title": "Wednesday _ S2E1 - [2022]",
+          "epNumber": 2,
+          "size": 789724978
+        },
+        {
+          "file": "wednesday/s2/Wednesday _ S2E2 - [2022].mp4",
+          "title": "Wednesday _ S2E2 - [2022]",
+          "epNumber": 2,
+          "size": 873643946
+        },
+        {
+          "file": "wednesday/s2/Wednesday _ S2E3 - [2022].mp4",
+          "title": "Wednesday _ S2E3 - [2022]",
+          "epNumber": 2,
+          "size": 707121833
+        },
+        {
+          "file": "wednesday/s2/Wednesday _ S2E4 - [2022].mp4",
+          "title": "Wednesday _ S2E4 - [2022]",
+          "epNumber": 2,
+          "size": 646736005
+        },
+        {
+          "file": "wednesday/s2/Wednesday _ S2E5 - [2022].mp4",
+          "title": "Wednesday _ S2E5 - [2022]",
+          "epNumber": 2,
+          "size": 743013574
+        },
+        {
+          "file": "wednesday/s2/Wednesday _ S2E6 - [2022].mp4",
+          "title": "Wednesday _ S2E6 - [2022]",
+          "epNumber": 2,
+          "size": 862451973
+        },
+        {
+          "file": "wednesday/s2/Wednesday _ S2E7 - [2022].mp4",
+          "title": "Wednesday _ S2E7 - [2022]",
+          "epNumber": 2,
+          "size": 708379900
+        },
+        {
+          "file": "wednesday/s2/Wednesday _ S2E8 - [2022].mp4",
+          "title": "Wednesday _ S2E8 - [2022]",
+          "epNumber": 2,
+          "size": 829231120
+        }
+      ]
+    }
+  ]
+}

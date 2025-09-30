@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Show</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="/style.css?v=1" />
+</head>
+<body class="container" style="padding:24px">
+  <div class="header" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <a href="/series.html" class="btn" style="padding:8px 12px;border:1px solid #2a3a4a;border-radius:20px;color:#9bb4cc;text-decoration:none">← Back to Series</a>
+    <h1 id="title" style="margin:0 12px 0 12px;text-transform:capitalize">show</h1>
+    <label style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <span style="opacity:.8">Season</span>
+      <select id="seasonSel" style="background:#0f1720;border:1px solid #2a3a4a;color:#cfe3fb;border-radius:10px;padding:6px 10px"></select>
+    </label>
+  </div>
+
+  <p id="note" style="opacity:.8;margin-top:12px"></p>
+
+  <div id="episodes" style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px"></div>
+
+  <template id="cardTpl">
+    <a class="card" style="display:block;background:#0d1420;border:1px solid #243243;border-radius:12px;padding:12px;color:#cfe3fb;text-decoration:none">
+      <div class="thumb" style="height:150px;background:#0a0f18;border-radius:8px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;opacity:.9">Episode</div>
+      <div class="title" style="font-weight:600"></div>
+      <div class="sub" style="opacity:.7;font-size:.9em"></div>
+    </a>
+  </template>
+
+  <script>
+  (function(){
+    const params = new URLSearchParams(location.search);
+    const key = (params.get("key") || "").trim();
+
+    const titleEl = document.getElementById("title");
+    const noteEl  = document.getElementById("note");
+    const seasonSel = document.getElementById("seasonSel");
+    const wrap = document.getElementById("episodes");
+    const cardTpl = document.getElementById("cardTpl");
+
+    async function fetchDetail(){
+      const res = await fetch("/api/series/" + encodeURIComponent(key));
+      if(!res.ok) throw new Error("failed "+res.status);
+      return await res.json();
+    }
+
+    function setSeasons(detail){
+      seasonSel.innerHTML = "";
+      (detail.seasons || []).forEach((s, idx)=>{
+        const opt = document.createElement("option");
+        opt.value = s.name;
+        opt.textContent = s.name;
+        if(idx===0) opt.selected = true;
+        seasonSel.appendChild(opt);
+      });
+    }
+
+    function playHref(relPath){
+      let url = (typeof window.mediaUrl === "function") ? window.mediaUrl(relPath) : relPath;
+      return "/player.html?src=" + encodeURIComponent(url);
+    }
+
+    function renderSeason(detail, name){
+      wrap.innerHTML = "";
+      const season = (detail.seasons || []).find(s => s.name === name) || {episodes:[]};
+      season.episodes.forEach((ep, i)=>{
+        const a = cardTpl.content.firstElementChild.cloneNode(true);
+        a.href = playHref(ep.path);
+        a.querySelector(".thumb").textContent = String(i+1).padStart(2,"0");
+        a.querySelector(".title").textContent = (ep.file || "").replace(/\.[^.]+$/, "");
+        a.querySelector(".sub").textContent = ep.path;
+        wrap.appendChild(a);
+      });
+      if(season.episodes.length === 0){
+        const d = document.createElement("div");
+        d.style.opacity=".7"; d.style.padding="8px";
+        d.textContent = "No episodes found for "+name+".";
+        wrap.appendChild(d);
+      }
+    }
+
+    (async function init(){
+      titleEl.textContent = key || "show";
+      noteEl.textContent  = key ? ("Showing details for: " + key) : "No show key provided.";
+      try{
+        const detail = await fetchDetail();
+        if(!detail || !detail.seasons || !detail.seasons.length){
+          noteEl.textContent = "No episodes found.";
+          return;
+        }
+        setSeasons(detail);
+        renderSeason(detail, seasonSel.value);
+        seasonSel.addEventListener("change", ()=> renderSeason(detail, seasonSel.value));
+      }catch(e){
+        console.error(e);
+        noteEl.textContent = "Failed to load show details.";
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>

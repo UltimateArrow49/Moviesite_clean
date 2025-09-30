@@ -1,0 +1,9 @@
+from app_main import app
+
+@app.get("/__routes")
+def __routes():
+    body = "\n".join(sorted(str(r.rule) for r in app.url_map.iter_rules())) + "\n"
+    return body, 200, {"Content-Type":"text/plain"}
+
+if __name__ == "__main__":
+    app.run(host="127.0.0.1", port=8010)

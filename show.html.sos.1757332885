@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Show • MovieSite</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="/style.css?v=20250905">
+  <style>
+    header.site{display:flex;align-items:center;gap:.6rem;padding:12px 16px}
+    .controls{display:flex;gap:.6rem;align-items:center;margin-left:auto}
+    select,input[type="search"]{background:#0b0e13;color:#d9e6ff;border:1px solid #2b3747;border-radius:10px;padding:.5rem .6rem}
+    .episodes{display:flex;flex-direction:column;gap:14px;padding:14px}
+    .ep{display:flex;gap:14px;padding:12px;border:1px solid #1f2937;border-radius:14px;background:#0b0e13;align-items:center}
+    .ep img{width:210px;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:#111}
+    .ep h3{margin:.2rem 0 .4rem}
+    .play{padding:.45rem .8rem;border-radius:999px;border:1px solid #2b3747;color:#cfe4ff;text-decoration:none;white-space:nowrap}
+    .btn{padding:.45rem .8rem;border-radius:999px;border:1px solid #2b3747;text-decoration:none;color:#cfe4ff}
+  </style>
+</head>
+<body class="app">
+  <header class="site">
+    <a class="btn" href="/series.html">← Series</a>
+    <h2 id="showTitle" style="margin:0"></h2>
+    <div class="controls">
+      <select id="season"></select>
+      <input id="q" type="search" placeholder="Search episode...">
+    </div>
+  </header>
+  <main><section id="episodes" class="episodes" aria-live="polite"></section></main>
+  <template id="tpl-ep">
+    <article class="ep">
+      <img class="shot" alt="">
+      <div class="meta"><h3 class="title"></h3><div class="desc"></div></div>
+      <a class="play" href="#">Play ▶</a>
+    </article>
+  </template>
+  <script src="/show.js"></script>
+</body>
+</html>
