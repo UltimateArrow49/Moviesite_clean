@@ -1,0 +1,19 @@
+:root{--bg:#0b0f14;--fg:#d8e1ea;--muted:#8aa0b3;--pill:#14202b;--accent:#00b2ff}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,Segoe UI,Roboto,Arial}
+.container{max-width:1200px;margin:32px auto;padding:0 16px}
+.hbar{display:flex;gap:8px;align-items:center;margin-bottom:18px}
+.hbar h1{font-size:20px;margin:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+.card{background:#0f1620;border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.35)}
+.thumb{aspect-ratio:16/9;background:#0b0f14;display:block;width:100%;object-fit:cover}
+.meta{padding:10px 12px}
+.title{font-weight:600;margin:0 0 6px 0;font-size:14px}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{background:var(--pill);color:var(--muted);border-radius:999px;padding:3px 8px;font-size:12px}
+.searchbar{margin-left:auto}
+.searchbar input{background:#0f1620;color:var(--fg);border:1px solid #1f2b37;border-radius:999px;padding:8px 12px;min-width:260px}
+a.cardlink{color:inherit;text-decoration:none;display:block}
+.topnav{display:flex;gap:10px;margin:18px 0}
+.pill{padding:8px 14px;border-radius:999px;background:#101a24;color:var(--fg);text-decoration:none;border:1px solid #1f2b37}
+.pill.active{background:#0f2838;border-color:#11445a;color:#cfefff}
+.note{color:var(--muted);margin-top:10px}

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Show</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="/style.css?v=1" />
+  <script src="/config.js?v=1"></script>
+</head>
+<body class="container">
+  <header class="topbar">
+    <nav class="pillbar">
+      <a class="btn" href="/">Home</a>
+      <a class="btn" href="/movies.html">Movies</a>
+      <a class="btn" href="/series.html">Series</a>
+    </nav>
+  </header>
+
+  <main style="margin-top:16px">
+    <a href="/series.html" class="btn">← All Series</a>
+    <h1 id="title" style="margin:12px 0 8px">Show</h1>
+
+    <label style="display:inline-flex;gap:8px;align-items:center;margin:8px 0">
+      <span>Season</span>
+      <select id="seasonSel" class="btn"></select>
+    </label>
+
+    <div class="grid" id="episodes"></div>
+  </main>
+
+  <template id="epCard">
+    <div class="card" style="max-width:320px">
+      <video controls preload="metadata" style="width:100%;border-radius:12px"></video>
+      <div class="meta">
+        <div class="title"></div>
+        <div class="sub"></div>
+      </div>
+    </div>
+  </template>
+
+  <script>
+  (async function(){
+    const params = new URLSearchParams(location.search);
+    const slug = (params.get("slug")||"").trim();
+    const titleText = slug ? slug.replace(/[._-]+/g," ") : "Show";
+    document.getElementById("title").textContent = titleText;
+    if(!slug) return;
+
+    // 1) Prefer per-show manifest
+    let names = [];
+    try {
+      const r = await fetch("/manifests/series/" + encodeURIComponent(slug) + ".json", {cache:"no-store"});
+      if (r.ok) {
+        const j = await r.json();
+        // Accept either plain array or {files:[...]}
+        names = Array.isArray(j) ? j : (j.files || []);
+        names = names.map(x => typeof x === "string" ? x : (x.name||x.path||"")).filter(Boolean);
+      }
+    } catch(e) {}
+
+    // 2) Fallback to /api/media
+    if (!names.length) {
+      try {
+        const r2 = await fetch("/api/media?prefix=" + encodeURIComponent("series/"+slug+"/"), {cache:"no-store"});
+        const d2 = await r2.json();
+        names = (d2.files||d2.items||[]).map(x => typeof x === "string" ? x : (x.name||x.path||"")).filter(Boolean);
+      } catch(e) {}
+    }
+
+    // Helpers
+    function seasonFromPath(name){
+      // series/<slug>/<season>/<file>
+      const parts = String(name).split("/");
+      const i = parts.findIndex(p => p.toLowerCase() === slug.toLowerCase());
+      return (i>=0 && parts[i+1]) ? parts[i+1] : null;
+    }
+    function parseSE(name){
+      // support SxxEyy OR just Eyy (default season 1)
+      const m1 = String(name).match(/s(\d{1,2})\s*e(\d{1,2})/i);
+      if (m1) return [parseInt(m1[1]), parseInt(m1[2])];
+      const m2 = String(name).match(/(?:^|[^a-z])e(\d{1,2})(?!\d)/i);
+      if (m2) return [1, parseInt(m2[1])];
+      return [1, 9999];
+    }
+    function epKey(name){
+      const leaf = name.split("/").pop().replace(/\.(mp4|mkv|mov|webm)$/i,"");
+      const m = leaf.match(/(\d+)/g);
+      return m ? parseInt(m[m.length-1],10) : 9999; // natural-ish fallback
+    }
+
+    // Build groups
+    const groups = new Map(); // season -> [{name, ep}]
+    for (const nm of names){
+      const sp = seasonFromPath(nm);
+      if (sp){
+        // use folder as season name, ep from filename numeric tail or E##
+        const e = parseSE(nm)[1] || epKey(nm);
+        if(!groups.has(sp)) groups.set(sp, []);
+        groups.get(sp).push({name:nm, ep:e});
+      } else {
+        const [s,e] = parseSE(nm);
+        const label = "Season " + s;
+        if(!groups.has(label)) groups.set(label, []);
+        groups.get(label).push({name:nm, ep:e});
+      }
+    }
+
+    const seasons = Array.from(groups.keys()).sort((a,b)=>a.localeCompare(b, undefined, {numeric:true}));
+    const sel = document.getElementById("seasonSel");
+    sel.innerHTML = seasons.map(s => `<option value="${s}">${s}</option>`).join("");
+    if (seasons.includes("Season 1")) sel.value = "Season 1";
+
+    const mount = document.getElementById("episodes");
+    const tpl = document.getElementById("epCard");
+
+    function renderSeason(season){
+      mount.innerHTML = "";
+      const list = (groups.get(season)||[]).sort((a,b)=>a.ep-b.ep); // 1..10
+      for (const item of list){
+        const node = tpl.content.cloneNode(true);
+        const v = node.querySelector("video");
+        const leaf = item.name.split("/").pop().replace(/\.(mp4|mkv|mov|webm)$/i,"");
+        const nice = leaf.replace(/[._-]+/g," ");
+        node.querySelector(".title").textContent = season + " • E" + String(item.ep).padStart(2,"0");
+        node.querySelector(".sub").textContent   = nice;
+        v.src = (window.mediaUrl ? window.mediaUrl(item.name) : ("/media/" + item.name));
+        mount.appendChild(node);
+      }
+      if (!list.length) mount.innerHTML = "<p style='opacity:.6'>No episodes found for this season.</p>";
+    }
+
+    sel.addEventListener("change", e => renderSeason(e.target.value));
+    renderSeason(sel.value || seasons[0] || "Season 1");
+  })();
+  </script>
+</body>
+</html>
