@@ -25,9 +25,19 @@ body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,Seg
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.9rem}
 .card{display:flex;flex-direction:column;background:var(--card);border:1px solid #1f2b39;border-radius:14px;overflow:hidden;text-decoration:none;color:var(--ink);transition:transform .12s ease, box-shadow .12s ease, border-color .12s}
 .card:hover{transform:translateY(-2px);border-color:#2d4156;box-shadow:0 10px 28px #00000055}
-.card .thumb{aspect-ratio:2/3;background:#0e1620;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.card .thumb{position:relative;aspect-ratio:2/3;background:#0e1620;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .card .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.card .title{padding:.6rem .7rem;font-weight:600;min-height:3.1em}
+.card .badge{position:absolute;top:8px;right:8px;background:rgba(11,17,23,.85);color:var(--ink);padding:.25rem .5rem;border-radius:999px;font-size:.78rem;font-weight:600;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+.card .placeholder{display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:1rem;color:var(--muted);font-size:.85rem;text-align:center}
+.card .meta{display:flex;flex-direction:column;gap:.45rem;padding:.7rem .75rem;flex:1;min-height:160px}
+.card .title{margin:0;font-weight:600;font-size:1rem}
+.card .sub{margin:0;color:var(--muted);font-size:.85rem}
+.card .overview{margin:0;color:var(--muted);font-size:.82rem;line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card .actions{margin-top:auto;font-size:.85rem;color:var(--accent);font-weight:600}
+.card .actions .watch{display:inline-flex;align-items:center;gap:.35rem;color:var(--accent)}
+.card:hover .actions .watch{text-decoration:underline}
+
+.empty{padding:2.5rem 1rem;text-align:center;color:var(--muted);font-size:1rem}
 
 /* Simple responsive */
 @media (max-width:700px){
