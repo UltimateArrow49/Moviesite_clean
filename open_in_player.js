@@ -63,7 +63,7 @@
     window.addEventListener('beforeunload', () => write(true));
   }
 
-  // -------- dedicated player page support (/player?src=...) ----------
+  // -------- dedicated player page support (/player.html?src=...) ----------
   function getQS(name) { return new URLSearchParams(location.search).get(name); }
   function initPlayerFromQuery() {
     const v = document.getElementById('player') || document.querySelector('video');
@@ -95,7 +95,7 @@
     document.title = title ? `${title} — Player` : 'Player';
   }
 
-  // -------- listing page: open tiles in new /player tab ----------
+  // -------- listing page: open tiles in new /player.html tab ----------
   function findGrid(){ return document.getElementById('grid') || document.querySelector('.grid,.movies,.list'); }
   function extractSrcFrom(card) {
     if (!card) return null;
@@ -121,7 +121,7 @@
       if (!src) return;
       const title = encodeURIComponent(extractTitleFrom(card));
       e.preventDefault?.();
-      window.open(`/player?src=${encodeURIComponent(src)}&title=${title}`, '_blank', 'noopener,noreferrer');
+      window.open(`/player.html?src=${encodeURIComponent(src)}&title=${title}`, '_blank', 'noopener,noreferrer');
     }, { passive: false });
   }
 
