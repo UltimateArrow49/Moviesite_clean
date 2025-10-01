@@ -11,6 +11,26 @@
   --accent-strong: #0affd1;
   --accent-strong-rgb: 10, 255, 209;
   --danger: #ff3864;
+  --bg-hue-base: 152deg;
+  --bg-hue-secondary-shift: -18deg;
+  --bg-hue-drift: 0deg;
+  --bg-radial-1-x: 12%;
+  --bg-radial-1-y: 18%;
+  --bg-radial-2-x: 88%;
+  --bg-radial-2-y: 8%;
+  --bg-radial-1-offset-x: 0%;
+  --bg-radial-1-offset-y: 0%;
+  --bg-radial-2-offset-x: 0%;
+  --bg-radial-2-offset-y: 0%;
+  --bg-radial-1-radius: 42%;
+  --bg-radial-2-radius: 55%;
+  --bg-radial-1-radius-shift: 0%;
+  --bg-radial-2-radius-shift: 0%;
+  --bg-radial-1-alpha: 0.08;
+  --bg-radial-2-alpha: 0.05;
+  --bg-gradient-angle: 180deg;
+  --bg-gradient-tilt: 0deg;
+  --bg-gradient-stop-shift: 0%;
   --radius-sm: 12px;
   --radius-md: 18px;
   --radius-lg: 24px;
@@ -31,12 +51,38 @@ body {
   margin: 0;
   font: 15px/1.6 "Inter", "Segoe UI", Roboto, Ubuntu, sans-serif;
   background:
-    radial-gradient(circle at 12% 18%, rgba(var(--accent-rgb), 0.08) 0%, rgba(5, 5, 5, 0) 42%),
-    radial-gradient(circle at 88% 8%, rgba(120, 255, 210, 0.05) 0%, rgba(5, 5, 5, 0) 55%),
-    linear-gradient(180deg, #050505 0%, #090909 46%, #050505 100%);
+    radial-gradient(
+      circle at calc(var(--bg-radial-1-x) + var(--bg-radial-1-offset-x))
+        calc(var(--bg-radial-1-y) + var(--bg-radial-1-offset-y)),
+      hsl(
+          calc(var(--bg-hue-base) + var(--bg-hue-drift))
+          88%
+          64% /
+          var(--bg-radial-1-alpha)
+        )
+        0%,
+      rgba(5, 5, 5, 0) calc(var(--bg-radial-1-radius) + var(--bg-radial-1-radius-shift))
+    ),
+    radial-gradient(
+      circle at calc(var(--bg-radial-2-x) + var(--bg-radial-2-offset-x))
+        calc(var(--bg-radial-2-y) + var(--bg-radial-2-offset-y)),
+      hsl(
+          calc(var(--bg-hue-base) + var(--bg-hue-secondary-shift) + var(--bg-hue-drift))
+          88%
+          68% /
+          var(--bg-radial-2-alpha)
+        )
+        0%,
+      rgba(5, 5, 5, 0) calc(var(--bg-radial-2-radius) + var(--bg-radial-2-radius-shift))
+    ),
+    linear-gradient(
+      calc(var(--bg-gradient-angle) + var(--bg-gradient-tilt)),
+      var(--bg) 0%,
+      var(--bg-alt) calc(46% + var(--bg-gradient-stop-shift)),
+      var(--bg) 100%
+    );
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
-  background-attachment: fixed;
 }
 
 a {
