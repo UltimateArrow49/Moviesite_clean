@@ -93,7 +93,7 @@ function setSearchNavigation(show) {
 
 function buildPlayerUrl(seasonNumber, episodeNumber, title) {
   const params = new URLSearchParams({
-    vk: "tv",
+    mode: "tv",
     tmdb: String(state.showId),
     season: String(seasonNumber),
     episode: String(episodeNumber),
@@ -101,7 +101,7 @@ function buildPlayerUrl(seasonNumber, episodeNumber, title) {
     nextEpisode: "true",
     episodeSelector: "true",
     autoPlay: "true",
-    color: "5ad7ff",
+    color: "14ff9f",
   });
   if (state.show && state.show.poster_path) {
     params.set("poster", IMG_BASE.replace("w780", "w500") + state.show.poster_path);
@@ -117,7 +117,7 @@ function renderPoster(show) {
     img.alt = `${show.name || show.original_name || "Series"} poster`;
     img.style.width = "100%";
     img.style.borderRadius = "18px";
-    img.style.boxShadow = "0 22px 45px rgba(3,8,25,0.55)";
+    img.style.boxShadow = "0 28px 60px rgba(0,0,0,0.6)";
     posterWrap.appendChild(img);
   } else {
     const fallback = document.createElement("div");
@@ -249,7 +249,7 @@ function filterSeasons(seasons) {
 function populateShow(show) {
   state.show = show;
   showTitleEl.textContent = show.name || show.original_name || "Series";
-  document.title = `${showTitleEl.textContent} · Series Detail`;
+  document.title = `${showTitleEl.textContent} · The Blackbox`;
   renderPoster(show);
   renderTags(show);
   renderGenres(show);

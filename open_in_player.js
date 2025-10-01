@@ -92,7 +92,7 @@
         }
       } catch {}
     });
-    document.title = title ? `${title} — Player` : 'Player';
+    document.title = title ? `${title} — The Blackbox Player` : 'The Blackbox Player';
   }
 
   // -------- listing page: open tiles in new /player.html tab ----------
