@@ -98,9 +98,9 @@ function buildPlayerUrl(seasonNumber, episodeNumber, title) {
     season: String(seasonNumber),
     episode: String(episodeNumber),
     title,
-    nextEpisode: "true",
-    episodeSelector: "true",
-    autoPlay: "true",
+    nextepisode: "true",
+    episodeselector: "true",
+    autoplay: "true",
     color: "14ff9f",
   });
   return `/player.html?${params.toString()}`;
