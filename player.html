@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>BLACKBOX Player</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="/style.css?v=3">
+  <link rel="stylesheet" href="/style.css?v=4">
 </head>
 <body class="app-shell">
   <header class="topbar">
@@ -45,6 +45,8 @@
         id="embedFrame"
         src=""
         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+        referrerpolicy="no-referrer"
+        title="Vidking video player"
         allowfullscreen
       ></iframe>
     </div>
@@ -89,11 +91,35 @@
     const tmdb = params.get("tmdb");
     const explicitTitle = params.get("title") || "BLACKBOX Player";
     const color = (params.get("color") || "14ff9f").replace(/^#/, "");
-    const autoPlay = params.get("autoPlay") !== "false";
-    const nextEpisode = params.get("nextEpisode") === "true";
-    const episodeSelector = params.get("episodeSelector") === "true";
+
+    const autoplayParam = params.has("autoplay") ? params.get("autoplay") : params.get("autoPlay");
+    const autoPlay =
+      autoplayParam == null
+        ? true
+        : !["false", "0", "no"].includes(String(autoplayParam).trim().toLowerCase());
+
+    const nextEpisodeParam = params.has("nextepisode")
+      ? params.get("nextepisode")
+      : params.get("nextEpisode");
+    const nextEpisode =
+      nextEpisodeParam != null && ["true", "1", "yes"].includes(String(nextEpisodeParam).trim().toLowerCase());
+
+    const episodeSelectorParam = params.has("episodeselector")
+      ? params.get("episodeselector")
+      : params.get("episodeSelector");
+    const episodeSelector =
+      episodeSelectorParam != null &&
+      ["true", "1", "yes"].includes(String(episodeSelectorParam).trim().toLowerCase());
+
     const seasonNumber = mode === "tv" ? parseInt(params.get("season") || "1", 10) || 1 : null;
     const episodeNumber = mode === "tv" ? parseInt(params.get("episode") || "1", 10) || 1 : null;
+    const progressParam = params.get("progress");
+    const forcedProgressSeconds = (() => {
+      if (progressParam == null) return null;
+      const numeric = Number(progressParam);
+      if (!Number.isFinite(numeric) || numeric <= 0) return null;
+      return Math.floor(numeric);
+    })();
 
     document.title = `${explicitTitle} · The Blackbox Player`;
     titleEl.textContent = explicitTitle;
@@ -281,12 +307,147 @@
       return `${minutes}:${pad(secs)}`;
     }
 
-    const playbackKey = buildProgressKey();
-    const savedProgress = readProgress(playbackKey);
-    let lastRecordedSecond = savedProgress ? savedProgress.seconds : null;
+    function toFiniteNumber(value) {
+      const num = Number(value);
+      return Number.isFinite(num) ? num : null;
+    }
 
-    if (savedProgress && savedProgress.seconds) {
-      setStatus(`Contacting Vidking… resuming from ${formatTime(savedProgress.seconds)}.`);
+    function toOptionalBoolean(value) {
+      if (value === undefined || value === null) return null;
+      if (typeof value === "boolean") return value;
+      if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (!normalized) return null;
+        if (["false", "0", "no"].includes(normalized)) return false;
+        if (["true", "1", "yes"].includes(normalized)) return true;
+        return null;
+      }
+      return Boolean(value);
+    }
+
+    function normalizeVidkingPayload(raw) {
+      if (raw == null) return null;
+
+      let payload = raw;
+      if (typeof raw === "string") {
+        try {
+          payload = JSON.parse(raw);
+        } catch (error) {
+          console.warn("Ignored non-JSON message from Vidking", error);
+          return null;
+        }
+      }
+
+      if (!payload || typeof payload !== "object") return null;
+
+      const type = typeof payload.type === "string" ? payload.type.toUpperCase() : "";
+      if (type && type !== "PLAYER_EVENT") return null;
+
+      const candidates = [
+        payload.data,
+        payload.message && typeof payload.message === "object" ? payload.message : null,
+        payload.payload,
+        payload.detail,
+        payload.eventData,
+      ];
+
+      let details = null;
+      for (const candidate of candidates) {
+        if (candidate && typeof candidate === "object") {
+          details = candidate;
+          break;
+        }
+      }
+      if (!details && (!type || type === "PLAYER_EVENT")) {
+        details = payload;
+      }
+      if (!details || typeof details !== "object") return null;
+
+      const rawEvent =
+        details.event ??
+        details.name ??
+        details.type ??
+        (typeof payload.event === "string" ? payload.event : null);
+      if (!rawEvent) return null;
+
+      const eventKey = String(rawEvent).toLowerCase().replace(/[^a-z0-9]+/g, "");
+      const eventMap = {
+        play: "play",
+        playing: "play",
+        playbackstarted: "play",
+        start: "play",
+        started: "play",
+        pause: "pause",
+        paused: "pause",
+        buffering: "buffering",
+        buffer: "buffering",
+        loading: "buffering",
+        ready: "ready",
+        loaded: "ready",
+        prepared: "ready",
+        timeupdate: "timeupdate",
+        timeupdated: "timeupdate",
+        time: "timeupdate",
+        progress: "timeupdate",
+        tick: "timeupdate",
+        seeked: "seeked",
+        seeking: "seeked",
+        seek: "seeked",
+        ended: "ended",
+        complete: "ended",
+        completed: "ended",
+        finished: "ended",
+        error: "error",
+        failure: "error",
+      };
+      const normalizedEvent = eventMap[eventKey] || eventKey;
+
+      const rawMessage =
+        (typeof details.message === "string" && details.message) ||
+        (typeof details.error === "string" && details.error) ||
+        (typeof details.reason === "string" && details.reason) ||
+        (typeof payload.message === "string" && payload.message) ||
+        (typeof payload.error === "string" && payload.error) ||
+        null;
+
+      const id = details.id ?? payload.id ?? null;
+      const mediaType =
+        (details.mediaType || details.media_type || payload.mediaType || payload.media_type || "")
+          .toString()
+          .toLowerCase();
+      const season = details.season ?? details.seasonNumber ?? details.season_number ?? null;
+      const episode = details.episode ?? details.episodeNumber ?? details.episode_number ?? null;
+      const nextEpisode = toOptionalBoolean(details.nextEpisode ?? details.next_episode ?? null);
+
+      return {
+        event: normalizedEvent,
+        currentTime:
+          toFiniteNumber(details.currentTime ?? details.current_time ?? details.position ?? details.seconds ?? details.time),
+        duration: toFiniteNumber(
+          details.duration ?? details.totalDuration ?? details.length ?? details.runtime ?? details.total_time,
+        ),
+        message: rawMessage,
+        id,
+        mediaType,
+        season,
+        episode,
+        nextEpisode,
+      };
+    }
+
+    const playbackKey = buildProgressKey();
+    const savedProgress = forcedProgressSeconds == null ? readProgress(playbackKey) : null;
+    const resumeSeconds =
+      forcedProgressSeconds != null
+        ? forcedProgressSeconds
+        : savedProgress && typeof savedProgress.seconds === "number"
+        ? savedProgress.seconds
+        : null;
+    let lastRecordedSecond = typeof resumeSeconds === "number" ? resumeSeconds : null;
+
+    if (typeof resumeSeconds === "number" && resumeSeconds > 0) {
+      const verb = forcedProgressSeconds != null ? "starting" : "resuming";
+      setStatus(`Contacting Vidking… ${verb} at ${formatTime(resumeSeconds)}.`);
     }
 
     function loadVidkingEmbed(src) {
@@ -326,8 +487,8 @@
       }
       const src = movieEmbed(tmdb, {
         color,
-        autoPlay,
-        progress: savedProgress ? savedProgress.seconds : undefined,
+        autoplay: autoPlay,
+        progress: typeof resumeSeconds === "number" ? resumeSeconds : undefined,
       });
       loadVidkingEmbed(src);
     }
@@ -342,10 +503,10 @@
       const episode = episodeNumber || 1;
       const src = tvEmbed(tmdb, season, episode, {
         color,
-        autoPlay,
+        autoplay: autoPlay,
         nextEpisode,
         episodeSelector,
-        progress: savedProgress ? savedProgress.seconds : undefined,
+        progress: typeof resumeSeconds === "number" ? resumeSeconds : undefined,
       });
       loadVidkingEmbed(src);
     }
@@ -353,8 +514,30 @@
     function handlePlayerEvent(data = {}) {
       const eventName = data.event;
       if (!eventName) return;
-      const currentTime = Number(data.currentTime);
-      const duration = Number(data.duration);
+      const currentTime = toFiniteNumber(data.currentTime);
+      const duration = toFiniteNumber(data.duration);
+
+      if (eventName === "ready") {
+        setLoading(false);
+        const readyTime =
+          Number.isFinite(currentTime) && currentTime > 0
+            ? currentTime
+            : typeof resumeSeconds === "number"
+            ? resumeSeconds
+            : null;
+        if (readyTime != null && readyTime > 0) {
+          setStatus(`Vidking ready. Resume at ${formatTime(readyTime)} when you’re set.`);
+        } else {
+          setStatus("Vidking player ready. Press play to begin.");
+        }
+        return;
+      }
+
+      if (eventName === "buffering") {
+        setLoading(true, "Vidking buffering…");
+        setStatus("Vidking is buffering…");
+        return;
+      }
 
       if (eventName === "play") {
         setLoading(false);
@@ -392,7 +575,11 @@
         }
       } else if (eventName === "ended") {
         setLoading(false);
-        setStatus("Playback finished. Thanks for watching on Vidking.");
+        if (data.nextEpisode) {
+          setStatus("Episode complete. Awaiting the next installment…");
+        } else {
+          setStatus("Playback finished. Thanks for watching on Vidking.");
+        }
         if (playbackKey) {
           clearProgress(playbackKey);
           lastRecordedSecond = null;
@@ -408,19 +595,29 @@
     }
 
     function handlePlayerMessage(event) {
-      if (!event || typeof event.data !== "string") return;
-      let payload;
-      try {
-        payload = JSON.parse(event.data);
-      } catch {
-        return;
+      if (!event) return;
+      const payload = normalizeVidkingPayload(event.data);
+      if (!payload) return;
+      if (tmdb && payload.id && String(payload.id) !== String(tmdb)) return;
+      if (mode === "movie" && payload.mediaType && payload.mediaType !== "movie") return;
+      if (mode === "tv" && payload.mediaType && payload.mediaType !== "tv") return;
+      if (mode === "tv") {
+        if (
+          payload.season != null &&
+          Number.isFinite(Number(payload.season)) &&
+          Number(payload.season) !== seasonNumber
+        ) {
+          return;
+        }
+        if (
+          payload.episode != null &&
+          Number.isFinite(Number(payload.episode)) &&
+          Number(payload.episode) !== episodeNumber
+        ) {
+          return;
+        }
       }
-      if (!payload || payload.type !== "PLAYER_EVENT" || !payload.data) return;
-      const { id, mediaType } = payload.data;
-      if (tmdb && id && String(id) !== String(tmdb)) return;
-      if (mode === "movie" && mediaType && mediaType !== "movie") return;
-      if (mode === "tv" && mediaType && mediaType !== "tv") return;
-      handlePlayerEvent(payload.data);
+      handlePlayerEvent(payload);
     }
 
     window.addEventListener("message", handlePlayerMessage);

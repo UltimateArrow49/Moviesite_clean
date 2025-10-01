@@ -115,7 +115,7 @@ function buildPlayerUrl(movie) {
     mode: "movie",
     tmdb: String(movie.id),
     title: movie.title || movie.original_title || "Movie",
-    autoPlay: "true",
+    autoplay: "true",
     color: "14ff9f",
   });
   return `/player.html?${params.toString()}`;
