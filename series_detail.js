@@ -103,9 +103,6 @@ function buildPlayerUrl(seasonNumber, episodeNumber, title) {
     autoPlay: "true",
     color: "14ff9f",
   });
-  if (state.show && state.show.poster_path) {
-    params.set("poster", IMG_BASE.replace("w780", "w500") + state.show.poster_path);
-  }
   return `/player.html?${params.toString()}`;
 }
 
