@@ -1,4 +1,4 @@
-const VIDKING_BASE = "https://www.vidking.net/";
+const VIDKING_ORIGIN = "https://www.vidking.net";
 
 function applyOptions(url, options = {}) {
   const params = url.searchParams;
@@ -17,17 +17,18 @@ function applyOptions(url, options = {}) {
 
 export function movieEmbed(tmdbId, options = {}) {
   if (!tmdbId) return "";
-  const url = new URL(`embed/movie/${encodeURIComponent(tmdbId)}`, VIDKING_BASE);
+  const base = `${VIDKING_ORIGIN}/embed/movie/${encodeURIComponent(tmdbId)}`;
+  const url = new URL(base);
   return applyOptions(url, options);
 }
 
 export function tvEmbed(tmdbId, season, episode, options = {}) {
   if (!tmdbId) return "";
-  const safeSeason = season == null ? "" : encodeURIComponent(season);
-  const safeEpisode = episode == null ? "" : encodeURIComponent(episode);
-  const url = new URL(
-    `embed/tv/${encodeURIComponent(tmdbId)}/${safeSeason || 1}/${safeEpisode || 1}`,
-    VIDKING_BASE,
-  );
+  const seasonSegment = season == null ? "1" : String(season);
+  const episodeSegment = episode == null ? "1" : String(episode);
+  const base = `${VIDKING_ORIGIN}/embed/tv/${encodeURIComponent(tmdbId)}/${encodeURIComponent(
+    seasonSegment,
+  )}/${encodeURIComponent(episodeSegment)}`;
+  const url = new URL(base);
   return applyOptions(url, options);
 }
