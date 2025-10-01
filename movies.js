@@ -116,7 +116,7 @@ function buildPlayerUrl(movie) {
     tmdb: String(movie.id),
     title: movie.title || movie.original_title || "Movie",
     autoPlay: "true",
-    color: "5ad7ff",
+    color: "14ff9f",
   });
   if (movie.poster_path) params.set("poster", IMG_BASE + movie.poster_path);
   return `/player.html?${params.toString()}`;
