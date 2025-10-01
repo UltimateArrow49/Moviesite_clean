@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Vidking Player</title>
+  <title>theblackbox player · Vidking backend</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="/style.css?v=4">
 </head>
 <body class="app-shell">
   <header class="topbar">
-    <a class="brand" href="/">Vidking Player</a>
+    <a class="brand" href="/">theblackbox</a>
     <nav>
       <a href="/movies.html" class="btn">Movies</a>
       <a href="/series.html" class="btn">Series</a>
-      <a href="/player.html" class="btn btn--primary">Player</a>
+      <a href="/player.html" class="btn btn--primary">Vidking backend</a>
     </nav>
     <button class="btn btn--ghost" type="button" id="backButton">← Back</button>
   </header>
@@ -24,7 +24,7 @@
 <span style="--i:3">  |    |   |   Y  \  ___/|    |   \  |__/ __ \\  \___|    < |    |   (  <_> >    < </span>
 <span style="--i:4">  |____|   |___|  /\\___  >______  /____(____  /\\___  >__|_ \|______  /\\____/__\\/\\_ \</span>
 <span style="--i:5">                \/     \/       \/          \/     \/     \/       \/            \/</span></pre>
-    <p class="ascii-subtitle">direct vidking embeds · tmdb metadata · no detours</p>
+    <p class="ascii-subtitle">direct Vidking embeds · TMDB metadata · theblackbox shell</p>
   </section>
 
   <main class="player-layout">
@@ -35,9 +35,9 @@
     <div class="player-status" role="status">
       <div class="loading-indicator" id="loadingIndicator" hidden aria-hidden="true">
         <span class="loading-box" aria-hidden="true"></span>
-        <span class="loading-text" id="loadingText">Buffering Vidking stream…</span>
+        <span class="loading-text" id="loadingText">Buffering via the Vidking backend…</span>
       </div>
-      <p id="playerStatus">Preparing Vidking stream…</p>
+      <p id="playerStatus">Preparing playback through the Vidking backend…</p>
     </div>
 
     <div class="player-frame" id="embedWrap" hidden>
@@ -46,7 +46,7 @@
         src=""
         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
         referrerpolicy="no-referrer"
-        title="Vidking video player"
+        title="Vidking backend player"
         allowfullscreen
         sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation"
       ></iframe>
@@ -90,7 +90,7 @@
     const params = url.searchParams;
     const mode = params.get("mode") || params.get("vk");
     const tmdb = params.get("tmdb");
-    const explicitTitle = params.get("title") || "Vidking Player";
+    const explicitTitle = params.get("title") || "theblackbox player";
     const color = (params.get("color") || "14ff9f").replace(/^#/, "");
 
     const autoplayParam = params.has("autoplay") ? params.get("autoplay") : params.get("autoPlay");
@@ -122,7 +122,7 @@
       return Math.floor(numeric);
     })();
 
-    document.title = `${explicitTitle} · Vidking Player`;
+    document.title = `${explicitTitle} · theblackbox (Vidking backend)`;
     titleEl.textContent = explicitTitle;
 
     function buildFacts(tags = []) {
@@ -198,7 +198,7 @@
       }
     }
 
-    const DEFAULT_LOADING_LABEL = "Buffering Vidking stream…";
+    const DEFAULT_LOADING_LABEL = "Buffering via the Vidking backend…";
 
     function setStatus(message) {
       if (!statusEl) return;
@@ -438,17 +438,125 @@
 
     const playbackKey = buildProgressKey();
     const savedProgress = forcedProgressSeconds == null ? readProgress(playbackKey) : null;
-    const resumeSeconds =
+    const initialResumeSeconds =
       forcedProgressSeconds != null
         ? forcedProgressSeconds
         : savedProgress && typeof savedProgress.seconds === "number"
         ? savedProgress.seconds
         : null;
+    let resumeSeconds = initialResumeSeconds;
     let lastRecordedSecond = typeof resumeSeconds === "number" ? resumeSeconds : null;
+    let resumeHandshakeTriggered = false;
+    let playbackConfirmed = false;
+    let resumeMonitorId = null;
+    let resumeFallbackApplied = false;
 
     if (typeof resumeSeconds === "number" && resumeSeconds > 0) {
       const verb = forcedProgressSeconds != null ? "starting" : "resuming";
-      setStatus(`Contacting Vidking… ${verb} at ${formatTime(resumeSeconds)}.`);
+      setStatus(`Syncing with the Vidking backend… ${verb} at ${formatTime(resumeSeconds)}.`);
+    }
+
+    function postVidkingMessages(payloads = []) {
+      if (!Array.isArray(payloads) || !payloads.length) return;
+      if (!embedFrame || !embedFrame.contentWindow) return;
+      const target = embedFrame.contentWindow;
+      for (const payload of payloads) {
+        try {
+          target.postMessage(payload, "*");
+        } catch (error) {
+          console.warn("Unable to post message object to Vidking backend", error);
+        }
+        if (payload && typeof payload === "object") {
+          try {
+            target.postMessage(JSON.stringify(payload), "*");
+          } catch (error) {
+            // ignore JSON serialization failures
+          }
+        }
+      }
+    }
+
+    function sendVidkingSeek(seconds) {
+      if (!Number.isFinite(seconds) || seconds < 0) return;
+      const value = Math.max(0, Math.floor(seconds));
+      postVidkingMessages([
+        { type: "PLAYER_COMMAND", command: "seek", value },
+        { type: "PLAYER_COMMAND", action: "seek", position: value },
+        { event: "seek", time: value },
+      ]);
+    }
+
+    function sendVidkingPlay() {
+      postVidkingMessages([
+        { type: "PLAYER_COMMAND", command: "play" },
+        { type: "PLAYER_COMMAND", action: "play" },
+        { event: "play" },
+      ]);
+    }
+
+    function cancelResumeMonitor() {
+      if (resumeMonitorId != null) {
+        clearTimeout(resumeMonitorId);
+        resumeMonitorId = null;
+      }
+    }
+
+    function startResumeMonitor() {
+      if (!autoPlay) return;
+      cancelResumeMonitor();
+      resumeMonitorId = window.setTimeout(() => {
+        resumeMonitorId = null;
+        if (playbackConfirmed) return;
+        triggerResumeFallback();
+      }, 7000);
+    }
+
+    function triggerResumeFallback() {
+      if (resumeFallbackApplied) return;
+      resumeFallbackApplied = true;
+      if (playbackKey) {
+        clearProgress(playbackKey);
+      }
+      resumeSeconds = null;
+      lastRecordedSecond = null;
+      setStatus("Resume stalled. Starting fresh through the Vidking backend…");
+      sendVidkingSeek(0);
+      if (autoPlay) {
+        sendVidkingPlay();
+        startResumeMonitor();
+      }
+    }
+
+    function markPlaybackConfirmed(currentTime) {
+      playbackConfirmed = true;
+      cancelResumeMonitor();
+      if (Number.isFinite(currentTime) && playbackKey) {
+        lastRecordedSecond = Math.floor(currentTime);
+      }
+    }
+
+    function attemptResumeHandshake(readyTime) {
+      if (resumeHandshakeTriggered) return;
+      resumeHandshakeTriggered = true;
+
+      const resumeTarget =
+        Number.isFinite(readyTime) && readyTime > 0
+          ? Math.floor(readyTime)
+          : Number.isFinite(resumeSeconds) && resumeSeconds > 0
+          ? Math.floor(resumeSeconds)
+          : null;
+
+      if (resumeTarget != null) {
+        setStatus(`Vidking backend ready. Resuming at ${formatTime(resumeTarget)}…`);
+        sendVidkingSeek(resumeTarget);
+      } else {
+        setStatus("Vidking backend ready. Preparing playback…");
+      }
+
+      if (autoPlay) {
+        sendVidkingPlay();
+        startResumeMonitor();
+      }
     }
 
     function loadVidkingEmbed(src) {
@@ -456,7 +564,7 @@
       if (!src) {
         embedFrame.removeAttribute("src");
         embedWrap.hidden = true;
-        setStatus("Unable to prepare Vidking stream. Check the launch parameters.");
+        setStatus("Unable to prepare playback through the Vidking backend. Check the launch parameters.");
         setLoading(false);
         return;
       }
@@ -466,23 +574,23 @@
       window.requestAnimationFrame(() => {
         embedFrame.src = src;
       });
-      setStatus("Connecting to Vidking…");
-      setLoading(true, "Contacting Vidking…");
+      setStatus("Connecting to the Vidking backend…");
+      setLoading(true, "Contacting Vidking backend…");
     }
 
     if (embedFrame) {
       embedFrame.addEventListener("load", () => {
-        setStatus("Vidking player loaded. Waiting for playback…");
+        setStatus("Vidking backend loaded. Waiting for playback…");
       });
       embedFrame.addEventListener("error", () => {
         setLoading(false);
-        setStatus("Vidking embed failed to load. Please refresh or try again later.");
+        setStatus("Vidking backend embed failed to load. Please refresh or try again later.");
       });
     }
 
     function openMovie() {
       if (!tmdb) {
-        setStatus("Missing TMDB identifier for Vidking playback.");
+        setStatus("Missing TMDB identifier for Vidking backend playback.");
         setLoading(false);
         return;
       }
@@ -490,7 +598,7 @@
         color,
         autoplay: autoPlay,
         autoPlay,
-        progress: typeof resumeSeconds === "number" ? resumeSeconds : undefined,
+        progress: typeof initialResumeSeconds === "number" ? initialResumeSeconds : undefined,
         idleCheck: 0,
       });
       loadVidkingEmbed(src);
@@ -498,7 +606,7 @@
 
     function openSeries() {
       if (!tmdb) {
-        setStatus("Missing TMDB identifier for Vidking playback.");
+        setStatus("Missing TMDB identifier for Vidking backend playback.");
         setLoading(false);
         return;
       }
@@ -510,7 +618,7 @@
         autoPlay,
         nextEpisode,
         episodeSelector,
-        progress: typeof resumeSeconds === "number" ? resumeSeconds : undefined,
+        progress: typeof initialResumeSeconds === "number" ? initialResumeSeconds : undefined,
         idleCheck: 0,
       });
       loadVidkingEmbed(src);
@@ -524,37 +632,27 @@
 
       if (eventName === "ready") {
         setLoading(false);
-        const readyTime =
-          Number.isFinite(currentTime) && currentTime > 0
-            ? currentTime
-            : typeof resumeSeconds === "number"
-            ? resumeSeconds
-            : null;
-        if (readyTime != null && readyTime > 0) {
-          setStatus(`Vidking ready. Resume at ${formatTime(readyTime)} when you’re set.`);
-        } else {
-          setStatus("Vidking player ready. Press play to begin.");
-        }
+        const readyTime = Number.isFinite(currentTime) && currentTime > 0 ? currentTime : null;
+        attemptResumeHandshake(readyTime);
         return;
       }
 
       if (eventName === "buffering") {
-        setLoading(true, "Vidking buffering…");
-        setStatus("Vidking is buffering…");
+        setLoading(true, "Buffering via the Vidking backend…");
+        setStatus("Vidking backend is buffering…");
         return;
       }
 
       if (eventName === "play") {
+        markPlaybackConfirmed(currentTime);
         setLoading(false);
         if (Number.isFinite(currentTime) && currentTime > 0) {
-          setStatus(`Vidking playback started at ${formatTime(currentTime)}.`);
-          if (playbackKey) {
-            lastRecordedSecond = Math.floor(currentTime);
-          }
+          setStatus(`Playback started at ${formatTime(currentTime)} via the Vidking backend.`);
         } else {
-          setStatus("Vidking playback started.");
+          setStatus("Playback started via the Vidking backend.");
         }
       } else if (eventName === "timeupdate") {
+        markPlaybackConfirmed(currentTime);
         setLoading(false);
         if (playbackKey && Number.isFinite(currentTime) && currentTime >= 0) {
           if (lastRecordedSecond == null || Math.abs(currentTime - lastRecordedSecond) >= 5) {
@@ -571,6 +669,7 @@
           }
         }
       } else if (eventName === "pause") {
+        cancelResumeMonitor();
         if (Number.isFinite(currentTime) && currentTime > 0) {
           setStatus(`Paused at ${formatTime(currentTime)}.`);
         }
@@ -579,22 +678,24 @@
           lastRecordedSecond = Math.floor(currentTime);
         }
       } else if (eventName === "ended") {
+        markPlaybackConfirmed(currentTime);
         setLoading(false);
         if (data.nextEpisode) {
           setStatus("Episode complete. Awaiting the next installment…");
         } else {
-          setStatus("Playback finished. Thanks for watching on Vidking.");
+          setStatus("Playback finished. Thanks for watching with theblackbox + Vidking backend.");
         }
         if (playbackKey) {
           clearProgress(playbackKey);
           lastRecordedSecond = null;
         }
       } else if (eventName === "error") {
+        cancelResumeMonitor();
         setLoading(false);
         if (data.message) {
-          setStatus(`Vidking error: ${data.message}`);
+          setStatus(`Vidking backend error: ${data.message}`);
         } else {
-          setStatus("Vidking reported an unexpected error.");
+          setStatus("Vidking backend reported an unexpected error.");
         }
       }
     }
@@ -627,14 +728,14 @@
 
     window.addEventListener("message", handlePlayerMessage);
 
-    setLoading(true, "Contacting Vidking…");
+    setLoading(true, "Contacting Vidking backend…");
 
     if (mode === "movie") {
       openMovie();
     } else if (mode === "tv") {
       openSeries();
     } else {
-      setStatus("Provide a valid Vidking mode (movie or tv) with a TMDB id to begin playback.");
+      setStatus("Provide a valid Vidking backend mode (movie or tv) with a TMDB id to begin playback.");
       setLoading(false);
       if (embedWrap) embedWrap.hidden = true;
     }
