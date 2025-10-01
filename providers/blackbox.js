@@ -1,9 +1,10 @@
 const DEFAULT_HOSTS = [
-  "https://theblackbox.watch",
   "https://theblackbox.ddns.net",
+  "https://theblackbox.watch",
   "https://vidsrc.net",
   "https://vidsrc.me",
   "https://vidsrc.cc",
+  "https://vidsrc.vip",
 ];
 
 const STORAGE_KEY = "blackbox:last-mirror";
