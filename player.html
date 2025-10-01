@@ -48,6 +48,7 @@
         referrerpolicy="no-referrer"
         title="Vidking video player"
         allowfullscreen
+        sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation"
       ></iframe>
     </div>
 
@@ -488,7 +489,9 @@
       const src = movieEmbed(tmdb, {
         color,
         autoplay: autoPlay,
+        autoPlay,
         progress: typeof resumeSeconds === "number" ? resumeSeconds : undefined,
+        idleCheck: 0,
       });
       loadVidkingEmbed(src);
     }
@@ -504,9 +507,11 @@
       const src = tvEmbed(tmdb, season, episode, {
         color,
         autoplay: autoPlay,
+        autoPlay,
         nextEpisode,
         episodeSelector,
         progress: typeof resumeSeconds === "number" ? resumeSeconds : undefined,
+        idleCheck: 0,
       });
       loadVidkingEmbed(src);
     }
