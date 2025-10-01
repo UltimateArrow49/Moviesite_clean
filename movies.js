@@ -1,87 +1,113 @@
 const IMG_BASE = "https://image.tmdb.org/t/p/w500";
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_API_KEY = "b7d1cc8554fcab41e013428e2dc418de";
+const MAX_PAGES = 500;
 
 const grid = document.getElementById("grid");
-const search = document.getElementById("search");
-let currentController = null;
+const searchInput = document.getElementById("search");
+const filtersEl = document.getElementById("filters");
+const statusLine = document.getElementById("statusLine");
+const pageIndicator = document.getElementById("pageIndicator");
+const prevBtn = document.getElementById("prevPage");
+const nextBtn = document.getElementById("nextPage");
+const viewTitle = document.getElementById("viewTitle");
+
+let activeRequest = null;
 let searchTimer = null;
 
-function escapeHTML(str = "") {
-  return String(str).replace(/[&<>"']/g, (ch) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  })[ch]);
-}
+const FILTERS = new Map([
+  ["trending", { label: "Trending movies", path: "trending/movie/week" }],
+  ["popular", { label: "Popular movies", path: "movie/popular" }],
+  ["top_rated", { label: "Top rated movies", path: "movie/top_rated" }],
+  ["now_playing", { label: "Now playing", path: "movie/now_playing" }],
+  ["upcoming", { label: "Upcoming movies", path: "movie/upcoming" }],
+]);
 
-function truncate(str = "", max = 160) {
-  const clean = String(str).trim();
-  if (!clean) return "";
-  return clean.length > max ? clean.slice(0, max - 1).trimEnd() + "…" : clean;
-}
+const state = {
+  filter: "trending",
+  page: 1,
+  totalPages: 1,
+  totalResults: 0,
+  query: "",
+};
 
-async function fetchAndParse(url, controller, headers = {}) {
-  const res = await fetch(url, {
-    cache: "no-store",
-    headers,
-    signal: controller.signal,
-  });
-
-  const text = await res.text();
-  if (!res.ok) {
-    const detail = text || `status ${res.status}`;
-    throw new Error(`TMDB request failed: ${detail}`);
-  }
-
-  if (!text) return {};
-
-  try {
-    return JSON.parse(text);
-  } catch (err) {
-    throw new Error("TMDB returned invalid JSON");
+function abortActiveRequest() {
+  if (activeRequest) {
+    activeRequest.abort();
+    activeRequest = null;
   }
 }
 
 async function requestTmdb(path, params = {}) {
-  const cleanPath = String(path || "").replace(/^\/+/, "");
-  const query = new URLSearchParams(params);
-
-  if (currentController) currentController.abort();
+  abortActiveRequest();
   const controller = new AbortController();
-  currentController = controller;
+  activeRequest = controller;
+
+  const query = new URLSearchParams(params);
+  const cleanPath = path.replace(/^\/+/, "");
+
+  const attempt = async (url, extraOptions = {}) => {
+    const response = await fetch(url, {
+      cache: "no-store",
+      signal: controller.signal,
+      ...extraOptions,
+    });
+
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(text || `TMDB request failed (${response.status})`);
+    }
+    if (!text) return {};
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      throw new Error("Received invalid JSON from TMDB");
+    }
+  };
 
   try {
     try {
       const proxyUrl = `/api/tmdb/${cleanPath}${query.toString() ? `?${query}` : ""}`;
-      return await fetchAndParse(proxyUrl, controller);
-    } catch (err) {
-      if (err.name === "AbortError") throw err;
-      console.warn("Proxy TMDB request failed, retrying direct", err);
+      return await attempt(proxyUrl);
+    } catch (proxyError) {
+      if (proxyError.name === "AbortError") throw proxyError;
+      console.warn("Proxy TMDB request failed, retrying direct", proxyError);
     }
 
     const direct = new URL(`${TMDB_BASE}/${cleanPath}`);
-    for (const [key, value] of query.entries()) {
-      direct.searchParams.set(key, value);
-    }
-    if (!direct.searchParams.has("api_key")) {
-      direct.searchParams.set("api_key", TMDB_API_KEY);
-    }
+    for (const [key, value] of query.entries()) direct.searchParams.set(key, value);
+    if (!direct.searchParams.has("api_key")) direct.searchParams.set("api_key", TMDB_API_KEY);
 
-    return await fetchAndParse(direct.toString(), controller, {
-      Accept: "application/json",
+    return await attempt(direct.toString(), {
+      headers: { Accept: "application/json" },
     });
   } finally {
-    if (currentController === controller) {
-      currentController = null;
-    }
+    if (activeRequest === controller) activeRequest = null;
   }
 }
 
-function showMessage(text) {
-  grid.innerHTML = `<p class="empty">${escapeHTML(text)}</p>`;
+function setBusy(isBusy) {
+  grid.setAttribute("aria-busy", String(isBusy));
+}
+
+function clearGrid() {
+  grid.innerHTML = "";
+}
+
+function placeholder(message) {
+  grid.innerHTML = `<p class="empty">${message}</p>`;
+}
+
+function formatFacts(movie) {
+  const facts = [];
+  const year = (movie.release_date || "").slice(0, 4);
+  if (year) facts.push(year);
+  const rating = Number(movie.vote_average || 0);
+  if (movie.vote_count > 0 && rating > 0) facts.push(`⭐ ${rating.toFixed(1)}`);
+  if (movie.original_language && movie.original_language !== "en") {
+    facts.push(movie.original_language.toUpperCase());
+  }
+  return facts.join(" • ");
 }
 
 function buildPlayerUrl(movie) {
@@ -90,101 +116,241 @@ function buildPlayerUrl(movie) {
     tmdb: String(movie.id),
     title: movie.title || movie.original_title || "Movie",
     autoPlay: "true",
-    color: "3ba0ff",
+    color: "5ad7ff",
   });
-  if (movie.poster_path) {
-    params.set("poster", IMG_BASE + movie.poster_path);
-  }
+  if (movie.poster_path) params.set("poster", IMG_BASE + movie.poster_path);
   return `/player.html?${params.toString()}`;
 }
 
 function createCard(movie) {
-  const title = movie.title || movie.original_title || movie.name || "Untitled";
-  const year = (movie.release_date || "").slice(0, 4);
-  const rating = Number(movie.vote_average || 0).toFixed(1);
-  const hasRating = Number(movie.vote_count || 0) > 0;
-  const overview = truncate(movie.overview, 140);
-  const posterUrl = movie.poster_path ? IMG_BASE + movie.poster_path : null;
+  const card = document.createElement("a");
+  card.className = "card";
+  card.href = buildPlayerUrl(movie);
+  card.dataset.tmdbId = movie.id;
+  card.setAttribute("aria-label", `Play ${movie.title || movie.name || "movie"} on VidKing`);
 
-  const link = document.createElement("a");
-  link.className = "card";
-  link.href = buildPlayerUrl(movie);
-  link.target = "_blank";
-  link.rel = "noopener";
-  link.dataset.tmdbId = movie.id;
-  link.dataset.title = title;
-  link.title = title;
+  const thumb = document.createElement("div");
+  thumb.className = "thumb";
+  if (movie.poster_path) {
+    const img = document.createElement("img");
+    img.src = IMG_BASE + movie.poster_path;
+    img.alt = `${movie.title || movie.name || "Movie"} poster`;
+    thumb.appendChild(img);
+  } else {
+    const fallback = document.createElement("div");
+    fallback.className = "placeholder";
+    fallback.textContent = "No artwork";
+    thumb.appendChild(fallback);
+  }
+  const rating = Number(movie.vote_average || 0);
+  if (movie.vote_count > 0 && rating > 0) {
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    badge.textContent = rating.toFixed(1);
+    thumb.appendChild(badge);
+  }
 
-  const facts = [];
-  if (year) facts.push(year);
-  if (hasRating) facts.push(`⭐ ${rating}`);
+  const meta = document.createElement("div");
+  meta.className = "meta";
 
-  link.innerHTML = `
-    <div class="thumb">
-      ${posterUrl ? `<img src="${posterUrl}" alt="${escapeHTML(title)} poster">` : `<div class="placeholder">No poster</div>`}
-      ${hasRating ? `<span class="badge">${rating}</span>` : ""}
-    </div>
-    <div class="meta">
-      <p class="title">${escapeHTML(title)}</p>
-      ${facts.length ? `<p class="sub">${escapeHTML(facts.join(" • "))}</p>` : ""}
-      ${overview ? `<p class="overview">${escapeHTML(overview)}</p>` : ""}
-      <div class="actions"><span class="watch">▶ Play with VidKing</span></div>
-    </div>
-  `;
+  const title = document.createElement("p");
+  title.className = "title";
+  title.textContent = movie.title || movie.original_title || movie.name || "Untitled";
+  meta.appendChild(title);
 
-  return link;
+  const facts = formatFacts(movie);
+  if (facts) {
+    const sub = document.createElement("p");
+    sub.className = "sub";
+    sub.textContent = facts;
+    meta.appendChild(sub);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "actions";
+  actions.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>Play on VidKing</span>';
+  meta.appendChild(actions);
+
+  card.appendChild(thumb);
+  card.appendChild(meta);
+  return card;
 }
 
-function render(list = []) {
-  grid.innerHTML = "";
+function render(results = [], total = 0) {
+  clearGrid();
+  if (!results.length) {
+    placeholder(state.query ? "No movies matched your search." : "No movies to show right now.");
+    updateStatus(0, total, results.length);
+    return;
+  }
+
   const fragment = document.createDocumentFragment();
-  let count = 0;
-  for (const movie of list) {
+  for (const movie of results) {
     if (!movie || !movie.id) continue;
     fragment.appendChild(createCard(movie));
-    count += 1;
-  }
-  if (!count) {
-    showMessage("No movies found.");
-    return;
   }
   grid.appendChild(fragment);
+  updateStatus(results.length, total, results.length);
 }
 
-async function loadTrending() {
-  showMessage("Loading trending movies…");
-  try {
-    const data = await requestTmdb("trending/movie/week");
-    render(data.results || []);
-  } catch (err) {
-    if (err.name === "AbortError") return;
-    console.error(err);
-    showMessage("Unable to load trending movies right now.");
-  }
-}
+function updateStatus(count, total, pageCount) {
+  const filterInfo = state.query
+    ? `for “${state.query}”`
+    : (FILTERS.get(state.filter) || FILTERS.get("trending")).label.toLowerCase();
 
-async function searchMovies(query) {
-  if (!query) {
-    loadTrending();
+  if (!count) {
+    statusLine.textContent = state.query
+      ? `We couldn’t find any movies for “${state.query}”. Try a different keyword.`
+      : `No ${filterInfo} at the moment. Try another filter or search.`;
     return;
   }
-  showMessage(`Searching for “${escapeHTML(query)}”…`);
-  try {
-    const data = await requestTmdb("search/movie", { query });
-    render(data.results || []);
-  } catch (err) {
-    if (err.name === "AbortError") return;
-    console.error(err);
-    showMessage("Search failed. Please try again in a moment.");
+
+  const start = (state.page - 1) * 20 + 1;
+  const end = start + pageCount - 1;
+  const formattedTotal = total ? total.toLocaleString() : "many";
+  statusLine.textContent = `Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${formattedTotal} ${filterInfo}.`;
+}
+
+function updatePager() {
+  pageIndicator.textContent = `Page ${state.page.toLocaleString()} of ${state.totalPages.toLocaleString()}`;
+  prevBtn.disabled = state.page <= 1;
+  nextBtn.disabled = state.page >= state.totalPages;
+}
+
+function highlightActiveFilter() {
+  if (!filtersEl) return;
+  for (const chip of filtersEl.querySelectorAll(".chip")) {
+    if (state.query) {
+      chip.classList.remove("is-active");
+      continue;
+    }
+    chip.classList.toggle("is-active", chip.dataset.filter === state.filter);
   }
 }
 
-if (search) {
-  search.addEventListener("input", () => {
-    const value = search.value.trim();
-    if (searchTimer) clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => searchMovies(value), 350);
+function updateTitle() {
+  if (state.query) {
+    viewTitle.textContent = `Search results`;
+  } else {
+    const filter = FILTERS.get(state.filter) || FILTERS.get("trending");
+    viewTitle.textContent = filter.label;
+  }
+}
+
+function syncUrl() {
+  const url = new URL(window.location.href);
+  if (state.query) {
+    url.searchParams.set("q", state.query);
+    url.hash = "";
+  } else {
+    url.searchParams.delete("q");
+    url.hash = state.filter === "trending" ? "" : `#${state.filter}`;
+  }
+  history.replaceState({}, "", url);
+}
+
+async function loadPage() {
+  const { filter, page, query } = state;
+  const endpoint = query ? "search/movie" : (FILTERS.get(filter) || FILTERS.get("trending")).path;
+  const params = { page: String(page) };
+  if (query) params.query = query;
+
+  setBusy(true);
+  placeholder("Loading titles…");
+
+  try {
+    const data = await requestTmdb(endpoint, params);
+    const results = Array.isArray(data.results) ? data.results : [];
+    state.totalPages = Math.max(1, Math.min(MAX_PAGES, Number(data.total_pages) || 1));
+    state.totalResults = Number(data.total_results) || results.length;
+    render(results, state.totalResults);
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    console.error(error);
+    clearGrid();
+    placeholder("Unable to load movies right now. Please try again shortly.");
+    statusLine.textContent = "A network error stopped the TMDB request. Retrying may help.";
+  } finally {
+    setBusy(false);
+    updatePager();
+    updateTitle();
+    highlightActiveFilter();
+    syncUrl();
+  }
+}
+
+function setFilter(newFilter) {
+  if (!FILTERS.has(newFilter)) newFilter = "trending";
+  if (state.filter === newFilter && !state.query) return;
+  state.filter = newFilter;
+  state.page = 1;
+  if (state.query) {
+    state.query = "";
+    if (searchInput) searchInput.value = "";
+  }
+  loadPage();
+}
+
+function setQuery(value) {
+  const clean = value.trim();
+  if (clean === state.query) return;
+  state.query = clean;
+  state.page = 1;
+  loadPage();
+}
+
+function changePage(delta) {
+  const nextPage = state.page + delta;
+  if (nextPage < 1 || nextPage > state.totalPages) return;
+  state.page = nextPage;
+  loadPage();
+}
+
+function initFilters() {
+  if (!filtersEl) return;
+  filtersEl.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-filter]");
+    if (!button) return;
+    setFilter(String(button.dataset.filter));
   });
 }
 
-document.addEventListener("DOMContentLoaded", loadTrending);
+function initPager() {
+  if (prevBtn) prevBtn.addEventListener("click", () => changePage(-1));
+  if (nextBtn) nextBtn.addEventListener("click", () => changePage(1));
+}
+
+function initSearch() {
+  if (!searchInput) return;
+  searchInput.addEventListener("input", () => {
+    const value = searchInput.value;
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => setQuery(value), 350);
+  });
+}
+
+function applyInitialState() {
+  const url = new URL(window.location.href);
+  const initialQuery = url.searchParams.get("q");
+  const hashFilter = url.hash.replace(/^#/, "").toLowerCase();
+
+  if (initialQuery) {
+    state.query = initialQuery.trim();
+    if (searchInput) searchInput.value = state.query;
+  } else if (hashFilter && FILTERS.has(hashFilter)) {
+    state.filter = hashFilter;
+  }
+}
+
+function init() {
+  applyInitialState();
+  initFilters();
+  initPager();
+  initSearch();
+  highlightActiveFilter();
+  updateTitle();
+  updatePager();
+  loadPage();
+}
+
+document.addEventListener("DOMContentLoaded", init);

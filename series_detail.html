@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Series Detail · VidKing Cinema</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="/style.css?v=2">
+</head>
+<body class="app-shell">
+  <header class="topbar">
+    <a class="brand" href="/">VidKing Cinema</a>
+    <nav>
+      <a href="/movies.html" class="btn">Movies</a>
+      <a href="/series.html" class="btn btn--primary">Series</a>
+      <a href="/player.html" class="btn btn--ghost">Player</a>
+    </nav>
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
+      <input id="search" type="search" placeholder="Search series" autocomplete="off" spellcheck="false" aria-label="Search series">
+    </div>
+  </header>
+
+  <main class="player-layout" id="detailRoot">
+    <div class="player-header">
+      <button class="btn btn--ghost" type="button" id="backButton">← Back</button>
+      <h1 class="player-title" id="showTitle">Loading…</h1>
+    </div>
+
+    <section class="glass-panel" id="summaryPanel">
+      <div class="media-summary" id="summaryContent">
+        <div class="media-artwork" id="posterWrap"></div>
+        <div class="stack" id="summaryText">
+          <div class="meta-tags" id="tagList"></div>
+          <p class="muted" id="overview">Fetching details…</p>
+          <div class="meta-tags" id="genreList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-panel seasons">
+      <h2 class="section-title">Select a season</h2>
+      <div class="season-selectors" id="seasonList"></div>
+      <div id="seasonStatus" class="muted"></div>
+      <div class="episode-grid" id="episodeList"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">Choose a season and episode to launch the player.</footer>
+
+  <script src="/series_detail.js?v=1" type="module"></script>
+</body>
+</html>

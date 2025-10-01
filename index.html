@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>VidKing Cinema</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="/style.css?v=2">
+  <script src="/config.js"></script>
+  <script>window.CLOUD_BASE="";</script>
+  <script src="/cloud.js"></script>
+</head>
+<body class="app-shell">
+  <header class="topbar">
+    <a class="brand" href="/">VidKing Cinema</a>
+    <nav>
+      <a href="/movies.html" class="btn">Movies</a>
+      <a href="/series.html" class="btn">Series</a>
+      <a href="/player.html" class="btn btn--ghost">Launch Player</a>
+    </nav>
+    <form class="search-bar" action="/movies.html" method="get">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
+      <input type="search" name="q" placeholder="Search the catalog" aria-label="Search the catalog">
+    </form>
+  </header>
+
+  <main>
+    <section class="hero hero--split">
+      <div>
+        <h1>Binge-worthy stories, premium VidKing playback.</h1>
+        <p>Discover a hand-curated universe of blockbusters, fresh releases, and the latest series drops. VidKing Cinema wraps the TMDB catalog in a lightning-fast interface with instant streaming using the official VidKing player.</p>
+        <div class="chip-group" style="margin-top:28px">
+          <a class="btn btn--primary" href="/movies.html">Browse movies</a>
+          <a class="btn" href="/series.html">Dive into series</a>
+          <a class="btn btn--ghost" href="/player.html">Open standalone player</a>
+        </div>
+      </div>
+      <div class="glass-panel stack">
+        <h2 class="section-title">Why you'll love it</h2>
+        <div class="meta-tags">
+          <span class="meta-tag">🚀 Instant TMDB sync</span>
+          <span class="meta-tag">🎬 VidKing embeds with no pop-ups</span>
+          <span class="meta-tag">🔍 Smart search &amp; paging</span>
+          <span class="meta-tag">📺 Season &amp; episode explorer</span>
+        </div>
+        <p class="muted">Start with what's trending, then deep dive with powerful filtering. Every title loads with rich artwork, ratings, and streamlined access to the VidKing player.</p>
+        <div class="chip-group">
+          <span class="chip is-active">Trending releases</span>
+          <span class="chip">Dynamic pagination</span>
+          <span class="chip">Premium dark UI</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="content">
+      <div class="glass-panel stack">
+        <h2 class="section-title">Quick launch</h2>
+        <div class="chip-group">
+          <a class="btn" href="/movies.html#popular">Popular today</a>
+          <a class="btn" href="/movies.html#top">Top rated</a>
+          <a class="btn" href="/series.html#airing">Now airing</a>
+          <a class="btn" href="/series.html#top">Fan favorites</a>
+        </div>
+        <p class="muted">Use the shortcuts above or jump straight into the dedicated tabs. Every view keeps your filters, search keywords, and page position so you can explore thousands of titles without slowing the server.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">Powered by TMDB data &amp; the VidKing streaming platform.</footer>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>VidKing Player</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="/style.css?v=2">
+</head>
+<body class="app-shell">
+  <header class="topbar">
+    <a class="brand" href="/">VidKing Cinema</a>
+    <nav>
+      <a href="/movies.html" class="btn">Movies</a>
+      <a href="/series.html" class="btn">Series</a>
+      <a href="/player.html" class="btn btn--primary">Player</a>
+    </nav>
+    <button class="btn btn--ghost" type="button" id="backButton">← Back</button>
+  </header>
+
+  <main class="player-layout">
+    <div class="player-header">
+      <h1 class="player-title" id="title">Loading…</h1>
+    </div>
+
+    <div class="player-frame" id="vkWrap" hidden>
+      <iframe id="vkFrame" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen
+        sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-fullscreen"
+        referrerpolicy="strict-origin"
+      ></iframe>
+    </div>
+
+    <div class="player-frame" id="videoWrap" hidden>
+      <video id="fallbackPlayer" controls preload="metadata"></video>
+    </div>
+
+    <section class="player-details">
+      <div class="detail-card">
+        <h3>Overview</h3>
+        <p id="overview">Fetching synopsis…</p>
+      </div>
+      <div class="detail-card">
+        <h3>Details</h3>
+        <div class="meta-tags" id="facts"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">Streaming securely with sandboxed VidKing embeds and TMDB metadata.</footer>
+
+  <script type="module">
+    import { vkMovieEmbed, vkTvEmbed } from "/providers/vidking.js";
+
+    const IMG_BASE = "https://image.tmdb.org/t/p/w500";
+    const TMDB_BASE = "https://api.themoviedb.org/3";
+    const TMDB_API_KEY = "b7d1cc8554fcab41e013428e2dc418de";
+
+    const titleEl = document.getElementById("title");
+    const overviewEl = document.getElementById("overview");
+    const factsEl = document.getElementById("facts");
+    const backButton = document.getElementById("backButton");
+    const vkWrap = document.getElementById("vkWrap");
+    const vkFrame = document.getElementById("vkFrame");
+    const videoWrap = document.getElementById("videoWrap");
+    const fallbackPlayer = document.getElementById("fallbackPlayer");
+
+    const url = new URL(window.location.href);
+    const params = url.searchParams;
+    const mode = params.get("vk");
+    const tmdb = params.get("tmdb");
+    const explicitTitle = params.get("title") || "VidKing Player";
+    const color = (params.get("color") || "5ad7ff").replace(/^#/, "");
+    const autoPlay = params.get("autoPlay") === "true";
+    const nextEpisode = params.get("nextEpisode") === "true";
+    const episodeSelector = params.get("episodeSelector") === "true";
+
+    document.title = `${explicitTitle} · VidKing Player`;
+    titleEl.textContent = explicitTitle;
+
+    function buildFacts(tags = []) {
+      factsEl.innerHTML = "";
+      if (!tags.length) {
+        const span = document.createElement("span");
+        span.className = "meta-tag";
+        span.textContent = "No extra details available";
+        factsEl.appendChild(span);
+        return;
+      }
+      for (const tag of tags) {
+        const span = document.createElement("span");
+        span.className = "meta-tag";
+        span.textContent = tag;
+        factsEl.appendChild(span);
+      }
+    }
+
+    async function requestTmdb(path) {
+      const cleanPath = path.replace(/^\/+/, "");
+      const controller = new AbortController();
+      const attempt = async (target, opts = {}) => {
+        const response = await fetch(target, {
+          cache: "no-store",
+          signal: controller.signal,
+          ...opts,
+        });
+        const text = await response.text();
+        if (!response.ok) throw new Error(text || `TMDB request failed (${response.status})`);
+        if (!text) return {};
+        return JSON.parse(text);
+      };
+
+      try {
+        try {
+          return await attempt(`/api/tmdb/${cleanPath}`);
+        } catch (error) {
+          if (error.name === "AbortError") throw error;
+          console.warn("Proxy TMDB request failed, retrying direct", error);
+        }
+        const direct = new URL(`${TMDB_BASE}/${cleanPath}`);
+        direct.searchParams.set("api_key", TMDB_API_KEY);
+        return await attempt(direct.toString(), { headers: { Accept: "application/json" } });
+      } catch (error) {
+        if (error.name !== "AbortError") console.error(error);
+        throw error;
+      }
+    }
+
+    async function populateDetails() {
+      if (!tmdb || !mode) return;
+      try {
+        const endpoint = mode === "tv" ? `tv/${tmdb}` : `movie/${tmdb}`;
+        const data = await requestTmdb(endpoint);
+        if (!data) return;
+        const tags = [];
+        if (mode === "movie") {
+          if (data.release_date) tags.push(new Date(data.release_date).getFullYear().toString());
+          if (data.runtime) tags.push(`${data.runtime} min`);
+        } else if (mode === "tv") {
+          if (data.first_air_date) tags.push(`Since ${new Date(data.first_air_date).getFullYear()}`);
+          if (data.number_of_seasons) tags.push(`${data.number_of_seasons} season${data.number_of_seasons > 1 ? "s" : ""}`);
+          if (data.number_of_episodes) tags.push(`${data.number_of_episodes} episodes`);
+        }
+        if (data.vote_average) tags.push(`⭐ ${Number(data.vote_average).toFixed(1)}`);
+        if (Array.isArray(data.genres)) tags.push(...data.genres.slice(0, 3).map((g) => g.name));
+        buildFacts(tags);
+        overviewEl.textContent = data.overview || "No synopsis available.";
+      } catch (error) {
+        overviewEl.textContent = "Unable to load TMDB details right now.";
+        buildFacts([]);
+      }
+    }
+
+    function openMovie() {
+      if (!tmdb) return;
+      const src = vkMovieEmbed(tmdb, { color, autoPlay });
+      vkFrame.src = src;
+      vkWrap.hidden = false;
+    }
+
+    function openSeries() {
+      if (!tmdb) return;
+      const season = parseInt(params.get("season") || "1", 10) || 1;
+      const episode = parseInt(params.get("episode") || "1", 10) || 1;
+      const src = vkTvEmbed(tmdb, season, episode, { color, autoPlay, nextEpisode, episodeSelector });
+      vkFrame.src = src;
+      vkWrap.hidden = false;
+    }
+
+    function openFallback() {
+      const src = params.get("src");
+      if (!src) return;
+      fallbackPlayer.src = `/video/${encodeURIComponent(src)}`;
+      videoWrap.hidden = false;
+    }
+
+    if (mode === "movie") {
+      openMovie();
+    } else if (mode === "tv") {
+      openSeries();
+    } else {
+      openFallback();
+    }
+
+    populateDetails();
+
+    if (backButton) {
+      backButton.addEventListener("click", () => {
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.href = mode === "tv" ? "/series.html" : "/movies.html";
+        }
+      });
+    }
+  </script>
+</body>
+</html>
