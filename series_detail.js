@@ -246,7 +246,7 @@ function filterSeasons(seasons) {
 function populateShow(show) {
   state.show = show;
   showTitleEl.textContent = show.name || show.original_name || "Series";
-  document.title = `${showTitleEl.textContent} · Vidking Hub`;
+  document.title = `${showTitleEl.textContent} · theblackbox`;
   renderPoster(show);
   renderTags(show);
   renderGenres(show);
