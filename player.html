@@ -19,12 +19,12 @@
 
   <section class="ascii-banner" aria-hidden="true">
     <pre>
-██████╗ ██╗      █████╗  ██████╗██╗  ██╗██████╗  ██████╗ ██╗  ██╗
-██╔══██╗██║     ██╔══██╗██╔════╝██║ ██╔╝██╔══██╗██╔═══██╗██║ ██╔╝
-██║  ██║██║     ███████║██║     █████╔╝ ██████╔╝██║   ██║█████╔╝ 
-██║  ██║██║     ██╔══██║██║     ██╔═██╗ ██╔══██╗██║   ██║██╔═██╗ 
-██████╔╝███████╗██║  ██║╚██████╗██║  ██╗██║  ██║╚██████╔╝██║  ██╗
-╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝</pre>
+████████╗██╗  ██╗███████╗     ██████╗ ██╗      █████╗  ██████╗██╗  ██╗██████╗  ██████╗ ██╗  ██╗
+╚══██╔══╝██║  ██║██╔════╝    ██╔═══██╗██║     ██╔══██╗██╔════╝██║ ██╔╝██╔══██╗██╔═══██╗██║ ██╔╝
+   ██║   ███████║█████╗      ██║   ██║██║     ███████║██║     █████╔╝ ██████╔╝██║   ██║█████╔╝
+   ██║   ██╔══██║██╔══╝      ██║▄▄ ██║██║     ██╔══██║██║     ██╔═██╗ ██╔══██╗██║   ██║██╔═██╗
+   ██║   ██║  ██║███████╗    ╚██████╔╝███████╗██║  ██║╚██████╗██║  ██╗██║  ██║╚██████╔╝██║  ██╗
+   ╚═╝   ╚═╝  ╚═╝╚══════╝     ╚══▀▀═╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝</pre>
     <p class="ascii-subtitle">indie circuits · encrypted vibes · run by the night crew</p>
   </section>
 
@@ -38,7 +38,7 @@
 
     <div class="player-frame" id="embedWrap" hidden>
       <iframe id="embedFrame" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen
-        sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-fullscreen"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups"
         referrerpolicy="strict-origin"
       ></iframe>
     </div>
@@ -178,6 +178,8 @@
       }
     }
 
+    let mirrorHosts = [];
+
     const embedState = {
       list: [],
       pointer: 0,
@@ -190,26 +192,51 @@
       statusEl.textContent = message;
     }
 
+    function hostFromCandidate(candidate) {
+      if (!candidate) return null;
+      try {
+        return new URL(candidate.base || candidate.url).host;
+      } catch {
+        return candidate.base || candidate.url || null;
+      }
+    }
+
     function setMirrorList(candidates) {
       if (!mirrorListEl) return;
-      const hosts = Array.from(
-        new Set(
-          candidates
-            .map((candidate) => {
-              try {
-                return new URL(candidate.base || candidate.url).host;
-              } catch {
-                return null;
-              }
-            })
-            .filter(Boolean),
-        ),
-      );
+      const hosts = Array.from(new Set(candidates.map(hostFromCandidate).filter(Boolean)));
+      mirrorHosts = hosts;
       if (!hosts.length) {
         mirrorListEl.textContent = "";
         return;
       }
       mirrorListEl.textContent = `mirrors online: ${hosts.join(" · ")}`;
+    }
+
+    function updateMirrorIndicator(currentHost, attempt, total) {
+      if (!mirrorListEl) return;
+      const hosts = mirrorHosts.slice();
+      if (currentHost) {
+        const lowerCurrent = currentHost.toLowerCase();
+        if (hosts.length) {
+          const decorated = hosts.map((host) => {
+            if (host && host.toLowerCase() === lowerCurrent) {
+              return `[${host}]`;
+            }
+            return host;
+          });
+          const prefix = total > 1 ? `mirror ${attempt}/${total}` : "mirror";
+          mirrorListEl.textContent = `${prefix}: ${decorated.join(" · ")}`;
+          return;
+        }
+        const prefix = total > 1 ? `mirror ${attempt}/${total}` : "mirror";
+        mirrorListEl.textContent = `${prefix}: ${currentHost}`;
+        return;
+      }
+      if (hosts.length) {
+        mirrorListEl.textContent = `mirrors online: ${hosts.join(" · ")}`;
+      } else {
+        mirrorListEl.textContent = "";
+      }
     }
 
     function resetTimer() {
@@ -236,7 +263,8 @@
         setStatus(reason);
       }
 
-      const candidate = embedState.list[embedState.pointer++];
+      const index = embedState.pointer++;
+      const candidate = embedState.list[index];
       if (!candidate) {
         setStatus("All mirrors stalled. Trying raw stream fallback if provided…");
         if (externalButton) {
@@ -245,13 +273,14 @@
         }
         embedFrame.removeAttribute("src");
         embedWrap.hidden = true;
+        updateMirrorIndicator(null, 0, 0);
         openFallback(true);
         return;
       }
 
-      embedState.current = candidate;
-      const attempt = embedState.pointer;
+      const attempt = index + 1;
       const total = embedState.list.length;
+      embedState.current = { ...candidate, attempt, total };
 
       if (externalButton) {
         externalButton.hidden = false;
@@ -259,26 +288,43 @@
         externalButton.textContent = `Pop out mirror ${attempt}`;
       }
 
-      embedFrame.src = candidate.url;
       embedWrap.hidden = false;
+      embedFrame.removeAttribute("src");
+      window.requestAnimationFrame(() => {
+        embedFrame.src = candidate.url;
+      });
       setStatus(`Connecting to mirror ${attempt} of ${total}…`);
+      updateMirrorIndicator(hostFromCandidate(candidate), attempt, total);
 
       embedState.timer = window.setTimeout(() => {
-        if (embedState.current === candidate) {
+        if (embedState.current && embedState.current.attempt === attempt) {
           tryNextEmbed(`Mirror ${attempt} timed out. Jumping to the next source…`);
         }
-      }, 12000);
+      }, 10000);
+    }
 
-      embedFrame.addEventListener(
-        "load",
-        () => {
-          if (embedState.current !== candidate) return;
-          resetTimer();
-          registerWorkingBase(candidate.base);
-          setStatus("Stream locked in. Tap play if it doesn’t auto-start.");
-        },
-        { once: true },
+    function onEmbedLoad() {
+      if (!embedState.current) return;
+      resetTimer();
+      registerWorkingBase(embedState.current.base);
+      const { attempt, total } = embedState.current;
+      updateMirrorIndicator(hostFromCandidate(embedState.current), attempt, total);
+      setStatus(
+        total > 1
+          ? `Stream locked on mirror ${attempt}. Tap play if it doesn’t auto-start.`
+          : "Stream locked in. Tap play if it doesn’t auto-start.",
       );
+    }
+
+    function onEmbedError() {
+      if (!embedState.current) return;
+      const { attempt } = embedState.current;
+      tryNextEmbed(`Mirror ${attempt} blocked or crashed. Cycling onward…`);
+    }
+
+    if (embedFrame) {
+      embedFrame.addEventListener("load", onEmbedLoad);
+      embedFrame.addEventListener("error", onEmbedError);
     }
 
     function openMovie() {
@@ -365,9 +411,9 @@
 
     populateDetails();
 
-    if (mirrorListEl) {
+    if (mirrorListEl && !mirrorListEl.textContent) {
       const mirrors = availableMirrors();
-      if (mirrors && mirrors.length && !mirrorListEl.textContent) {
+      if (mirrors && mirrors.length) {
         try {
           const hosts = mirrors
             .map((entry) => {
@@ -379,7 +425,8 @@
             })
             .filter(Boolean);
           if (hosts.length) {
-            mirrorListEl.textContent = `fallback rotation: ${hosts.join(" → ")}`;
+            mirrorHosts = hosts;
+            mirrorListEl.textContent = `mirrors online: ${hosts.join(" · ")}`;
           }
         } catch {}
       }
