@@ -46,13 +46,6 @@ function applyOptions(url, options = {}) {
     setFlag(params, ["episodeselector", "episodeSelector"], "1");
   }
 
-  if (options.idleCheck !== undefined || options.idlecheck !== undefined) {
-    const idleNumeric = Number(options.idleCheck ?? options.idlecheck);
-    if (Number.isFinite(idleNumeric) && idleNumeric >= 0) {
-      setFlag(params, ["idlecheck", "idleCheck"], Math.floor(idleNumeric));
-    }
-  }
-
   if (typeof options.progress === "number" && Number.isFinite(options.progress)) {
     const clamped = Math.max(0, Math.floor(options.progress));
     if (clamped > 0) params.set("progress", String(clamped));
