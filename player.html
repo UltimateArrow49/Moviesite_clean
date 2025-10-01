@@ -114,14 +114,6 @@
 
     const seasonNumber = mode === "tv" ? parseInt(params.get("season") || "1", 10) || 1 : null;
     const episodeNumber = mode === "tv" ? parseInt(params.get("episode") || "1", 10) || 1 : null;
-    const progressParam = params.get("progress");
-    const forcedProgressSeconds = (() => {
-      if (progressParam == null) return null;
-      const numeric = Number(progressParam);
-      if (!Number.isFinite(numeric) || numeric <= 0) return null;
-      return Math.floor(numeric);
-    })();
-
     document.title = `${explicitTitle} · theblackbox (Vidking backend)`;
     titleEl.textContent = explicitTitle;
 
@@ -220,80 +212,6 @@
         if (statusWrap) statusWrap.classList.remove("is-loading");
         if (loadingText) loadingText.textContent = DEFAULT_LOADING_LABEL;
       }
-    }
-
-    const PROGRESS_STORAGE_KEY = "vidking_progress_v1";
-    const MAX_PROGRESS_ENTRIES = 150;
-
-    function buildProgressKey() {
-      if (!tmdb) return "";
-      if (mode === "tv") {
-        const s = seasonNumber != null ? seasonNumber : 1;
-        const e = episodeNumber != null ? episodeNumber : 1;
-        return `tv:${tmdb}:${s}:${e}`;
-      }
-      return `movie:${tmdb}`;
-    }
-
-    function safeParseProgress(raw) {
-      if (!raw) return null;
-      try {
-        return JSON.parse(raw);
-      } catch (error) {
-        console.warn("Unable to parse Vidking progress store", error);
-        return null;
-      }
-    }
-
-    function persistProgress(map) {
-      if (!map) return;
-      try {
-        const entries = Object.entries(map)
-          .filter(([, value]) => value && typeof value === "object");
-        if (entries.length > MAX_PROGRESS_ENTRIES) {
-          entries
-            .sort((a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0))
-            .slice(MAX_PROGRESS_ENTRIES)
-            .forEach(([key]) => delete map[key]);
-        }
-        localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(map));
-      } catch (error) {
-        console.warn("Unable to persist Vidking progress", error);
-      }
-    }
-
-    function readProgress(key) {
-      if (!key) return null;
-      const raw = safeParseProgress(localStorage.getItem(PROGRESS_STORAGE_KEY));
-      if (!raw || !raw[key]) return null;
-      const entry = raw[key];
-      const seconds = Number(entry.seconds);
-      if (!Number.isFinite(seconds) || seconds <= 0) return null;
-      const duration = Number(entry.duration);
-      return {
-        seconds: Math.max(0, Math.floor(seconds)),
-        duration: Number.isFinite(duration) ? Math.max(0, Math.floor(duration)) : 0,
-      };
-    }
-
-    function writeProgress(key, seconds, duration) {
-      if (!key) return;
-      if (!Number.isFinite(seconds) || seconds < 0) return;
-      const raw = safeParseProgress(localStorage.getItem(PROGRESS_STORAGE_KEY)) || {};
-      raw[key] = {
-        seconds: Math.floor(seconds),
-        duration: Number.isFinite(duration) ? Math.max(0, Math.floor(duration)) : undefined,
-        updatedAt: Date.now(),
-      };
-      persistProgress(raw);
-    }
-
-    function clearProgress(key) {
-      if (!key) return;
-      const raw = safeParseProgress(localStorage.getItem(PROGRESS_STORAGE_KEY));
-      if (!raw || !raw[key]) return;
-      delete raw[key];
-      persistProgress(raw);
     }
 
     function formatTime(totalSeconds) {
@@ -424,9 +342,6 @@
         event: normalizedEvent,
         currentTime:
           toFiniteNumber(details.currentTime ?? details.current_time ?? details.position ?? details.seconds ?? details.time),
-        duration: toFiniteNumber(
-          details.duration ?? details.totalDuration ?? details.length ?? details.runtime ?? details.total_time,
-        ),
         message: rawMessage,
         id,
         mediaType,
@@ -434,26 +349,6 @@
         episode,
         nextEpisode,
       };
-    }
-
-    const playbackKey = buildProgressKey();
-    const savedProgress = forcedProgressSeconds == null ? readProgress(playbackKey) : null;
-    const initialResumeSeconds =
-      forcedProgressSeconds != null
-        ? forcedProgressSeconds
-        : savedProgress && typeof savedProgress.seconds === "number"
-        ? savedProgress.seconds
-        : null;
-    let resumeSeconds = initialResumeSeconds;
-    let lastRecordedSecond = typeof resumeSeconds === "number" ? resumeSeconds : null;
-    let resumeHandshakeTriggered = false;
-    let playbackConfirmed = false;
-    let resumeMonitorId = null;
-    let resumeFallbackApplied = false;
-
-    if (typeof resumeSeconds === "number" && resumeSeconds > 0) {
-      const verb = forcedProgressSeconds != null ? "starting" : "resuming";
-      setStatus(`Syncing with the Vidking backend… ${verb} at ${formatTime(resumeSeconds)}.`);
     }
 
     function postVidkingMessages(payloads = []) {
@@ -495,79 +390,8 @@
       }
     }
 
-    function sendVidkingSeek(seconds) {
-      if (!Number.isFinite(seconds) || seconds < 0) return;
-      const value = Math.max(0, Math.floor(seconds));
-      postVidkingMessages([{ type: "PLAYER_COMMAND", command: "seek", value }]);
-    }
-
     function sendVidkingPlay() {
       postVidkingMessages([{ type: "PLAYER_COMMAND", command: "play" }]);
-    }
-
-    function cancelResumeMonitor() {
-      if (resumeMonitorId != null) {
-        clearTimeout(resumeMonitorId);
-        resumeMonitorId = null;
-      }
-    }
-
-    function startResumeMonitor() {
-      if (!autoPlay) return;
-      cancelResumeMonitor();
-      resumeMonitorId = window.setTimeout(() => {
-        resumeMonitorId = null;
-        if (playbackConfirmed) return;
-        triggerResumeFallback();
-      }, 7000);
-    }
-
-    function triggerResumeFallback() {
-      if (resumeFallbackApplied) return;
-      resumeFallbackApplied = true;
-      if (playbackKey) {
-        clearProgress(playbackKey);
-      }
-      resumeSeconds = null;
-      lastRecordedSecond = null;
-      setStatus("Resume stalled. Starting fresh through the Vidking backend…");
-      sendVidkingSeek(0);
-      if (autoPlay) {
-        sendVidkingPlay();
-        startResumeMonitor();
-      }
-    }
-
-    function markPlaybackConfirmed(currentTime) {
-      playbackConfirmed = true;
-      cancelResumeMonitor();
-      if (Number.isFinite(currentTime) && playbackKey) {
-        lastRecordedSecond = Math.floor(currentTime);
-      }
-    }
-
-    function attemptResumeHandshake(readyTime) {
-      if (resumeHandshakeTriggered) return;
-      resumeHandshakeTriggered = true;
-
-      const resumeTarget =
-        Number.isFinite(readyTime) && readyTime > 0
-          ? Math.floor(readyTime)
-          : Number.isFinite(resumeSeconds) && resumeSeconds > 0
-          ? Math.floor(resumeSeconds)
-          : null;
-
-      if (resumeTarget != null) {
-        setStatus(`Vidking backend ready. Resuming at ${formatTime(resumeTarget)}…`);
-        sendVidkingSeek(resumeTarget);
-      } else {
-        setStatus("Vidking backend ready. Preparing playback…");
-      }
-
-      if (autoPlay) {
-        sendVidkingPlay();
-        startResumeMonitor();
-      }
     }
 
     function loadVidkingEmbed(src) {
@@ -609,7 +433,6 @@
         color,
         autoplay: autoPlay,
         autoPlay,
-        progress: typeof initialResumeSeconds === "number" ? initialResumeSeconds : undefined,
         idleCheck: 0,
       });
       loadVidkingEmbed(src);
@@ -629,7 +452,6 @@
         autoPlay,
         nextEpisode,
         episodeSelector,
-        progress: typeof initialResumeSeconds === "number" ? initialResumeSeconds : undefined,
         idleCheck: 0,
       });
       loadVidkingEmbed(src);
@@ -639,12 +461,13 @@
       const eventName = data.event;
       if (!eventName) return;
       const currentTime = toFiniteNumber(data.currentTime);
-      const duration = toFiniteNumber(data.duration);
 
       if (eventName === "ready") {
         setLoading(false);
-        const readyTime = Number.isFinite(currentTime) && currentTime > 0 ? currentTime : null;
-        attemptResumeHandshake(readyTime);
+        setStatus("Vidking backend ready. Preparing playback…");
+        if (autoPlay) {
+          sendVidkingPlay();
+        }
         return;
       }
 
@@ -655,7 +478,6 @@
       }
 
       if (eventName === "play") {
-        markPlaybackConfirmed(currentTime);
         setLoading(false);
         if (Number.isFinite(currentTime) && currentTime > 0) {
           setStatus(`Playback started at ${formatTime(currentTime)} via the Vidking backend.`);
@@ -663,45 +485,23 @@
           setStatus("Playback started via the Vidking backend.");
         }
       } else if (eventName === "timeupdate") {
-        markPlaybackConfirmed(currentTime);
         setLoading(false);
-        if (playbackKey && Number.isFinite(currentTime) && currentTime >= 0) {
-          if (lastRecordedSecond == null || Math.abs(currentTime - lastRecordedSecond) >= 5) {
-            writeProgress(playbackKey, currentTime, duration);
-            lastRecordedSecond = Math.floor(currentTime);
-          }
-        }
       } else if (eventName === "seeked") {
         if (Number.isFinite(currentTime)) {
           setStatus(`Seeking to ${formatTime(currentTime)}…`);
-          if (playbackKey) {
-            writeProgress(playbackKey, currentTime, duration);
-            lastRecordedSecond = Math.floor(currentTime);
-          }
         }
       } else if (eventName === "pause") {
-        cancelResumeMonitor();
         if (Number.isFinite(currentTime) && currentTime > 0) {
           setStatus(`Paused at ${formatTime(currentTime)}.`);
         }
-        if (playbackKey && Number.isFinite(currentTime)) {
-          writeProgress(playbackKey, currentTime, duration);
-          lastRecordedSecond = Math.floor(currentTime);
-        }
       } else if (eventName === "ended") {
-        markPlaybackConfirmed(currentTime);
         setLoading(false);
         if (data.nextEpisode) {
           setStatus("Episode complete. Awaiting the next installment…");
         } else {
           setStatus("Playback finished. Thanks for watching with theblackbox + Vidking backend.");
         }
-        if (playbackKey) {
-          clearProgress(playbackKey);
-          lastRecordedSecond = null;
-        }
       } else if (eventName === "error") {
-        cancelResumeMonitor();
         setLoading(false);
         if (data.message) {
           setStatus(`Vidking backend error: ${data.message}`);
