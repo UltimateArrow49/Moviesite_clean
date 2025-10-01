@@ -1,5 +1,16 @@
 const VIDKING_ORIGIN = "https://www.vidking.net";
 
+function coerceBoolean(value) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return undefined;
+    if (["false", "0", "no"].includes(normalized)) return false;
+    return true;
+  }
+  return Boolean(value);
+}
+
 function applyOptions(url, options = {}) {
   const params = url.searchParams;
   const color = options.color ?? options.colour;
