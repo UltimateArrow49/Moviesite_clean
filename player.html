@@ -35,25 +35,18 @@
     <div class="player-status" role="status">
       <div class="loading-indicator" id="loadingIndicator" hidden aria-hidden="true">
         <span class="loading-box" aria-hidden="true"></span>
-        <span class="loading-text" id="loadingText">Buffering signal…</span>
+        <span class="loading-text" id="loadingText">Buffering Vidking stream…</span>
       </div>
-      <p id="playerStatus">Spooling up mirrors…</p>
+      <p id="playerStatus">Preparing Vidking stream…</p>
     </div>
-    <p class="player-mirrors" id="mirrorList"></p>
 
     <div class="player-frame" id="embedWrap" hidden>
-      <iframe id="embedFrame" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen
-        sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups allow-top-navigation-by-user-activation"
-        referrerpolicy="strict-origin"
+      <iframe
+        id="embedFrame"
+        src=""
+        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+        allowfullscreen
       ></iframe>
-    </div>
-
-    <a class="btn btn--ghost btn--inline" id="externalButton" href="#" target="_blank" rel="noreferrer noopener" hidden>
-      Pop out this mirror
-    </a>
-
-    <div class="player-frame" id="videoWrap" hidden>
-      <video id="fallbackPlayer" controls preload="metadata"></video>
     </div>
 
     <section class="player-details">
@@ -74,13 +67,8 @@
     import {
       movieEmbed,
       tvEmbed,
-      movieEmbedCandidates,
-      tvEmbedCandidates,
-      registerWorkingBase,
-      availableMirrors,
     } from "/providers/blackbox.js";
 
-    const IMG_BASE = "https://image.tmdb.org/t/p/w500";
     const TMDB_BASE = "https://api.themoviedb.org/3";
     const TMDB_API_KEY = "b7d1cc8554fcab41e013428e2dc418de";
 
@@ -90,14 +78,10 @@
     const backButton = document.getElementById("backButton");
     const embedWrap = document.getElementById("embedWrap");
     const embedFrame = document.getElementById("embedFrame");
-    const videoWrap = document.getElementById("videoWrap");
-    const fallbackPlayer = document.getElementById("fallbackPlayer");
     const statusEl = document.getElementById("playerStatus");
     const statusWrap = document.querySelector(".player-status");
     const loadingIndicator = document.getElementById("loadingIndicator");
     const loadingText = document.getElementById("loadingText");
-    const mirrorListEl = document.getElementById("mirrorList");
-    const externalButton = document.getElementById("externalButton");
 
     const url = new URL(window.location.href);
     const params = url.searchParams;
@@ -105,10 +89,11 @@
     const tmdb = params.get("tmdb");
     const explicitTitle = params.get("title") || "BLACKBOX Player";
     const color = (params.get("color") || "14ff9f").replace(/^#/, "");
-    const autoPlay = params.get("autoPlay") === "true";
-    const poster = params.get("poster");
+    const autoPlay = params.get("autoPlay") !== "false";
     const nextEpisode = params.get("nextEpisode") === "true";
     const episodeSelector = params.get("episodeSelector") === "true";
+    const seasonNumber = mode === "tv" ? parseInt(params.get("season") || "1", 10) || 1 : null;
+    const episodeNumber = mode === "tv" ? parseInt(params.get("episode") || "1", 10) || 1 : null;
 
     document.title = `${explicitTitle} · The Blackbox Player`;
     titleEl.textContent = explicitTitle;
@@ -186,16 +171,7 @@
       }
     }
 
-    let mirrorHosts = [];
-
-    const DEFAULT_LOADING_LABEL = "Buffering signal…";
-
-    const embedState = {
-      list: [],
-      pointer: 0,
-      timer: null,
-      current: null,
-    };
+    const DEFAULT_LOADING_LABEL = "Buffering Vidking stream…";
 
     function setStatus(message) {
       if (!statusEl) return;
@@ -219,275 +195,249 @@
       }
     }
 
-    function hostFromCandidate(candidate) {
-      if (!candidate) return null;
+    const PROGRESS_STORAGE_KEY = "vidking_progress_v1";
+    const MAX_PROGRESS_ENTRIES = 150;
+
+    function buildProgressKey() {
+      if (!tmdb) return "";
+      if (mode === "tv") {
+        const s = seasonNumber != null ? seasonNumber : 1;
+        const e = episodeNumber != null ? episodeNumber : 1;
+        return `tv:${tmdb}:${s}:${e}`;
+      }
+      return `movie:${tmdb}`;
+    }
+
+    function safeParseProgress(raw) {
+      if (!raw) return null;
       try {
-        return new URL(candidate.base || candidate.url).host;
-      } catch {
-        return candidate.base || candidate.url || null;
+        return JSON.parse(raw);
+      } catch (error) {
+        console.warn("Unable to parse Vidking progress store", error);
+        return null;
       }
     }
 
-    function setMirrorList(candidates) {
-      if (!mirrorListEl) return;
-      const hosts = Array.from(new Set(candidates.map(hostFromCandidate).filter(Boolean)));
-      mirrorHosts = hosts;
-      if (!hosts.length) {
-        mirrorListEl.textContent = "";
-        return;
-      }
-      mirrorListEl.textContent = `mirrors online: ${hosts.join(" · ")}`;
-    }
-
-    function updateMirrorIndicator(currentHost, attempt, total) {
-      if (!mirrorListEl) return;
-      const hosts = mirrorHosts.slice();
-      if (currentHost) {
-        const lowerCurrent = currentHost.toLowerCase();
-        if (hosts.length) {
-          const decorated = hosts.map((host) => {
-            if (host && host.toLowerCase() === lowerCurrent) {
-              return `[${host}]`;
-            }
-            return host;
-          });
-          const prefix = total > 1 ? `mirror ${attempt}/${total}` : "mirror";
-          mirrorListEl.textContent = `${prefix}: ${decorated.join(" · ")}`;
-          return;
+    function persistProgress(map) {
+      if (!map) return;
+      try {
+        const entries = Object.entries(map)
+          .filter(([, value]) => value && typeof value === "object");
+        if (entries.length > MAX_PROGRESS_ENTRIES) {
+          entries
+            .sort((a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0))
+            .slice(MAX_PROGRESS_ENTRIES)
+            .forEach(([key]) => delete map[key]);
         }
-        const prefix = total > 1 ? `mirror ${attempt}/${total}` : "mirror";
-        mirrorListEl.textContent = `${prefix}: ${currentHost}`;
-        return;
-      }
-      if (hosts.length) {
-        mirrorListEl.textContent = `mirrors online: ${hosts.join(" · ")}`;
-      } else {
-        mirrorListEl.textContent = "";
+        localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(map));
+      } catch (error) {
+        console.warn("Unable to persist Vidking progress", error);
       }
     }
 
-    function resetTimer() {
-      if (embedState.timer) {
-        clearTimeout(embedState.timer);
-        embedState.timer = null;
-      }
+    function readProgress(key) {
+      if (!key) return null;
+      const raw = safeParseProgress(localStorage.getItem(PROGRESS_STORAGE_KEY));
+      if (!raw || !raw[key]) return null;
+      const entry = raw[key];
+      const seconds = Number(entry.seconds);
+      if (!Number.isFinite(seconds) || seconds <= 0) return null;
+      const duration = Number(entry.duration);
+      return {
+        seconds: Math.max(0, Math.floor(seconds)),
+        duration: Number.isFinite(duration) ? Math.max(0, Math.floor(duration)) : 0,
+      };
     }
 
-    function dedupeCandidates(list) {
-      const seen = new Set();
-      return list.filter((candidate) => {
-        if (!candidate || !candidate.url) return false;
-        const key = candidate.url;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
+    function writeProgress(key, seconds, duration) {
+      if (!key) return;
+      if (!Number.isFinite(seconds) || seconds < 0) return;
+      const raw = safeParseProgress(localStorage.getItem(PROGRESS_STORAGE_KEY)) || {};
+      raw[key] = {
+        seconds: Math.floor(seconds),
+        duration: Number.isFinite(duration) ? Math.max(0, Math.floor(duration)) : undefined,
+        updatedAt: Date.now(),
+      };
+      persistProgress(raw);
     }
 
-    function tryNextEmbed(reason) {
-      resetTimer();
-      if (reason) {
-        setStatus(reason);
-      }
+    function clearProgress(key) {
+      if (!key) return;
+      const raw = safeParseProgress(localStorage.getItem(PROGRESS_STORAGE_KEY));
+      if (!raw || !raw[key]) return;
+      delete raw[key];
+      persistProgress(raw);
+    }
 
-      const index = embedState.pointer++;
-      const candidate = embedState.list[index];
-      if (!candidate) {
-        setLoading(false);
-        setStatus("All mirrors stalled. Trying raw stream fallback if provided…");
-        if (externalButton) {
-          externalButton.hidden = true;
-          externalButton.removeAttribute("href");
-        }
+    function formatTime(totalSeconds) {
+      const seconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      const pad = (value) => value.toString().padStart(2, "0");
+      if (hours > 0) {
+        return `${hours}:${pad(minutes)}:${pad(secs)}`;
+      }
+      return `${minutes}:${pad(secs)}`;
+    }
+
+    const playbackKey = buildProgressKey();
+    const savedProgress = readProgress(playbackKey);
+    let lastRecordedSecond = savedProgress ? savedProgress.seconds : null;
+
+    if (savedProgress && savedProgress.seconds) {
+      setStatus(`Contacting Vidking… resuming from ${formatTime(savedProgress.seconds)}.`);
+    }
+
+    function loadVidkingEmbed(src) {
+      if (!embedFrame || !embedWrap) return;
+      if (!src) {
         embedFrame.removeAttribute("src");
         embedWrap.hidden = true;
-        updateMirrorIndicator(null, 0, 0);
-        openFallback(true);
+        setStatus("Unable to prepare Vidking stream. Check the launch parameters.");
+        setLoading(false);
         return;
-      }
-
-      const attempt = index + 1;
-      const total = embedState.list.length;
-      embedState.current = { ...candidate, attempt, total };
-
-      const loadingMessage = total > 1 ? `Dialing mirror ${attempt} of ${total}…` : "Dialing primary mirror…";
-      setLoading(true, loadingMessage);
-
-      if (externalButton) {
-        externalButton.hidden = false;
-        externalButton.href = candidate.url;
-        externalButton.textContent = `Pop out mirror ${attempt}`;
       }
 
       embedWrap.hidden = false;
       embedFrame.removeAttribute("src");
       window.requestAnimationFrame(() => {
-        embedFrame.src = candidate.url;
+        embedFrame.src = src;
       });
-      setStatus(`Connecting to mirror ${attempt} of ${total}…`);
-      updateMirrorIndicator(hostFromCandidate(candidate), attempt, total);
-
-      embedState.timer = window.setTimeout(() => {
-        if (embedState.current && embedState.current.attempt === attempt) {
-          tryNextEmbed(`Mirror ${attempt} timed out. Jumping to the next source…`);
-        }
-      }, 6500);
-    }
-
-    function onEmbedLoad() {
-      if (!embedState.current) return;
-      resetTimer();
-      setLoading(false);
-      registerWorkingBase(embedState.current.base);
-      const { attempt, total } = embedState.current;
-      updateMirrorIndicator(hostFromCandidate(embedState.current), attempt, total);
-      setStatus(
-        total > 1
-          ? `Stream locked on mirror ${attempt}. Tap play if it doesn’t auto-start.`
-          : "Stream locked in. Tap play if it doesn’t auto-start.",
-      );
-    }
-
-    function onEmbedError() {
-      if (!embedState.current) return;
-      const { attempt } = embedState.current;
-      tryNextEmbed(`Mirror ${attempt} blocked or crashed. Cycling onward…`);
+      setStatus("Connecting to Vidking…");
+      setLoading(true, "Contacting Vidking…");
     }
 
     if (embedFrame) {
-      embedFrame.addEventListener("load", onEmbedLoad);
-      embedFrame.addEventListener("error", onEmbedError);
-    }
-
-    if (fallbackPlayer) {
-      const settle = () => setLoading(false);
-      fallbackPlayer.addEventListener("waiting", () => setLoading(true, "Buffering fallback stream…"));
-      fallbackPlayer.addEventListener("seeking", () => setLoading(true, "Tuning fallback stream…"));
-      fallbackPlayer.addEventListener("canplay", settle);
-      fallbackPlayer.addEventListener("playing", settle);
-      fallbackPlayer.addEventListener("ended", settle);
-      fallbackPlayer.addEventListener("error", () => {
-        setStatus("Fallback stream failed to load.");
+      embedFrame.addEventListener("load", () => {
+        setStatus("Vidking player loaded. Waiting for playback…");
+      });
+      embedFrame.addEventListener("error", () => {
         setLoading(false);
+        setStatus("Vidking embed failed to load. Please refresh or try again later.");
       });
     }
 
     function openMovie() {
-      if (!tmdb) return;
-      const candidates = dedupeCandidates(
-        movieEmbedCandidates(tmdb, { color, autoPlay, poster }),
-      );
-      if (!candidates.length) {
-        const src = movieEmbed(tmdb, { color, autoPlay, poster });
-        if (src) {
-          setLoading(true, "Dialing primary mirror…");
-          embedFrame.src = src;
-          embedWrap.hidden = false;
-          if (externalButton) {
-            externalButton.hidden = false;
-            externalButton.href = src;
-            externalButton.textContent = "Pop out mirror";
-          }
-          setStatus("Running on the primary mirror. If it stalls, refresh to rotate sources.");
-        }
+      if (!tmdb) {
+        setStatus("Missing TMDB identifier for Vidking playback.");
+        setLoading(false);
         return;
       }
-      embedState.list = candidates;
-      embedState.pointer = 0;
-      setMirrorList(candidates);
-      tryNextEmbed();
+      const src = movieEmbed(tmdb, {
+        color,
+        autoPlay,
+        progress: savedProgress ? savedProgress.seconds : undefined,
+      });
+      loadVidkingEmbed(src);
     }
 
     function openSeries() {
-      if (!tmdb) return;
-      const season = parseInt(params.get("season") || "1", 10) || 1;
-      const episode = parseInt(params.get("episode") || "1", 10) || 1;
-      const candidates = dedupeCandidates(
-        tvEmbedCandidates(tmdb, season, episode, {
-          color,
-          autoPlay,
-          nextEpisode,
-          episodeSelector,
-          poster,
-        }),
-      );
-      if (!candidates.length) {
-        const src = tvEmbed(tmdb, season, episode, {
-          color,
-          autoPlay,
-          nextEpisode,
-          episodeSelector,
-          poster,
-        });
-        if (src) {
-          setLoading(true, "Dialing primary mirror…");
-          embedFrame.src = src;
-          embedWrap.hidden = false;
-          if (externalButton) {
-            externalButton.hidden = false;
-            externalButton.href = src;
-            externalButton.textContent = "Pop out mirror";
-          }
-          setStatus("Running on the primary mirror. If it stalls, refresh to rotate sources.");
-        }
+      if (!tmdb) {
+        setStatus("Missing TMDB identifier for Vidking playback.");
+        setLoading(false);
         return;
       }
-      embedState.list = candidates;
-      embedState.pointer = 0;
-      setMirrorList(candidates);
-      tryNextEmbed();
+      const season = seasonNumber || 1;
+      const episode = episodeNumber || 1;
+      const src = tvEmbed(tmdb, season, episode, {
+        color,
+        autoPlay,
+        nextEpisode,
+        episodeSelector,
+        progress: savedProgress ? savedProgress.seconds : undefined,
+      });
+      loadVidkingEmbed(src);
     }
 
-    function openFallback(isAuto = false) {
-      const src = params.get("src");
-      if (!src) {
-        if (!isAuto) {
-          setStatus("No stream configured. Use a launch link to start playback.");
-        }
+    function handlePlayerEvent(data = {}) {
+      const eventName = data.event;
+      if (!eventName) return;
+      const currentTime = Number(data.currentTime);
+      const duration = Number(data.duration);
+
+      if (eventName === "play") {
         setLoading(false);
-        return false;
+        if (Number.isFinite(currentTime) && currentTime > 0) {
+          setStatus(`Vidking playback started at ${formatTime(currentTime)}.`);
+          if (playbackKey) {
+            lastRecordedSecond = Math.floor(currentTime);
+          }
+        } else {
+          setStatus("Vidking playback started.");
+        }
+      } else if (eventName === "timeupdate") {
+        setLoading(false);
+        if (playbackKey && Number.isFinite(currentTime) && currentTime >= 0) {
+          if (lastRecordedSecond == null || Math.abs(currentTime - lastRecordedSecond) >= 5) {
+            writeProgress(playbackKey, currentTime, duration);
+            lastRecordedSecond = Math.floor(currentTime);
+          }
+        }
+      } else if (eventName === "seeked") {
+        if (Number.isFinite(currentTime)) {
+          setStatus(`Seeking to ${formatTime(currentTime)}…`);
+          if (playbackKey) {
+            writeProgress(playbackKey, currentTime, duration);
+            lastRecordedSecond = Math.floor(currentTime);
+          }
+        }
+      } else if (eventName === "pause") {
+        if (Number.isFinite(currentTime) && currentTime > 0) {
+          setStatus(`Paused at ${formatTime(currentTime)}.`);
+        }
+        if (playbackKey && Number.isFinite(currentTime)) {
+          writeProgress(playbackKey, currentTime, duration);
+          lastRecordedSecond = Math.floor(currentTime);
+        }
+      } else if (eventName === "ended") {
+        setLoading(false);
+        setStatus("Playback finished. Thanks for watching on Vidking.");
+        if (playbackKey) {
+          clearProgress(playbackKey);
+          lastRecordedSecond = null;
+        }
+      } else if (eventName === "error") {
+        setLoading(false);
+        if (data.message) {
+          setStatus(`Vidking error: ${data.message}`);
+        } else {
+          setStatus("Vidking reported an unexpected error.");
+        }
       }
-      setLoading(true, "Buffering fallback stream…");
-      fallbackPlayer.src = `/video/${encodeURIComponent(src)}`;
-      videoWrap.hidden = false;
-      if (isAuto) {
-        setStatus("Fallback stream loaded. Playback uses direct piping from our edge.");
-      }
-      return true;
     }
 
-    setLoading(true, "Calibrating The Blackbox signal…");
+    function handlePlayerMessage(event) {
+      if (!event || typeof event.data !== "string") return;
+      let payload;
+      try {
+        payload = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      if (!payload || payload.type !== "PLAYER_EVENT" || !payload.data) return;
+      const { id, mediaType } = payload.data;
+      if (tmdb && id && String(id) !== String(tmdb)) return;
+      if (mode === "movie" && mediaType && mediaType !== "movie") return;
+      if (mode === "tv" && mediaType && mediaType !== "tv") return;
+      handlePlayerEvent(payload.data);
+    }
+
+    window.addEventListener("message", handlePlayerMessage);
+
+    setLoading(true, "Contacting Vidking…");
 
     if (mode === "movie") {
       openMovie();
     } else if (mode === "tv") {
       openSeries();
     } else {
-      openFallback();
+      setStatus("Provide a valid Vidking mode (movie or tv) with a TMDB id to begin playback.");
+      setLoading(false);
+      if (embedWrap) embedWrap.hidden = true;
     }
 
     populateDetails();
-
-    if (mirrorListEl && !mirrorListEl.textContent) {
-      const mirrors = availableMirrors();
-      if (mirrors && mirrors.length) {
-        try {
-          const hosts = mirrors
-            .map((entry) => {
-              try {
-                return new URL(entry).host;
-              } catch {
-                return null;
-              }
-            })
-            .filter(Boolean);
-          if (hosts.length) {
-            mirrorHosts = hosts;
-            mirrorListEl.textContent = `mirrors online: ${hosts.join(" · ")}`;
-          }
-        } catch {}
-      }
-    }
 
     if (backButton) {
       backButton.addEventListener("click", () => {

@@ -118,7 +118,6 @@ function buildPlayerUrl(movie) {
     autoPlay: "true",
     color: "14ff9f",
   });
-  if (movie.poster_path) params.set("poster", IMG_BASE + movie.poster_path);
   return `/player.html?${params.toString()}`;
 }
 
