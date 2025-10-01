@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>BLACKBOX Player</title>
+  <title>Vidking Player</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="/style.css?v=4">
 </head>
 <body class="app-shell">
   <header class="topbar">
-    <a class="brand" href="/">The Blackbox</a>
+    <a class="brand" href="/">Vidking Player</a>
     <nav>
       <a href="/movies.html" class="btn">Movies</a>
       <a href="/series.html" class="btn">Series</a>
@@ -24,7 +24,7 @@
 <span style="--i:3">  |    |   |   Y  \  ___/|    |   \  |__/ __ \\  \___|    < |    |   (  <_> >    < </span>
 <span style="--i:4">  |____|   |___|  /\\___  >______  /____(____  /\\___  >__|_ \|______  /\\____/__\\/\\_ \</span>
 <span style="--i:5">                \/     \/       \/          \/     \/     \/       \/            \/</span></pre>
-    <p class="ascii-subtitle">signal locked · vidking harnessed · blackbox encrypted</p>
+    <p class="ascii-subtitle">direct vidking embeds · tmdb metadata · no detours</p>
   </section>
 
   <main class="player-layout">
@@ -70,7 +70,7 @@
     import {
       movieEmbed,
       tvEmbed,
-    } from "/providers/blackbox.js";
+    } from "/providers/vidking.js";
 
     const TMDB_BASE = "https://api.themoviedb.org/3";
     const TMDB_API_KEY = "b7d1cc8554fcab41e013428e2dc418de";
@@ -90,7 +90,7 @@
     const params = url.searchParams;
     const mode = params.get("mode") || params.get("vk");
     const tmdb = params.get("tmdb");
-    const explicitTitle = params.get("title") || "BLACKBOX Player";
+    const explicitTitle = params.get("title") || "Vidking Player";
     const color = (params.get("color") || "14ff9f").replace(/^#/, "");
 
     const autoplayParam = params.has("autoplay") ? params.get("autoplay") : params.get("autoPlay");
@@ -122,7 +122,7 @@
       return Math.floor(numeric);
     })();
 
-    document.title = `${explicitTitle} · The Blackbox Player`;
+    document.title = `${explicitTitle} · Vidking Player`;
     titleEl.textContent = explicitTitle;
 
     function buildFacts(tags = []) {
