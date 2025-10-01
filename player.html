@@ -18,12 +18,13 @@
   </header>
 
   <section class="ascii-banner" aria-hidden="true">
-    <pre class="ascii-art"><span style="--i:0">////////  //\\ //\\  ////////      ///////   //\\       //////    ///////  //\\ //\\  ///////    ///////  //\\ //\\</span>
-<span style="--i:1">   //\\  //\\ //\\  //\\          //\\ //\\  //\\      //\\ //\\  //\\      //\\//    //\\ //\\  //\\ //\\   \\///</span>
-<span style="--i:2">   //\\  ////////  ///////       ///////   //\\      ////////  //\\      //////    ///////   //\\ //\\    ////</span>
-<span style="--i:3">   //\\  //\\ //\\  //\\          //\\ //\\  //\\      //\\ //\\  //\\      //\\//    //\\ //\\  //\\ //\\   //\\</span>
-<span style="--i:4">   //\\  //\\ //\\  ////////      ///////   ////////  //\\ //\\   ///////  //\\ //\\  ///////    ///////  //\\ //\\</span></pre>
-    <p class="ascii-subtitle">indie circuits · encrypted vibes · run by the night crew</p>
+    <pre class="ascii-art"><span style="--i:0">___________.__          __________.__                 __   __________              </span>
+<span style="--i:1">\\__    ___/|  |__   ____\\______   \  | _____    ____ |  | _\\______   \ _______  ___</span>
+<span style="--i:2">  |    |   |  |  \_/ __ \|    |  _/  | \__  \ _/ ___\|  |/ /|    |  _//  _ \  \/  /</span>
+<span style="--i:3">  |    |   |   Y  \  ___/|    |   \  |__/ __ \\  \___|    < |    |   (  <_> >    < </span>
+<span style="--i:4">  |____|   |___|  /\\___  >______  /____(____  /\\___  >__|_ \|______  /\\____/__\\/\\_ \</span>
+<span style="--i:5">                \/     \/       \/          \/     \/     \/       \/            \/</span></pre>
+    <p class="ascii-subtitle">signal locked · vidking harnessed · blackbox encrypted</p>
   </section>
 
   <main class="player-layout">
@@ -31,7 +32,13 @@
       <h1 class="player-title" id="title">Loading…</h1>
     </div>
 
-    <p class="player-status" id="playerStatus" role="status">Spooling up mirrors…</p>
+    <div class="player-status" role="status">
+      <div class="loading-indicator" id="loadingIndicator" hidden aria-hidden="true">
+        <span class="loading-box" aria-hidden="true"></span>
+        <span class="loading-text" id="loadingText">Buffering signal…</span>
+      </div>
+      <p id="playerStatus">Spooling up mirrors…</p>
+    </div>
     <p class="player-mirrors" id="mirrorList"></p>
 
     <div class="player-frame" id="embedWrap" hidden>
@@ -86,6 +93,9 @@
     const videoWrap = document.getElementById("videoWrap");
     const fallbackPlayer = document.getElementById("fallbackPlayer");
     const statusEl = document.getElementById("playerStatus");
+    const statusWrap = document.querySelector(".player-status");
+    const loadingIndicator = document.getElementById("loadingIndicator");
+    const loadingText = document.getElementById("loadingText");
     const mirrorListEl = document.getElementById("mirrorList");
     const externalButton = document.getElementById("externalButton");
 
@@ -178,6 +188,8 @@
 
     let mirrorHosts = [];
 
+    const DEFAULT_LOADING_LABEL = "Buffering signal…";
+
     const embedState = {
       list: [],
       pointer: 0,
@@ -188,6 +200,23 @@
     function setStatus(message) {
       if (!statusEl) return;
       statusEl.textContent = message;
+    }
+
+    function setLoading(isLoading, label = DEFAULT_LOADING_LABEL) {
+      if (!loadingIndicator) return;
+      if (loadingText && label) {
+        loadingText.textContent = label;
+      }
+      if (isLoading) {
+        loadingIndicator.hidden = false;
+        loadingIndicator.removeAttribute("aria-hidden");
+        if (statusWrap) statusWrap.classList.add("is-loading");
+      } else {
+        loadingIndicator.hidden = true;
+        loadingIndicator.setAttribute("aria-hidden", "true");
+        if (statusWrap) statusWrap.classList.remove("is-loading");
+        if (loadingText) loadingText.textContent = DEFAULT_LOADING_LABEL;
+      }
     }
 
     function hostFromCandidate(candidate) {
@@ -264,6 +293,7 @@
       const index = embedState.pointer++;
       const candidate = embedState.list[index];
       if (!candidate) {
+        setLoading(false);
         setStatus("All mirrors stalled. Trying raw stream fallback if provided…");
         if (externalButton) {
           externalButton.hidden = true;
@@ -279,6 +309,9 @@
       const attempt = index + 1;
       const total = embedState.list.length;
       embedState.current = { ...candidate, attempt, total };
+
+      const loadingMessage = total > 1 ? `Dialing mirror ${attempt} of ${total}…` : "Dialing primary mirror…";
+      setLoading(true, loadingMessage);
 
       if (externalButton) {
         externalButton.hidden = false;
@@ -304,6 +337,7 @@
     function onEmbedLoad() {
       if (!embedState.current) return;
       resetTimer();
+      setLoading(false);
       registerWorkingBase(embedState.current.base);
       const { attempt, total } = embedState.current;
       updateMirrorIndicator(hostFromCandidate(embedState.current), attempt, total);
@@ -325,6 +359,19 @@
       embedFrame.addEventListener("error", onEmbedError);
     }
 
+    if (fallbackPlayer) {
+      const settle = () => setLoading(false);
+      fallbackPlayer.addEventListener("waiting", () => setLoading(true, "Buffering fallback stream…"));
+      fallbackPlayer.addEventListener("seeking", () => setLoading(true, "Tuning fallback stream…"));
+      fallbackPlayer.addEventListener("canplay", settle);
+      fallbackPlayer.addEventListener("playing", settle);
+      fallbackPlayer.addEventListener("ended", settle);
+      fallbackPlayer.addEventListener("error", () => {
+        setStatus("Fallback stream failed to load.");
+        setLoading(false);
+      });
+    }
+
     function openMovie() {
       if (!tmdb) return;
       const candidates = dedupeCandidates(
@@ -333,6 +380,7 @@
       if (!candidates.length) {
         const src = movieEmbed(tmdb, { color, autoPlay, poster });
         if (src) {
+          setLoading(true, "Dialing primary mirror…");
           embedFrame.src = src;
           embedWrap.hidden = false;
           if (externalButton) {
@@ -372,6 +420,7 @@
           poster,
         });
         if (src) {
+          setLoading(true, "Dialing primary mirror…");
           embedFrame.src = src;
           embedWrap.hidden = false;
           if (externalButton) {
@@ -391,13 +440,23 @@
 
     function openFallback(isAuto = false) {
       const src = params.get("src");
-      if (!src) return;
+      if (!src) {
+        if (!isAuto) {
+          setStatus("No stream configured. Use a launch link to start playback.");
+        }
+        setLoading(false);
+        return false;
+      }
+      setLoading(true, "Buffering fallback stream…");
       fallbackPlayer.src = `/video/${encodeURIComponent(src)}`;
       videoWrap.hidden = false;
       if (isAuto) {
         setStatus("Fallback stream loaded. Playback uses direct piping from our edge.");
       }
+      return true;
     }
+
+    setLoading(true, "Calibrating The Blackbox signal…");
 
     if (mode === "movie") {
       openMovie();

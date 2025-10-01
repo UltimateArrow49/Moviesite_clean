@@ -1,15 +1,8 @@
 const DEFAULT_HOSTS = [
-  "https://theblackbox.watch",
-  "https://theblackbox.to",
-  "https://theblackbox.app",
-  "https://theblackbox.io",
   "https://theblackbox.ddns.net",
-  "https://vidsrc.net",
-  "https://vidsrc.to",
-  "https://vidsrc.cc",
-  "https://vidsrc.me",
-  "https://vidsrc.vip",
   "https://www.vidking.net",
+  "https://vidking.to",
+  "https://vidking.pro",
 ];
 
 const STORAGE_KEY = "blackbox:last-mirror";
