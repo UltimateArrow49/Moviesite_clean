@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>The Blackbox Player</title>
+  <title>BLACKBOX Player</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="/style.css?v=2">
+  <link rel="stylesheet" href="/style.css?v=3">
 </head>
 <body class="app-shell">
   <header class="topbar">
@@ -17,17 +17,40 @@
     <button class="btn btn--ghost" type="button" id="backButton">← Back</button>
   </header>
 
+  <section class="ascii-banner" aria-hidden="true">
+    <pre class="ascii-art"><span style="--i:0">___________.__          __________.__                 __   __________              </span>
+<span style="--i:1">\\__    ___/|  |__   ____\\______   \  | _____    ____ |  | _\\______   \ _______  ___</span>
+<span style="--i:2">  |    |   |  |  \_/ __ \|    |  _/  | \__  \ _/ ___\|  |/ /|    |  _//  _ \  \/  /</span>
+<span style="--i:3">  |    |   |   Y  \  ___/|    |   \  |__/ __ \\  \___|    < |    |   (  <_> >    < </span>
+<span style="--i:4">  |____|   |___|  /\\___  >______  /____(____  /\\___  >__|_ \|______  /\\____/__\\/\\_ \</span>
+<span style="--i:5">                \/     \/       \/          \/     \/     \/       \/            \/</span></pre>
+    <p class="ascii-subtitle">signal locked · vidking harnessed · blackbox encrypted</p>
+  </section>
+
   <main class="player-layout">
     <div class="player-header">
       <h1 class="player-title" id="title">Loading…</h1>
     </div>
 
+    <div class="player-status" role="status">
+      <div class="loading-indicator" id="loadingIndicator" hidden aria-hidden="true">
+        <span class="loading-box" aria-hidden="true"></span>
+        <span class="loading-text" id="loadingText">Buffering signal…</span>
+      </div>
+      <p id="playerStatus">Spooling up mirrors…</p>
+    </div>
+    <p class="player-mirrors" id="mirrorList"></p>
+
     <div class="player-frame" id="embedWrap" hidden>
       <iframe id="embedFrame" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen
-        sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-fullscreen"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups allow-top-navigation-by-user-activation"
         referrerpolicy="strict-origin"
       ></iframe>
     </div>
+
+    <a class="btn btn--ghost btn--inline" id="externalButton" href="#" target="_blank" rel="noreferrer noopener" hidden>
+      Pop out this mirror
+    </a>
 
     <div class="player-frame" id="videoWrap" hidden>
       <video id="fallbackPlayer" controls preload="metadata"></video>
@@ -45,10 +68,17 @@
     </section>
   </main>
 
-  <footer class="site-footer">Streaming securely with sandboxed embeds and TMDB metadata.</footer>
+  <footer class="site-footer">Independent node · sandboxed embeds · TMDB metadata pipeline.</footer>
 
   <script type="module">
-    import { movieEmbed, tvEmbed } from "/providers/blackbox.js";
+    import {
+      movieEmbed,
+      tvEmbed,
+      movieEmbedCandidates,
+      tvEmbedCandidates,
+      registerWorkingBase,
+      availableMirrors,
+    } from "/providers/blackbox.js";
 
     const IMG_BASE = "https://image.tmdb.org/t/p/w500";
     const TMDB_BASE = "https://api.themoviedb.org/3";
@@ -62,13 +92,19 @@
     const embedFrame = document.getElementById("embedFrame");
     const videoWrap = document.getElementById("videoWrap");
     const fallbackPlayer = document.getElementById("fallbackPlayer");
+    const statusEl = document.getElementById("playerStatus");
+    const statusWrap = document.querySelector(".player-status");
+    const loadingIndicator = document.getElementById("loadingIndicator");
+    const loadingText = document.getElementById("loadingText");
+    const mirrorListEl = document.getElementById("mirrorList");
+    const externalButton = document.getElementById("externalButton");
 
     const url = new URL(window.location.href);
     const params = url.searchParams;
     const mode = params.get("mode") || params.get("vk");
     const tmdb = params.get("tmdb");
-    const explicitTitle = params.get("title") || "The Blackbox Player";
-    const color = (params.get("color") || "5ad7ff").replace(/^#/, "");
+    const explicitTitle = params.get("title") || "BLACKBOX Player";
+    const color = (params.get("color") || "14ff9f").replace(/^#/, "");
     const autoPlay = params.get("autoPlay") === "true";
     const poster = params.get("poster");
     const nextEpisode = params.get("nextEpisode") === "true";
@@ -150,28 +186,277 @@
       }
     }
 
+    let mirrorHosts = [];
+
+    const DEFAULT_LOADING_LABEL = "Buffering signal…";
+
+    const embedState = {
+      list: [],
+      pointer: 0,
+      timer: null,
+      current: null,
+    };
+
+    function setStatus(message) {
+      if (!statusEl) return;
+      statusEl.textContent = message;
+    }
+
+    function setLoading(isLoading, label = DEFAULT_LOADING_LABEL) {
+      if (!loadingIndicator) return;
+      if (loadingText && label) {
+        loadingText.textContent = label;
+      }
+      if (isLoading) {
+        loadingIndicator.hidden = false;
+        loadingIndicator.removeAttribute("aria-hidden");
+        if (statusWrap) statusWrap.classList.add("is-loading");
+      } else {
+        loadingIndicator.hidden = true;
+        loadingIndicator.setAttribute("aria-hidden", "true");
+        if (statusWrap) statusWrap.classList.remove("is-loading");
+        if (loadingText) loadingText.textContent = DEFAULT_LOADING_LABEL;
+      }
+    }
+
+    function hostFromCandidate(candidate) {
+      if (!candidate) return null;
+      try {
+        return new URL(candidate.base || candidate.url).host;
+      } catch {
+        return candidate.base || candidate.url || null;
+      }
+    }
+
+    function setMirrorList(candidates) {
+      if (!mirrorListEl) return;
+      const hosts = Array.from(new Set(candidates.map(hostFromCandidate).filter(Boolean)));
+      mirrorHosts = hosts;
+      if (!hosts.length) {
+        mirrorListEl.textContent = "";
+        return;
+      }
+      mirrorListEl.textContent = `mirrors online: ${hosts.join(" · ")}`;
+    }
+
+    function updateMirrorIndicator(currentHost, attempt, total) {
+      if (!mirrorListEl) return;
+      const hosts = mirrorHosts.slice();
+      if (currentHost) {
+        const lowerCurrent = currentHost.toLowerCase();
+        if (hosts.length) {
+          const decorated = hosts.map((host) => {
+            if (host && host.toLowerCase() === lowerCurrent) {
+              return `[${host}]`;
+            }
+            return host;
+          });
+          const prefix = total > 1 ? `mirror ${attempt}/${total}` : "mirror";
+          mirrorListEl.textContent = `${prefix}: ${decorated.join(" · ")}`;
+          return;
+        }
+        const prefix = total > 1 ? `mirror ${attempt}/${total}` : "mirror";
+        mirrorListEl.textContent = `${prefix}: ${currentHost}`;
+        return;
+      }
+      if (hosts.length) {
+        mirrorListEl.textContent = `mirrors online: ${hosts.join(" · ")}`;
+      } else {
+        mirrorListEl.textContent = "";
+      }
+    }
+
+    function resetTimer() {
+      if (embedState.timer) {
+        clearTimeout(embedState.timer);
+        embedState.timer = null;
+      }
+    }
+
+    function dedupeCandidates(list) {
+      const seen = new Set();
+      return list.filter((candidate) => {
+        if (!candidate || !candidate.url) return false;
+        const key = candidate.url;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function tryNextEmbed(reason) {
+      resetTimer();
+      if (reason) {
+        setStatus(reason);
+      }
+
+      const index = embedState.pointer++;
+      const candidate = embedState.list[index];
+      if (!candidate) {
+        setLoading(false);
+        setStatus("All mirrors stalled. Trying raw stream fallback if provided…");
+        if (externalButton) {
+          externalButton.hidden = true;
+          externalButton.removeAttribute("href");
+        }
+        embedFrame.removeAttribute("src");
+        embedWrap.hidden = true;
+        updateMirrorIndicator(null, 0, 0);
+        openFallback(true);
+        return;
+      }
+
+      const attempt = index + 1;
+      const total = embedState.list.length;
+      embedState.current = { ...candidate, attempt, total };
+
+      const loadingMessage = total > 1 ? `Dialing mirror ${attempt} of ${total}…` : "Dialing primary mirror…";
+      setLoading(true, loadingMessage);
+
+      if (externalButton) {
+        externalButton.hidden = false;
+        externalButton.href = candidate.url;
+        externalButton.textContent = `Pop out mirror ${attempt}`;
+      }
+
+      embedWrap.hidden = false;
+      embedFrame.removeAttribute("src");
+      window.requestAnimationFrame(() => {
+        embedFrame.src = candidate.url;
+      });
+      setStatus(`Connecting to mirror ${attempt} of ${total}…`);
+      updateMirrorIndicator(hostFromCandidate(candidate), attempt, total);
+
+      embedState.timer = window.setTimeout(() => {
+        if (embedState.current && embedState.current.attempt === attempt) {
+          tryNextEmbed(`Mirror ${attempt} timed out. Jumping to the next source…`);
+        }
+      }, 6500);
+    }
+
+    function onEmbedLoad() {
+      if (!embedState.current) return;
+      resetTimer();
+      setLoading(false);
+      registerWorkingBase(embedState.current.base);
+      const { attempt, total } = embedState.current;
+      updateMirrorIndicator(hostFromCandidate(embedState.current), attempt, total);
+      setStatus(
+        total > 1
+          ? `Stream locked on mirror ${attempt}. Tap play if it doesn’t auto-start.`
+          : "Stream locked in. Tap play if it doesn’t auto-start.",
+      );
+    }
+
+    function onEmbedError() {
+      if (!embedState.current) return;
+      const { attempt } = embedState.current;
+      tryNextEmbed(`Mirror ${attempt} blocked or crashed. Cycling onward…`);
+    }
+
+    if (embedFrame) {
+      embedFrame.addEventListener("load", onEmbedLoad);
+      embedFrame.addEventListener("error", onEmbedError);
+    }
+
+    if (fallbackPlayer) {
+      const settle = () => setLoading(false);
+      fallbackPlayer.addEventListener("waiting", () => setLoading(true, "Buffering fallback stream…"));
+      fallbackPlayer.addEventListener("seeking", () => setLoading(true, "Tuning fallback stream…"));
+      fallbackPlayer.addEventListener("canplay", settle);
+      fallbackPlayer.addEventListener("playing", settle);
+      fallbackPlayer.addEventListener("ended", settle);
+      fallbackPlayer.addEventListener("error", () => {
+        setStatus("Fallback stream failed to load.");
+        setLoading(false);
+      });
+    }
+
     function openMovie() {
       if (!tmdb) return;
-      const src = movieEmbed(tmdb, { color, autoPlay, poster });
-      embedFrame.src = src;
-      embedWrap.hidden = false;
+      const candidates = dedupeCandidates(
+        movieEmbedCandidates(tmdb, { color, autoPlay, poster }),
+      );
+      if (!candidates.length) {
+        const src = movieEmbed(tmdb, { color, autoPlay, poster });
+        if (src) {
+          setLoading(true, "Dialing primary mirror…");
+          embedFrame.src = src;
+          embedWrap.hidden = false;
+          if (externalButton) {
+            externalButton.hidden = false;
+            externalButton.href = src;
+            externalButton.textContent = "Pop out mirror";
+          }
+          setStatus("Running on the primary mirror. If it stalls, refresh to rotate sources.");
+        }
+        return;
+      }
+      embedState.list = candidates;
+      embedState.pointer = 0;
+      setMirrorList(candidates);
+      tryNextEmbed();
     }
 
     function openSeries() {
       if (!tmdb) return;
       const season = parseInt(params.get("season") || "1", 10) || 1;
       const episode = parseInt(params.get("episode") || "1", 10) || 1;
-      const src = tvEmbed(tmdb, season, episode, { color, autoPlay, nextEpisode, episodeSelector, poster });
-      embedFrame.src = src;
-      embedWrap.hidden = false;
+      const candidates = dedupeCandidates(
+        tvEmbedCandidates(tmdb, season, episode, {
+          color,
+          autoPlay,
+          nextEpisode,
+          episodeSelector,
+          poster,
+        }),
+      );
+      if (!candidates.length) {
+        const src = tvEmbed(tmdb, season, episode, {
+          color,
+          autoPlay,
+          nextEpisode,
+          episodeSelector,
+          poster,
+        });
+        if (src) {
+          setLoading(true, "Dialing primary mirror…");
+          embedFrame.src = src;
+          embedWrap.hidden = false;
+          if (externalButton) {
+            externalButton.hidden = false;
+            externalButton.href = src;
+            externalButton.textContent = "Pop out mirror";
+          }
+          setStatus("Running on the primary mirror. If it stalls, refresh to rotate sources.");
+        }
+        return;
+      }
+      embedState.list = candidates;
+      embedState.pointer = 0;
+      setMirrorList(candidates);
+      tryNextEmbed();
     }
 
-    function openFallback() {
+    function openFallback(isAuto = false) {
       const src = params.get("src");
-      if (!src) return;
+      if (!src) {
+        if (!isAuto) {
+          setStatus("No stream configured. Use a launch link to start playback.");
+        }
+        setLoading(false);
+        return false;
+      }
+      setLoading(true, "Buffering fallback stream…");
       fallbackPlayer.src = `/video/${encodeURIComponent(src)}`;
       videoWrap.hidden = false;
+      if (isAuto) {
+        setStatus("Fallback stream loaded. Playback uses direct piping from our edge.");
+      }
+      return true;
     }
+
+    setLoading(true, "Calibrating The Blackbox signal…");
 
     if (mode === "movie") {
       openMovie();
@@ -182,6 +467,27 @@
     }
 
     populateDetails();
+
+    if (mirrorListEl && !mirrorListEl.textContent) {
+      const mirrors = availableMirrors();
+      if (mirrors && mirrors.length) {
+        try {
+          const hosts = mirrors
+            .map((entry) => {
+              try {
+                return new URL(entry).host;
+              } catch {
+                return null;
+              }
+            })
+            .filter(Boolean);
+          if (hosts.length) {
+            mirrorHosts = hosts;
+            mirrorListEl.textContent = `mirrors online: ${hosts.join(" · ")}`;
+          }
+        } catch {}
+      }
+    }
 
     if (backButton) {
       backButton.addEventListener("click", () => {
