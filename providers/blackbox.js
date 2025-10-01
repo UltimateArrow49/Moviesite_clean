@@ -2,29 +2,13 @@ const VIDKING_ORIGIN = "https://www.vidking.net";
 
 function coerceBoolean(value) {
   if (value === undefined || value === null) return undefined;
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value !== 0;
-  }
   if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
     if (!normalized) return undefined;
-    if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
-    if (["false", "0", "no", "n", "off"].includes(normalized)) return false;
-    return undefined;
+    if (["false", "0", "no"].includes(normalized)) return false;
+    return true;
   }
   return Boolean(value);
-}
-
-function setFlag(params, names, value) {
-  const stringValue = value == null ? null : String(value);
-  for (const name of names) {
-    if (stringValue == null) {
-      params.delete(name);
-    } else {
-      params.set(name, stringValue);
-    }
-  }
 }
 
 function applyOptions(url, options = {}) {
@@ -33,17 +17,19 @@ function applyOptions(url, options = {}) {
   if (color) params.set("color", String(color).replace(/^#/, ""));
 
   const autoplayOption = coerceBoolean(options.autoplay ?? options.autoPlay);
-  if (autoplayOption !== undefined) {
-    const flag = autoplayOption ? "1" : "0";
-    setFlag(params, ["autoplay", "autoPlay"], flag);
+  if (
+    autoplayOption === true ||
+    (autoplayOption === undefined && options.autoplay !== false && options.autoPlay !== false)
+  ) {
+    params.set("autoplay", "true");
   }
 
   if (coerceBoolean(options.nextEpisode ?? options.nextepisode)) {
-    setFlag(params, ["nextepisode", "nextEpisode"], "1");
+    params.set("nextepisode", "true");
   }
 
   if (coerceBoolean(options.episodeSelector ?? options.episodeselector)) {
-    setFlag(params, ["episodeselector", "episodeSelector"], "1");
+    params.set("episodeselector", "true");
   }
 
   if (typeof options.progress === "number" && Number.isFinite(options.progress)) {
