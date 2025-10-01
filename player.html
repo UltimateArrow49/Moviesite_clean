@@ -462,31 +462,35 @@
       const target = embedFrame.contentWindow;
       for (const payload of payloads) {
         if (payload == null) continue;
-        if (typeof payload === "object") {
-          let delivered = false;
-          try {
-            target.postMessage(payload, "*");
-            delivered = true;
-          } catch (error) {
-            console.warn("Unable to post structured message to Vidking backend", error);
-          }
-          if (!delivered) {
-            try {
-              target.postMessage(JSON.stringify(payload), "*");
-              delivered = true;
-            } catch (error) {
-              console.warn("Unable to serialize message for Vidking backend", error);
-            }
-          }
-          if (!delivered) {
-            console.warn("Dropped Vidking command", payload);
-          }
-        } else {
+        if (typeof payload === "string") {
           try {
             target.postMessage(payload, "*");
           } catch (error) {
             console.warn("Unable to post message to Vidking backend", error);
           }
+          continue;
+        }
+
+        if (typeof payload === "object") {
+          let serialized;
+          try {
+            serialized = JSON.stringify(payload);
+          } catch (error) {
+            console.warn("Unable to serialize Vidking command", error);
+            continue;
+          }
+          try {
+            target.postMessage(serialized, "*");
+          } catch (error) {
+            console.warn("Unable to post serialized message to Vidking backend", error);
+          }
+          continue;
+        }
+
+        try {
+          target.postMessage(String(payload), "*");
+        } catch (error) {
+          console.warn("Unable to post coerced message to Vidking backend", error);
         }
       }
     }
@@ -494,17 +498,11 @@
     function sendVidkingSeek(seconds) {
       if (!Number.isFinite(seconds) || seconds < 0) return;
       const value = Math.max(0, Math.floor(seconds));
-      postVidkingMessages([
-        { type: "PLAYER_COMMAND", command: "seek", value },
-        { type: "PLAYER_COMMAND", action: "seek", position: value },
-      ]);
+      postVidkingMessages([{ type: "PLAYER_COMMAND", command: "seek", value }]);
     }
 
     function sendVidkingPlay() {
-      postVidkingMessages([
-        { type: "PLAYER_COMMAND", command: "play" },
-        { type: "PLAYER_COMMAND", action: "play" },
-      ]);
+      postVidkingMessages([{ type: "PLAYER_COMMAND", command: "play" }]);
     }
 
     function cancelResumeMonitor() {
