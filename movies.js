@@ -112,11 +112,11 @@ function formatFacts(movie) {
 
 function buildPlayerUrl(movie) {
   const params = new URLSearchParams({
-    vk: "movie",
+    mode: "movie",
     tmdb: String(movie.id),
     title: movie.title || movie.original_title || "Movie",
     autoPlay: "true",
-    color: "5ad7ff",
+    color: "14ff9f",
   });
   if (movie.poster_path) params.set("poster", IMG_BASE + movie.poster_path);
   return `/player.html?${params.toString()}`;
@@ -127,7 +127,7 @@ function createCard(movie) {
   card.className = "card";
   card.href = buildPlayerUrl(movie);
   card.dataset.tmdbId = movie.id;
-  card.setAttribute("aria-label", `Play ${movie.title || movie.name || "movie"} on VidKing`);
+  card.setAttribute("aria-label", `Play ${movie.title || movie.name || "movie"} in The Blackbox player`);
 
   const thumb = document.createElement("div");
   thumb.className = "thumb";
@@ -168,7 +168,7 @@ function createCard(movie) {
 
   const actions = document.createElement("div");
   actions.className = "actions";
-  actions.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>Play on VidKing</span>';
+  actions.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>Play in The Blackbox</span>';
   meta.appendChild(actions);
 
   card.appendChild(thumb);

@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Movies · VidKing Cinema</title>
+  <title>Movies · The Blackbox</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="/style.css?v=2">
+  <link rel="stylesheet" href="/style.css?v=3">
 </head>
 <body class="app-shell">
   <header class="topbar">
-    <a class="brand" href="/">VidKing Cinema</a>
+    <a class="brand" href="/">The Blackbox</a>
     <nav>
       <a href="/movies.html" class="btn btn--primary">Movies</a>
       <a href="/series.html" class="btn">Series</a>
@@ -19,6 +19,17 @@
       <input id="search" type="search" placeholder="Search movies" autocomplete="off" spellcheck="false" aria-label="Search movies">
     </div>
   </header>
+
+  <section class="ascii-banner" aria-hidden="true">
+    <pre>
+██████╗ ██╗      █████╗  ██████╗██╗  ██╗██████╗  ██████╗ ██╗  ██╗
+██╔══██╗██║     ██╔══██╗██╔════╝██║ ██╔╝██╔══██╗██╔═══██╗██║ ██╔╝
+██║  ██║██║     ███████║██║     █████╔╝ ██████╔╝██║   ██║█████╔╝ 
+██║  ██║██║     ██╔══██║██║     ██╔═██╗ ██╔══██╗██║   ██║██╔═██╗ 
+██████╔╝███████╗██║  ██║╚██████╗██║  ██╗██║  ██║╚██████╔╝██║  ██╗
+╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝</pre>
+    <p class="ascii-subtitle">feature vault · rapid filters · player-ready links</p>
+  </section>
 
   <main class="content">
     <div class="toolbar">
@@ -43,7 +54,7 @@
     </div>
   </main>
 
-  <footer class="site-footer">Results powered by TMDB · Streams by VidKing.</footer>
+  <footer class="site-footer">Results powered by TMDB · Streams routed through rotating Blackbox mirrors.</footer>
 
   <script src="/movies.js?v=4" type="module"></script>
 </body>
