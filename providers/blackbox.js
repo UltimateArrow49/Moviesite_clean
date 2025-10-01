@@ -1,10 +1,12 @@
 const DEFAULT_HOSTS = [
+  "https://www.vidking.net",
+  "https://vidsrc.to",
+  "https://vidsrc.cc",
+  "https://vidsrc.me",
+  "https://vidsrc.vip",
+  "https://vidsrc.net",
   "https://theblackbox.ddns.net",
   "https://theblackbox.watch",
-  "https://vidsrc.net",
-  "https://vidsrc.me",
-  "https://vidsrc.cc",
-  "https://vidsrc.vip",
 ];
 
 const STORAGE_KEY = "blackbox:last-mirror";
@@ -64,7 +66,7 @@ function collectHosts() {
 
 function applyOptions(url, options = {}) {
   const params = url.searchParams;
-  if (options.autoPlay) params.set("autoplay", "1");
+  if (options.autoPlay) params.set("autoplay", "true");
   if (options.color) params.set("color", String(options.color).replace(/^#/, ""));
   if (options.nextEpisode) params.set("next", "1");
   if (options.episodeSelector) params.set("selector", "1");
@@ -127,8 +129,22 @@ export function movieEmbedCandidates(tmdbId, options = {}) {
       return null;
     }
 
-    const url = new URL("embed/movie", base);
-    url.searchParams.set("tmdb", String(tmdbId));
+    let url;
+    try {
+      const baseUrl = new URL(base);
+      const host = baseUrl.hostname.toLowerCase();
+      if (host.includes("vidking")) {
+        baseUrl.pathname = `${baseUrl.pathname}embed/movie/${tmdbId}`;
+        baseUrl.search = "";
+        url = baseUrl;
+      } else {
+        url = new URL("embed/movie", base);
+        url.searchParams.set("tmdb", String(tmdbId));
+      }
+    } catch (error) {
+      console.warn("Unable to prepare movie embed for", base, error);
+      return null;
+    }
     return toCandidate(applyOptions(url, options), base);
   }).flat();
 }
@@ -148,10 +164,24 @@ export function tvEmbedCandidates(tmdbId, season, episode, options = {}) {
       return null;
     }
 
-    const url = new URL("embed/tv", base);
-    url.searchParams.set("tmdb", String(tmdbId));
-    url.searchParams.set("season", String(season));
-    url.searchParams.set("episode", String(episode));
+    let url;
+    try {
+      const baseUrl = new URL(base);
+      const host = baseUrl.hostname.toLowerCase();
+      if (host.includes("vidking")) {
+        baseUrl.pathname = `${baseUrl.pathname}embed/tv/${tmdbId}/${season}/${episode}`;
+        baseUrl.search = "";
+        url = baseUrl;
+      } else {
+        url = new URL("embed/tv", base);
+        url.searchParams.set("tmdb", String(tmdbId));
+        url.searchParams.set("season", String(season));
+        url.searchParams.set("episode", String(episode));
+      }
+    } catch (error) {
+      console.warn("Unable to prepare series embed for", base, error);
+      return null;
+    }
     return toCandidate(applyOptions(url, options), base);
   }).flat();
 }

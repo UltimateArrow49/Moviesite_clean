@@ -230,8 +230,36 @@ a {
   font-size: clamp(0.42rem, 1vw, 0.64rem);
   line-height: 1.25;
   letter-spacing: 0.08em;
-  color: rgba(var(--accent-rgb), 0.85);
-  text-shadow: 0 0 14px rgba(var(--accent-rgb), 0.35);
+  color: rgba(var(--accent-rgb), 0.78);
+  text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.42);
+  display: inline-block;
+}
+
+.ascii-banner pre span {
+  display: block;
+  transform-origin: center;
+  animation: asciiWave 5.6s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.28s);
+}
+
+.ascii-banner pre span:nth-child(odd) {
+  animation-direction: alternate;
+}
+
+.ascii-banner pre span:nth-child(even) {
+  animation-direction: alternate-reverse;
+}
+
+@keyframes asciiWave {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.95;
+  }
+  50% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
 }
 
 .ascii-subtitle {
