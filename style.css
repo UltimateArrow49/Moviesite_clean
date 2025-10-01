@@ -85,6 +85,24 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.side-ad {
+  position: fixed;
+  top: 80px;
+  width: 160px;
+  height: auto;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+}
+
+.side-ad.left {
+  left: 0;
+}
+
+.side-ad.right {
+  right: 0;
+}
+
 a {
   color: inherit;
 }
@@ -941,3 +959,17 @@ footer.site-footer {
     justify-content: flex-start;
   }
 }
+
+@media (max-width: 1279px) {
+  .side-ad {
+    display: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  body {
+    padding-left: 180px;
+    padding-right: 180px;
+  }
+}
+
