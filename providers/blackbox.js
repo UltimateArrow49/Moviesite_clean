@@ -17,11 +17,8 @@ function applyOptions(url, options = {}) {
   if (color) params.set("color", String(color).replace(/^#/, ""));
 
   const autoplayOption = coerceBoolean(options.autoplay ?? options.autoPlay);
-  if (
-    autoplayOption === true ||
-    (autoplayOption === undefined && options.autoplay !== false && options.autoPlay !== false)
-  ) {
-    params.set("autoplay", "true");
+  if (autoplayOption !== undefined) {
+    params.set("autoplay", autoplayOption ? "true" : "false");
   }
 
   if (coerceBoolean(options.nextEpisode ?? options.nextepisode)) {
