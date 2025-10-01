@@ -1,13 +1,15 @@
 const DEFAULT_HOSTS = [
   "https://theblackbox.watch",
-  "http://theblackbox.ddns.net",
   "https://theblackbox.to",
-  "https://www.vidking.net",
+  "https://theblackbox.app",
+  "https://theblackbox.io",
+  "https://theblackbox.ddns.net",
   "https://vidsrc.net",
   "https://vidsrc.to",
   "https://vidsrc.cc",
   "https://vidsrc.me",
   "https://vidsrc.vip",
+  "https://www.vidking.net",
 ];
 
 const STORAGE_KEY = "blackbox:last-mirror";
@@ -62,7 +64,11 @@ function collectHosts() {
 
   hosts.push(...DEFAULT_HOSTS);
 
-  return unique(hosts.map(sanitiseBase));
+  const sanitised = hosts.map(sanitiseBase).filter(Boolean);
+  if (typeof window !== "undefined" && window.location?.protocol === "https:") {
+    return unique(sanitised.filter((base) => !base.startsWith("http://")));
+  }
+  return unique(sanitised);
 }
 
 function applyOptions(url, options = {}) {
@@ -134,9 +140,11 @@ export function movieEmbedCandidates(tmdbId, options = {}) {
     try {
       const baseUrl = new URL(base);
       const host = baseUrl.hostname.toLowerCase();
+      const pathBase = baseUrl.pathname.endsWith("/") ? baseUrl.pathname.slice(0, -1) : baseUrl.pathname;
       if (host.includes("vidking")) {
-        baseUrl.pathname = `${baseUrl.pathname}embed/movie/${tmdbId}`;
+        baseUrl.pathname = `${pathBase}/embed/movie`;
         baseUrl.search = "";
+        baseUrl.searchParams.set("tmdb", String(tmdbId));
         url = baseUrl;
       } else {
         url = new URL("embed/movie", base);
@@ -169,9 +177,13 @@ export function tvEmbedCandidates(tmdbId, season, episode, options = {}) {
     try {
       const baseUrl = new URL(base);
       const host = baseUrl.hostname.toLowerCase();
+      const pathBase = baseUrl.pathname.endsWith("/") ? baseUrl.pathname.slice(0, -1) : baseUrl.pathname;
       if (host.includes("vidking")) {
-        baseUrl.pathname = `${baseUrl.pathname}embed/tv/${tmdbId}/${season}/${episode}`;
+        baseUrl.pathname = `${pathBase}/embed/tv`;
         baseUrl.search = "";
+        baseUrl.searchParams.set("tmdb", String(tmdbId));
+        baseUrl.searchParams.set("season", String(season));
+        baseUrl.searchParams.set("episode", String(episode));
         url = baseUrl;
       } else {
         url = new URL("embed/tv", base);
@@ -198,7 +210,7 @@ export function tvEmbed(tmdbId, season, episode, options = {}) {
 }
 
 export function registerWorkingBase(base) {
-  rememberHost(base);
+  rememberHost(sanitiseBase(base));
 }
 
 export function resolveEmbedBase() {
