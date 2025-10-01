@@ -69,7 +69,7 @@
     import {
       movieEmbed,
       tvEmbed,
-    } from "/providers/blackbox.js";
+    } from "/providers/blackbox.js?v=5";
 
     const TMDB_BASE = "https://api.themoviedb.org/3";
     const TMDB_API_KEY = "b7d1cc8554fcab41e013428e2dc418de";
@@ -85,41 +85,183 @@
     const loadingIndicator = document.getElementById("loadingIndicator");
     const loadingText = document.getElementById("loadingText");
 
+    function toOptionalBoolean(value) {
+      if (value === undefined || value === null) return null;
+      if (typeof value === "boolean") return value;
+      if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (!normalized) return null;
+        if (["false", "0", "no"].includes(normalized)) return false;
+        if (["true", "1", "yes"].includes(normalized)) return true;
+        return null;
+      }
+      return Boolean(value);
+    }
+
+    function parseProgressSeconds(value) {
+      if (value === undefined || value === null) return null;
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric) || numeric <= 0) return null;
+      return Math.floor(numeric);
+    }
+
+    function parseLegacyVidkingUrl(raw) {
+      if (!raw || typeof raw !== "string") return null;
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      if (!/^https?:\/\//i.test(trimmed)) return null;
+      let parsed;
+      try {
+        parsed = new URL(trimmed);
+      } catch (error) {
+        console.warn("Ignoring malformed legacy Vidking URL", raw, error);
+        return null;
+      }
+
+      if (!parsed.hostname || !parsed.hostname.toLowerCase().endsWith("theblackbox.watch")) {
+        return null;
+      }
+
+      const segments = parsed.pathname.split("/").filter(Boolean);
+      if (segments[0] !== "embed") return null;
+
+      const type = segments[1];
+      if (type !== "movie" && type !== "tv") return null;
+
+      const tmdb = parsed.searchParams.get("tmdb") || segments[2] || null;
+      if (!tmdb) return null;
+
+      const options = {};
+      const color = parsed.searchParams.get("color") || parsed.searchParams.get("colour");
+      if (color) options.color = color;
+
+      const autoplay = toOptionalBoolean(
+        parsed.searchParams.get("autoplay") ?? parsed.searchParams.get("autoPlay"),
+      );
+      if (autoplay != null) options.autoplay = autoplay;
+
+      const nextEpisode = toOptionalBoolean(
+        parsed.searchParams.get("nextepisode") ?? parsed.searchParams.get("nextEpisode"),
+      );
+      if (nextEpisode != null) options.nextEpisode = nextEpisode;
+
+      const episodeSelector = toOptionalBoolean(
+        parsed.searchParams.get("episodeselector") ?? parsed.searchParams.get("episodeSelector"),
+      );
+      if (episodeSelector != null) options.episodeSelector = episodeSelector;
+
+      const progress = parseProgressSeconds(parsed.searchParams.get("progress"));
+      if (progress != null) options.progress = progress;
+
+      if (type === "movie") {
+        return { mode: "movie", tmdb, options };
+      }
+
+      const season = parsed.searchParams.get("season") ?? segments[2] ?? null;
+      const episode = parsed.searchParams.get("episode") ?? segments[3] ?? null;
+
+      return {
+        mode: "tv",
+        tmdb,
+        season,
+        episode,
+        options,
+      };
+    }
+
     const url = new URL(window.location.href);
     const params = url.searchParams;
-    const mode = params.get("mode") || params.get("vk");
-    const tmdb = params.get("tmdb");
+    const rawVk = params.get("vk");
+    let mode = params.get("mode");
+    if (!mode && rawVk && !/^https?:/i.test(rawVk.trim())) {
+      mode = rawVk;
+    }
+
+    let tmdb = params.get("tmdb");
     const explicitTitle = params.get("title") || "BLACKBOX Player";
-    const color = (params.get("color") || "14ff9f").replace(/^#/, "");
+
+    const rawColorParam = params.get("color") || params.get("colour");
+    let color = (rawColorParam || "14ff9f").replace(/^#/, "");
 
     const autoplayParam = params.has("autoplay") ? params.get("autoplay") : params.get("autoPlay");
-    const autoPlay =
-      autoplayParam == null
-        ? true
-        : !["false", "0", "no"].includes(String(autoplayParam).trim().toLowerCase());
+    let autoPlay = (() => {
+      const parsed = toOptionalBoolean(autoplayParam);
+      if (parsed == null) return true;
+      return parsed;
+    })();
 
     const nextEpisodeParam = params.has("nextepisode")
       ? params.get("nextepisode")
       : params.get("nextEpisode");
-    const nextEpisode =
-      nextEpisodeParam != null && ["true", "1", "yes"].includes(String(nextEpisodeParam).trim().toLowerCase());
+    let nextEpisode = toOptionalBoolean(nextEpisodeParam) ?? false;
 
     const episodeSelectorParam = params.has("episodeselector")
       ? params.get("episodeselector")
       : params.get("episodeSelector");
-    const episodeSelector =
-      episodeSelectorParam != null &&
-      ["true", "1", "yes"].includes(String(episodeSelectorParam).trim().toLowerCase());
+    let episodeSelector = toOptionalBoolean(episodeSelectorParam) ?? false;
 
-    const seasonNumber = mode === "tv" ? parseInt(params.get("season") || "1", 10) || 1 : null;
-    const episodeNumber = mode === "tv" ? parseInt(params.get("episode") || "1", 10) || 1 : null;
+    const seasonParam = params.get("season");
+    const episodeParam = params.get("episode");
+
+    let seasonNumber = seasonParam != null ? parseInt(seasonParam, 10) : null;
+    if (!Number.isFinite(seasonNumber) || seasonNumber <= 0) seasonNumber = null;
+
+    let episodeNumber = episodeParam != null ? parseInt(episodeParam, 10) : null;
+    if (!Number.isFinite(episodeNumber) || episodeNumber <= 0) episodeNumber = null;
+
     const progressParam = params.get("progress");
-    const forcedProgressSeconds = (() => {
-      if (progressParam == null) return null;
-      const numeric = Number(progressParam);
-      if (!Number.isFinite(numeric) || numeric <= 0) return null;
-      return Math.floor(numeric);
+    let forcedProgressSeconds = parseProgressSeconds(progressParam);
+
+    const legacyEmbedCandidate = (() => {
+      if (rawVk && /^https?:/i.test(rawVk.trim())) return rawVk.trim();
+      const embedParam = params.get("embed") || params.get("vkembed") || params.get("legacy");
+      if (embedParam && /^https?:/i.test(embedParam.trim())) return embedParam.trim();
+      return null;
     })();
+
+    const legacyConfig = parseLegacyVidkingUrl(legacyEmbedCandidate);
+
+    if (legacyConfig) {
+      if (!mode || mode === rawVk) mode = legacyConfig.mode;
+      if (!tmdb) tmdb = legacyConfig.tmdb;
+
+      if (legacyConfig.mode === "tv") {
+        if (legacyConfig.season != null) {
+          const parsedSeason = parseInt(legacyConfig.season, 10);
+          if (Number.isFinite(parsedSeason) && parsedSeason > 0) seasonNumber = parsedSeason;
+        }
+        if (legacyConfig.episode != null) {
+          const parsedEpisode = parseInt(legacyConfig.episode, 10);
+          if (Number.isFinite(parsedEpisode) && parsedEpisode > 0) episodeNumber = parsedEpisode;
+        }
+      }
+
+      if (legacyConfig.options) {
+        if (legacyConfig.options.color && !rawColorParam) {
+          color = String(legacyConfig.options.color).replace(/^#/, "");
+        }
+        if (legacyConfig.options.autoplay != null && autoplayParam == null) {
+          autoPlay = Boolean(legacyConfig.options.autoplay);
+        }
+        if (legacyConfig.options.nextEpisode != null && nextEpisodeParam == null) {
+          nextEpisode = Boolean(legacyConfig.options.nextEpisode);
+        }
+        if (legacyConfig.options.episodeSelector != null && episodeSelectorParam == null) {
+          episodeSelector = Boolean(legacyConfig.options.episodeSelector);
+        }
+        if (legacyConfig.options.progress != null && progressParam == null) {
+          forcedProgressSeconds = legacyConfig.options.progress;
+        }
+      }
+    }
+
+    if (mode !== "tv") {
+      seasonNumber = null;
+      episodeNumber = null;
+    } else {
+      if (seasonNumber == null) seasonNumber = 1;
+      if (episodeNumber == null) episodeNumber = 1;
+    }
 
     document.title = `${explicitTitle} · The Blackbox Player`;
     titleEl.textContent = explicitTitle;
@@ -310,19 +452,6 @@
     function toFiniteNumber(value) {
       const num = Number(value);
       return Number.isFinite(num) ? num : null;
-    }
-
-    function toOptionalBoolean(value) {
-      if (value === undefined || value === null) return null;
-      if (typeof value === "boolean") return value;
-      if (typeof value === "string") {
-        const normalized = value.trim().toLowerCase();
-        if (!normalized) return null;
-        if (["false", "0", "no"].includes(normalized)) return false;
-        if (["true", "1", "yes"].includes(normalized)) return true;
-        return null;
-      }
-      return Boolean(value);
     }
 
     function normalizeVidkingPayload(raw) {
