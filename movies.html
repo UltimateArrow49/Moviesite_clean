@@ -2,21 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Movies</title>
+  <title>Movies · VidKing Cinema</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="/style.css?v=1">
+  <link rel="stylesheet" href="/style.css?v=2">
 </head>
-<body>
+<body class="app-shell">
   <header class="topbar">
-    <a href="/" class="btn">Home</a>
-    <h1>Movies</h1>
-    <div class="right">
-      <input id="search" type="search" placeholder="Search movies..." autocomplete="off" spellcheck="false" aria-label="Search movies" />
+    <a class="brand" href="/">VidKing Cinema</a>
+    <nav>
+      <a href="/movies.html" class="btn btn--primary">Movies</a>
+      <a href="/series.html" class="btn">Series</a>
+      <a href="/player.html" class="btn btn--ghost">Player</a>
+    </nav>
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
+      <input id="search" type="search" placeholder="Search movies" autocomplete="off" spellcheck="false" aria-label="Search movies">
     </div>
   </header>
-  <main>
-    <div id="grid" class="grid"></div>
+
+  <main class="content">
+    <div class="toolbar">
+      <h2 id="viewTitle">Trending movies</h2>
+      <div class="chip-group" id="filters" role="tablist" aria-label="Movie filters">
+        <button class="chip is-active" data-filter="trending" type="button">Trending</button>
+        <button class="chip" data-filter="popular" type="button">Popular</button>
+        <button class="chip" data-filter="top_rated" type="button">Top rated</button>
+        <button class="chip" data-filter="now_playing" type="button">Now playing</button>
+        <button class="chip" data-filter="upcoming" type="button">Upcoming</button>
+      </div>
+    </div>
+
+    <p class="status-line" id="statusLine">Loading titles…</p>
+
+    <div id="grid" class="grid" aria-live="polite" aria-busy="false"></div>
+
+    <div class="pager">
+      <button id="prevPage" class="btn" type="button">Previous</button>
+      <div class="page-indicator" id="pageIndicator">Page 1</div>
+      <button id="nextPage" class="btn" type="button">Next</button>
+    </div>
   </main>
-  <script src="/movies.js?v=3"></script>
+
+  <footer class="site-footer">Results powered by TMDB · Streams by VidKing.</footer>
+
+  <script src="/movies.js?v=4" type="module"></script>
 </body>
 </html>

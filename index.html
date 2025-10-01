@@ -1,59 +1,70 @@
-<!doctype html><html lang="en"><head>
-  <meta charset="utf-8"><title>Home</title>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>VidKing Cinema</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="/style.css?v=1">
-  <style>
-    :root{--accent:#8ef}
-    body{display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;text-align:center;background:#0b1220;color:#e8f1ff}
-    h1{font-size:28px;margin-bottom:20px}
-    .home-buttons{display:flex;gap:20px}
-    .home-buttons a{display:inline-block;padding:16px 28px;font-size:20px;font-weight:700;background:var(--accent);color:#001428;text-decoration:none;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.25);transition:transform .15s ease}
-    .home-buttons a:hover{transform:translateY(-2px)}
-  </style>
-<script src="/config.js"></script>
-
+  <link rel="stylesheet" href="/style.css?v=2">
+  <script src="/config.js"></script>
   <script>window.CLOUD_BASE="";</script>
   <script src="/cloud.js"></script>
-
-</head><body>
-<header class="topbar" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0">
-  <nav style="display:flex;gap:8px;align-items:center">
-    <a id="navHome"   class="btn" href="/">Home</a>
-    <a href="/movies.html" class="btn">Movies</a>
-    <a href="/series.html" class="btn">Series</a>
-  </nav>
-
-    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-      
-    </div>
+</head>
+<body class="app-shell">
+  <header class="topbar">
+    <a class="brand" href="/">VidKing Cinema</a>
+    <nav>
+      <a href="/movies.html" class="btn">Movies</a>
+      <a href="/series.html" class="btn">Series</a>
+      <a href="/player.html" class="btn btn--ghost">Launch Player</a>
+    </nav>
+    <form class="search-bar" action="/movies.html" method="get">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
+      <input type="search" name="q" placeholder="Search the catalog" aria-label="Search the catalog">
+    </form>
   </header>
 
-<div style="padding:12px"><a href="/arena/" class="btn" style="padding:8px 12px;border:1px solid #2a3a4a;border-radius:8px;color:#9bb4cc;text-decoration:none">Play FPS Arena</a></div>
-  <h1>Welcome</h1>
-  
+  <main>
+    <section class="hero hero--split">
+      <div>
+        <h1>Binge-worthy stories, premium VidKing playback.</h1>
+        <p>Discover a hand-curated universe of blockbusters, fresh releases, and the latest series drops. VidKing Cinema wraps the TMDB catalog in a lightning-fast interface with instant streaming using the official VidKing player.</p>
+        <div class="chip-group" style="margin-top:28px">
+          <a class="btn btn--primary" href="/movies.html">Browse movies</a>
+          <a class="btn" href="/series.html">Dive into series</a>
+          <a class="btn btn--ghost" href="/player.html">Open standalone player</a>
+        </div>
+      </div>
+      <div class="glass-panel stack">
+        <h2 class="section-title">Why you'll love it</h2>
+        <div class="meta-tags">
+          <span class="meta-tag">🚀 Instant TMDB sync</span>
+          <span class="meta-tag">🎬 VidKing embeds with no pop-ups</span>
+          <span class="meta-tag">🔍 Smart search &amp; paging</span>
+          <span class="meta-tag">📺 Season &amp; episode explorer</span>
+        </div>
+        <p class="muted">Start with what's trending, then deep dive with powerful filtering. Every title loads with rich artwork, ratings, and streamlined access to the VidKing player.</p>
+        <div class="chip-group">
+          <span class="chip is-active">Trending releases</span>
+          <span class="chip">Dynamic pagination</span>
+          <span class="chip">Premium dark UI</span>
+        </div>
+      </div>
+    </section>
 
-<script>/* fix-media-src-to-cloud */
-document.addEventListener('DOMContentLoaded', function () {
-  try {
-    document.querySelectorAll('a[href*="?src="]').forEach(function(a){
-      try {
-        var u = new URL(a.getAttribute('href'), location.origin);
-        var src = u.searchParams.get('src');
-        if(!src) return;
-        if(!/^https?:\/\//i.test(src)){
-          // strip any  prefix and map via cloud
-          src = src.replace(/^\/+media\//,'');
-          if (typeof window.mediaUrl === 'function') {
-            src = window.mediaUrl(src);
-          } else {
-            src = '' + encodeURIComponent(src);
-          }
-        }
-        u.searchParams.set('src', src);
-        a.setAttribute('href', u.toString());
-      } catch(e){ /* noop */ }
-    });
-  } catch(e){ /* noop */ }
-});
-</script>
-</body></html>
+    <section class="content">
+      <div class="glass-panel stack">
+        <h2 class="section-title">Quick launch</h2>
+        <div class="chip-group">
+          <a class="btn" href="/movies.html#popular">Popular today</a>
+          <a class="btn" href="/movies.html#top">Top rated</a>
+          <a class="btn" href="/series.html#airing">Now airing</a>
+          <a class="btn" href="/series.html#top">Fan favorites</a>
+        </div>
+        <p class="muted">Use the shortcuts above or jump straight into the dedicated tabs. Every view keeps your filters, search keywords, and page position so you can explore thousands of titles without slowing the server.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">Powered by TMDB data &amp; the VidKing streaming platform.</footer>
+</body>
+</html>
