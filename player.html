@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>VidKing Player</title>
+  <title>The Blackbox Player</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="/style.css?v=2">
 </head>
 <body class="app-shell">
   <header class="topbar">
-    <a class="brand" href="/">VidKing Cinema</a>
+    <a class="brand" href="/">The Blackbox</a>
     <nav>
       <a href="/movies.html" class="btn">Movies</a>
       <a href="/series.html" class="btn">Series</a>
@@ -22,8 +22,8 @@
       <h1 class="player-title" id="title">Loading…</h1>
     </div>
 
-    <div class="player-frame" id="vkWrap" hidden>
-      <iframe id="vkFrame" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen
+    <div class="player-frame" id="embedWrap" hidden>
+      <iframe id="embedFrame" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen
         sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-fullscreen"
         referrerpolicy="strict-origin"
       ></iframe>
@@ -45,10 +45,10 @@
     </section>
   </main>
 
-  <footer class="site-footer">Streaming securely with sandboxed VidKing embeds and TMDB metadata.</footer>
+  <footer class="site-footer">Streaming securely with sandboxed embeds and TMDB metadata.</footer>
 
   <script type="module">
-    import { vkMovieEmbed, vkTvEmbed } from "/providers/vidking.js";
+    import { movieEmbed, tvEmbed } from "/providers/blackbox.js";
 
     const IMG_BASE = "https://image.tmdb.org/t/p/w500";
     const TMDB_BASE = "https://api.themoviedb.org/3";
@@ -58,22 +58,23 @@
     const overviewEl = document.getElementById("overview");
     const factsEl = document.getElementById("facts");
     const backButton = document.getElementById("backButton");
-    const vkWrap = document.getElementById("vkWrap");
-    const vkFrame = document.getElementById("vkFrame");
+    const embedWrap = document.getElementById("embedWrap");
+    const embedFrame = document.getElementById("embedFrame");
     const videoWrap = document.getElementById("videoWrap");
     const fallbackPlayer = document.getElementById("fallbackPlayer");
 
     const url = new URL(window.location.href);
     const params = url.searchParams;
-    const mode = params.get("vk");
+    const mode = params.get("mode") || params.get("vk");
     const tmdb = params.get("tmdb");
-    const explicitTitle = params.get("title") || "VidKing Player";
+    const explicitTitle = params.get("title") || "The Blackbox Player";
     const color = (params.get("color") || "5ad7ff").replace(/^#/, "");
     const autoPlay = params.get("autoPlay") === "true";
+    const poster = params.get("poster");
     const nextEpisode = params.get("nextEpisode") === "true";
     const episodeSelector = params.get("episodeSelector") === "true";
 
-    document.title = `${explicitTitle} · VidKing Player`;
+    document.title = `${explicitTitle} · The Blackbox Player`;
     titleEl.textContent = explicitTitle;
 
     function buildFacts(tags = []) {
@@ -151,18 +152,18 @@
 
     function openMovie() {
       if (!tmdb) return;
-      const src = vkMovieEmbed(tmdb, { color, autoPlay });
-      vkFrame.src = src;
-      vkWrap.hidden = false;
+      const src = movieEmbed(tmdb, { color, autoPlay, poster });
+      embedFrame.src = src;
+      embedWrap.hidden = false;
     }
 
     function openSeries() {
       if (!tmdb) return;
       const season = parseInt(params.get("season") || "1", 10) || 1;
       const episode = parseInt(params.get("episode") || "1", 10) || 1;
-      const src = vkTvEmbed(tmdb, season, episode, { color, autoPlay, nextEpisode, episodeSelector });
-      vkFrame.src = src;
-      vkWrap.hidden = false;
+      const src = tvEmbed(tmdb, season, episode, { color, autoPlay, nextEpisode, episodeSelector, poster });
+      embedFrame.src = src;
+      embedWrap.hidden = false;
     }
 
     function openFallback() {
