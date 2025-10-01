@@ -93,7 +93,7 @@ function setSearchNavigation(show) {
 
 function buildPlayerUrl(seasonNumber, episodeNumber, title) {
   const params = new URLSearchParams({
-    vk: "tv",
+    mode: "tv",
     tmdb: String(state.showId),
     season: String(seasonNumber),
     episode: String(episodeNumber),
@@ -249,7 +249,7 @@ function filterSeasons(seasons) {
 function populateShow(show) {
   state.show = show;
   showTitleEl.textContent = show.name || show.original_name || "Series";
-  document.title = `${showTitleEl.textContent} · Series Detail`;
+  document.title = `${showTitleEl.textContent} · The Blackbox`;
   renderPoster(show);
   renderTags(show);
   renderGenres(show);
