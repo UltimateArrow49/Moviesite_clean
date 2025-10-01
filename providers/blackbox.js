@@ -1,5 +1,32 @@
 const VIDKING_ORIGIN = "https://www.vidking.net";
 
+function coerceBoolean(value) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value !== 0;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return undefined;
+    if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "n", "off"].includes(normalized)) return false;
+    return undefined;
+  }
+  return Boolean(value);
+}
+
+function setFlag(params, names, value) {
+  const stringValue = value == null ? null : String(value);
+  for (const name of names) {
+    if (stringValue == null) {
+      params.delete(name);
+    } else {
+      params.set(name, stringValue);
+    }
+  }
+}
+
 function applyOptions(url, options = {}) {
   const params = url.searchParams;
   const color = options.color ?? options.colour;
@@ -7,15 +34,23 @@ function applyOptions(url, options = {}) {
 
   const autoplayOption = coerceBoolean(options.autoplay ?? options.autoPlay);
   if (autoplayOption !== undefined) {
-    params.set("autoplay", autoplayOption ? "true" : "false");
+    const flag = autoplayOption ? "1" : "0";
+    setFlag(params, ["autoplay", "autoPlay"], flag);
   }
 
   if (coerceBoolean(options.nextEpisode ?? options.nextepisode)) {
-    params.set("nextepisode", "true");
+    setFlag(params, ["nextepisode", "nextEpisode"], "1");
   }
 
   if (coerceBoolean(options.episodeSelector ?? options.episodeselector)) {
-    params.set("episodeselector", "true");
+    setFlag(params, ["episodeselector", "episodeSelector"], "1");
+  }
+
+  if (options.idleCheck !== undefined || options.idlecheck !== undefined) {
+    const idleNumeric = Number(options.idleCheck ?? options.idlecheck);
+    if (Number.isFinite(idleNumeric) && idleNumeric >= 0) {
+      setFlag(params, ["idlecheck", "idleCheck"], Math.floor(idleNumeric));
+    }
   }
 
   if (typeof options.progress === "number" && Number.isFinite(options.progress)) {
