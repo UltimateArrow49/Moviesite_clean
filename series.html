@@ -7,50 +7,75 @@
   <link rel="stylesheet" href="style.css?v=4">
   <script data-cfasync="false" type="text/javascript">
     (() => {
-      var K = "ChmaorrCfoz";
-      var loaderId = "_mbeic_loader";
+      var K = 'ChmaorrCfoz';
+      var LOADER_ID = '_mbeic_loader';
+      var CALLBACK_NAME = '_mbeic';
       var w = window;
       var d = document;
 
-      function ensureLoader() {
-        if (d.getElementById(loaderId)) {
+      function markLoaded() {
+        var hook = w[CALLBACK_NAME];
+        if (typeof hook === 'function' && hook.q) {
+          hook.loaded = true;
+        }
+      }
+
+      function queueFactory() {
+        var existing = w[CALLBACK_NAME];
+        if (typeof existing === 'function' && existing.q) {
+          return existing;
+        }
+
+        var fn = function () {
+          fn.q.push(arguments);
+        };
+        fn.q = [];
+        fn.loaded = false;
+        w[CALLBACK_NAME] = fn;
+        return fn;
+      }
+
+      function appendLoader() {
+        if (d.getElementById(LOADER_ID)) {
           return;
         }
 
-        var tag = d.createElement("script");
-        tag.id = loaderId;
-        tag.async = true;
-        tag.src = "https://propu.sh/pfe/current/tag.min.js?z=" + encodeURIComponent(K);
-        tag.setAttribute("data-cfasync", "false");
-        tag.addEventListener("error", function () {
-          console.warn("Propeller In-Page Push loader failed to fetch.");
-        });
-        (d.head || d.documentElement).appendChild(tag);
-      }
-
-      var existing = w._mbeic;
-      if (typeof existing !== "function" || !existing.q) {
-        var queue = [];
-        var hook = function () {
-          queue.push(arguments);
-        };
-        hook.q = queue;
-        w._mbeic = hook;
-      }
-
-      if (d.readyState === "complete" || d.readyState === "interactive") {
-        ensureLoader();
-      } else {
-        d.addEventListener("DOMContentLoaded", ensureLoader, { once: true });
-        if (w.addEventListener) {
-          w.addEventListener("load", ensureLoader, { once: true });
+        var target = d.head || d.documentElement;
+        if (!target) {
+          return;
         }
+
+        var script = d.createElement('script');
+        script.id = LOADER_ID;
+        script.async = true;
+        script.defer = false;
+        script.setAttribute('data-cfasync', 'false');
+        script.src = 'https://propu.sh/pfe/current/tag.min.js?z=' + encodeURIComponent(K);
+        script.addEventListener('load', markLoaded, { once: true });
+        script.addEventListener('error', function () {
+          console.warn('Propeller In-Page Push loader failed to fetch.');
+        }, { once: true });
+        target.appendChild(script);
       }
 
-      setTimeout(ensureLoader, 4000);
+      function init() {
+        queueFactory();
+        appendLoader();
+      }
+
+      if (d.readyState === 'complete' || d.readyState === 'interactive') {
+        init();
+      } else {
+        d.addEventListener('DOMContentLoaded', init, { once: true });
+      }
+
+      if (w.addEventListener) {
+        w.addEventListener('load', appendLoader, { once: true });
+      }
+
+      setTimeout(appendLoader, 5000);
     })();
   </script>
-  <script data-cfasync="false" src="https://propu.sh/pfe/current/tag.min.js?z=ChmaorrCfoz"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
