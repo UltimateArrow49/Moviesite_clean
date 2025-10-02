@@ -17,7 +17,47 @@
   </div>
   <header class="topbar">
     <a class="brand" href="/" aria-label="theblackbox home">
-      <img src="/assets/theblackbox-logo.svg" alt="theblackbox">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 88" role="img" aria-labelledby="logoTitle logoDesc">
+        <title id="logoTitle">theblackbox logotype</title>
+        <desc id="logoDesc">A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
+        <defs>
+          <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#12ffb0" stop-opacity="0.8" />
+            <stop offset="100%" stop-color="#0b6751" stop-opacity="0.95" />
+          </linearGradient>
+          <linearGradient id="word" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#f7fff9" />
+            <stop offset="55%" stop-color="#8efed9" />
+            <stop offset="100%" stop-color="#12ffb0" />
+          </linearGradient>
+          <radialGradient id="pulse" cx="50%" cy="50%" r="65%">
+            <stop offset="0%" stop-color="#14ff9f" stop-opacity="0.3" />
+            <stop offset="100%" stop-color="#14ff9f" stop-opacity="0" />
+          </radialGradient>
+          <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <g filter="url(#glow)">
+          <rect x="12" y="14" width="64" height="60" rx="18" fill="#050a08" stroke="#14ff9f" stroke-opacity="0.45" stroke-width="2.5" />
+          <rect x="22" y="24" width="44" height="40" rx="12" fill="url(#panel)" />
+          <path d="M33 52h6v-20h-6zm11 12h6V32h-6zm11-20h6v20h-6z" fill="#0f362c" opacity="0.6" />
+          <path d="M33 48h6V32h-6zm11 12h6V28h-6zm11-16h6v16h-6z" fill="#12ffb0" />
+          <circle cx="54" cy="44" r="22" fill="url(#pulse)" />
+        </g>
+
+        <text x="96" y="48" fill="url(#word)" font-family="'Inter','Segoe UI',sans-serif" font-weight="700" font-size="32" letter-spacing="0.08em">
+          theblackbox
+        </text>
+        <text x="96" y="68" fill="rgba(220,247,236,0.7)" font-family="'Inter','Segoe UI',sans-serif" font-size="12" letter-spacing="0.36em">
+          SHADOW SIGNAL
+        </text>
+      </svg>
     </a>
     <nav>
       <a href="/movies.html" class="btn">Movies</a>
@@ -32,7 +72,47 @@
 
   <section class="hero hero--banner">
     <div class="hero-logo-card glass-panel">
-      <img class="hero-logo-img" src="/assets/theblackbox-logo.svg" alt="theblackbox logomark">
+      <svg class="hero-logo-img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 88" role="img" aria-labelledby="seriesHeroLogoTitle seriesHeroLogoDesc">
+        <title id="seriesHeroLogoTitle">theblackbox logotype</title>
+        <desc id="seriesHeroLogoDesc">A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
+        <defs>
+          <linearGradient id="series-hero-panel" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#12ffb0" stop-opacity="0.8" />
+            <stop offset="100%" stop-color="#0b6751" stop-opacity="0.95" />
+          </linearGradient>
+          <linearGradient id="series-hero-word" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#f7fff9" />
+            <stop offset="55%" stop-color="#8efed9" />
+            <stop offset="100%" stop-color="#12ffb0" />
+          </linearGradient>
+          <radialGradient id="series-hero-pulse" cx="50%" cy="50%" r="65%">
+            <stop offset="0%" stop-color="#14ff9f" stop-opacity="0.3" />
+            <stop offset="100%" stop-color="#14ff9f" stop-opacity="0" />
+          </radialGradient>
+          <filter id="series-hero-glow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <g filter="url(#series-hero-glow)">
+          <rect x="12" y="14" width="64" height="60" rx="18" fill="#050a08" stroke="#14ff9f" stroke-opacity="0.45" stroke-width="2.5" />
+          <rect x="22" y="24" width="44" height="40" rx="12" fill="url(#series-hero-panel)" />
+          <path d="M33 52h6v-20h-6zm11 12h6V32h-6zm11-20h6v20h-6z" fill="#0f362c" opacity="0.6" />
+          <path d="M33 48h6V32h-6zm11 12h6V28h-6zm11-16h6v16h-6z" fill="#12ffb0" />
+          <circle cx="54" cy="44" r="22" fill="url(#series-hero-pulse)" />
+        </g>
+
+        <text x="96" y="48" fill="url(#series-hero-word)" font-family="'Inter','Segoe UI',sans-serif" font-weight="700" font-size="32" letter-spacing="0.08em">
+          theblackbox
+        </text>
+        <text x="96" y="68" fill="rgba(220,247,236,0.7)" font-family="'Inter','Segoe UI',sans-serif" font-size="12" letter-spacing="0.36em">
+          SHADOW SIGNAL
+        </text>
+      </svg>
       <p class="hero-logo-caption">Season scanner</p>
     </div>
     <div class="hero-text">
