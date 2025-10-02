@@ -4,19 +4,47 @@
   <meta charset="utf-8">
   <title>Movies · theblackbox</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="/style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=4">
+  <script data-cfasync="false">
+    (function (w, d, zs, src) {
+      w.PropellerMultiTag = w.PropellerMultiTag || { zones: [], loaded: false };
+      var zoneList = w.PropellerMultiTag.zones;
+      for (var i = 0; i < zs.length; i += 1) {
+        if (zoneList.indexOf(zs[i]) === -1) {
+          zoneList.push(zs[i]);
+        }
+      }
+      if (!w.PropellerMultiTag.loaded) {
+        var s = d.createElement("script");
+        s.async = true;
+        s.src = src;
+        s.setAttribute("data-cfasync", "false");
+        (d.head || d.documentElement).appendChild(s);
+        w.PropellerMultiTag.loaded = true;
+      }
+    })(window, document, [9961316, 9961315], "https://propu.sh/pfe/current/tag.min.js");
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker
+          .register("sw.js")
+          .catch(function (error) {
+            console.error("Service worker registration failed:", error);
+          });
+      });
+    }
+  </script>
 </head>
 <body class="app-shell">
   <div class="side-ad left">
-    <ins class="monetag-slot" data-zone="9961312"></ins>
-    <script src="https://fpyf8.com/88/tag.min.js" data-zone="9961312" async data-cfasync="false"></script>
+    <ins class="propeller-slot" data-zone="9961316"></ins>
   </div>
   <div class="side-ad right">
-    <ins class="monetag-slot" data-zone="9961312"></ins>
-    <script src="https://fpyf8.com/88/tag.min.js" data-zone="9961312" async data-cfasync="false"></script>
+    <ins class="propeller-slot" data-zone="9961315"></ins>
   </div>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="theblackbox home">
+    <a class="brand" href="index.html" aria-label="theblackbox home">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 88" role="img" aria-labelledby="logoTitle logoDesc">
         <title id="logoTitle">theblackbox logotype</title>
         <desc id="logoDesc">A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
@@ -60,9 +88,9 @@
       </svg>
     </a>
     <nav>
-      <a href="/movies.html" class="btn btn--primary">Movies</a>
-      <a href="/series.html" class="btn">Series</a>
-      <a href="/player.html" class="btn btn--ghost">Vidking backend</a>
+      <a href="movies.html" class="btn btn--primary">Movies</a>
+      <a href="series.html" class="btn">Series</a>
+      <a href="player.html" class="btn btn--ghost">Vidking backend</a>
     </nav>
     <div class="search-bar">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
@@ -71,54 +99,10 @@
   </header>
 
   <section class="hero hero--banner">
-    <div class="hero-logo-card glass-panel">
-      <svg class="hero-logo-img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 88" role="img" aria-labelledby="moviesHeroLogoTitle moviesHeroLogoDesc">
-        <title id="moviesHeroLogoTitle">theblackbox logotype</title>
-        <desc id="moviesHeroLogoDesc">A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
-        <defs>
-          <linearGradient id="movies-hero-panel" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#12ffb0" stop-opacity="0.8" />
-            <stop offset="100%" stop-color="#0b6751" stop-opacity="0.95" />
-          </linearGradient>
-          <linearGradient id="movies-hero-word" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#f7fff9" />
-            <stop offset="55%" stop-color="#8efed9" />
-            <stop offset="100%" stop-color="#12ffb0" />
-          </linearGradient>
-          <radialGradient id="movies-hero-pulse" cx="50%" cy="50%" r="65%">
-            <stop offset="0%" stop-color="#14ff9f" stop-opacity="0.3" />
-            <stop offset="100%" stop-color="#14ff9f" stop-opacity="0" />
-          </radialGradient>
-          <filter id="movies-hero-glow" x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur stdDeviation="6" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        <g filter="url(#movies-hero-glow)">
-          <rect x="12" y="14" width="64" height="60" rx="18" fill="#050a08" stroke="#14ff9f" stroke-opacity="0.45" stroke-width="2.5" />
-          <rect x="22" y="24" width="44" height="40" rx="12" fill="url(#movies-hero-panel)" />
-          <path d="M33 52h6v-20h-6zm11 12h6V32h-6zm11-20h6v20h-6z" fill="#0f362c" opacity="0.6" />
-          <path d="M33 48h6V32h-6zm11 12h6V28h-6zm11-16h6v16h-6z" fill="#12ffb0" />
-          <circle cx="54" cy="44" r="22" fill="url(#movies-hero-pulse)" />
-        </g>
-
-        <text x="96" y="48" fill="url(#movies-hero-word)" font-family="'Inter','Segoe UI',sans-serif" font-weight="700" font-size="32" letter-spacing="0.08em">
-          theblackbox
-        </text>
-        <text x="96" y="68" fill="rgba(220,247,236,0.7)" font-family="'Inter','Segoe UI',sans-serif" font-size="12" letter-spacing="0.36em">
-          SHADOW SIGNAL
-        </text>
-      </svg>
-      <p class="hero-logo-caption">Feature vault calibration</p>
-    </div>
     <div class="hero-text">
-      <p class="hero-kicker">Movies channel</p>
-      <h1>Films running through theblackbox signal.</h1>
-      <p class="hero-subtitle">theblackbox interface keeps the TMDB-fed artwork intact while Vidking handles the heavy lifting.</p>
+      <p class="hero-kicker">Movie inventory</p>
+      <h1>Feature films curated for measurable engagement.</h1>
+      <p class="hero-subtitle">Leverage TMDB-backed insights and the Vidking pipeline to keep premium movie placements delivering across every campaign flight.</p>
     </div>
   </section>
 
@@ -147,7 +131,7 @@
 
   <footer class="site-footer">Results powered by TMDB · Streams delivered through the Vidking backend.</footer>
 
-  <script src="/background_motion.js" type="module"></script>
-  <script src="/movies.js?v=4" type="module"></script>
+  <script src="background_motion.js" type="module"></script>
+  <script src="movies.js?v=4" type="module"></script>
 </body>
 </html>
