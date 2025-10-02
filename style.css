@@ -104,10 +104,14 @@ body {
   right: 0;
 }
 
-.monetag-slot {
+.propeller-slot {
   display: block;
   width: 160px;
-  min-height: 600px;
+  min-height: 0;
+}
+
+.propeller-slot:empty {
+  display: none;
 }
 
 a {
@@ -141,7 +145,7 @@ a {
   text-decoration: none;
 }
 
-.topbar .brand img {
+.topbar .brand svg {
   height: 40px;
   width: auto;
   display: block;
@@ -149,8 +153,8 @@ a {
   transition: filter 0.25s ease;
 }
 
-.topbar .brand:hover img,
-.topbar .brand:focus-visible img {
+.topbar .brand:hover svg,
+.topbar .brand:focus-visible svg {
   filter: drop-shadow(0 0 32px rgba(var(--accent-rgb), 0.48));
 }
 
@@ -320,31 +324,6 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-}
-
-.hero-logo-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  min-height: 220px;
-  text-align: center;
-}
-
-.hero-logo-img {
-  width: min(100%, 320px);
-  height: auto;
-  display: block;
-}
-
-.hero-logo-caption {
-  margin: 0;
-  max-width: none;
-  font-size: 0.78rem;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: rgba(var(--ink-rgb), 0.52);
 }
 
 .hero--banner .hero-actions {
@@ -922,7 +901,7 @@ footer.site-footer {
     padding: 16px 20px 12px;
   }
 
-  .topbar .brand img {
+  .topbar .brand svg {
     height: 34px;
   }
 
