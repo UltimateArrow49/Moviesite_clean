@@ -91,9 +91,13 @@ body {
   width: 160px;
   height: auto;
   z-index: 9999;
-  display: flex;
+  display: none;
   justify-content: center;
   align-items: flex-start;
+}
+
+.ads-active .side-ad {
+  display: flex;
 }
 
 .side-ad.left {
@@ -957,13 +961,14 @@ footer.site-footer {
 }
 
 @media (max-width: 1279px) {
-  .side-ad {
+  .side-ad,
+  .ads-active .side-ad {
     display: none;
   }
 }
 
 @media (min-width: 1280px) {
-  body {
+  body.ads-active {
     padding-left: 180px;
     padding-right: 180px;
   }
