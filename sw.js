@@ -73,7 +73,12 @@ self.addEventListener("fetch", (event) => {
         })
         .catch((error) => {
           console.error("[ServiceWorker] Network request failed", error);
-          return caches.match(OFFLINE_FALLBACK_URL);
+
+          if (request.mode === "navigate" || request.destination === "document") {
+            return caches.match(OFFLINE_FALLBACK_URL);
+          }
+
+          return Promise.reject(error);
         });
     })
   );
