@@ -2,29 +2,94 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>BLACKBOX Player</title>
+  <title>theblackbox player · Vidking backend</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="/style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=4">
+  <script
+    data-cfasync="false"
+    src="ads/inpage-push-loader.js"
+    data-zone="ChmaorrCfoz"
+    data-hook="_mbeic"
+    data-loader-src="https://delivery.monetag.com/pfe/current/tag.min.js"
+    defer
+  ></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker
+          .register("sw.js")
+          .catch(function (error) {
+            console.error("Service worker registration failed:", error);
+          });
+      });
+    }
+  </script>
 </head>
 <body class="app-shell">
+  <div class="side-ad left">
+    <ins class="propeller-slot" data-zone="9961316"></ins>
+  </div>
+  <div class="side-ad right">
+    <ins class="propeller-slot" data-zone="9961315"></ins>
+  </div>
   <header class="topbar">
-    <a class="brand" href="/">The Blackbox</a>
+    <a class="brand" href="index.html" aria-label="theblackbox home">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 88" role="img" aria-labelledby="logoTitle logoDesc">
+        <title id="logoTitle">theblackbox logotype</title>
+        <desc id="logoDesc">A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
+        <defs>
+          <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#12ffb0" stop-opacity="0.8" />
+            <stop offset="100%" stop-color="#0b6751" stop-opacity="0.95" />
+          </linearGradient>
+          <linearGradient id="word" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#f7fff9" />
+            <stop offset="55%" stop-color="#8efed9" />
+            <stop offset="100%" stop-color="#12ffb0" />
+          </linearGradient>
+          <radialGradient id="pulse" cx="50%" cy="50%" r="65%">
+            <stop offset="0%" stop-color="#14ff9f" stop-opacity="0.3" />
+            <stop offset="100%" stop-color="#14ff9f" stop-opacity="0" />
+          </radialGradient>
+          <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <g filter="url(#glow)">
+          <rect x="12" y="14" width="64" height="60" rx="18" fill="#050a08" stroke="#14ff9f" stroke-opacity="0.45" stroke-width="2.5" />
+          <rect x="22" y="24" width="44" height="40" rx="12" fill="url(#panel)" />
+          <path d="M33 52h6v-20h-6zm11 12h6V32h-6zm11-20h6v20h-6z" fill="#0f362c" opacity="0.6" />
+          <path d="M33 48h6V32h-6zm11 12h6V28h-6zm11-16h6v16h-6z" fill="#12ffb0" />
+          <circle cx="54" cy="44" r="22" fill="url(#pulse)" />
+        </g>
+
+        <text x="96" y="48" fill="url(#word)" font-family="'Inter','Segoe UI',sans-serif" font-weight="700" font-size="32" letter-spacing="0.08em">
+          theblackbox
+        </text>
+        <text x="96" y="68" fill="rgba(220,247,236,0.7)" font-family="'Inter','Segoe UI',sans-serif" font-size="12" letter-spacing="0.36em">
+          SHADOW SIGNAL
+        </text>
+      </svg>
+    </a>
     <nav>
-      <a href="/movies.html" class="btn">Movies</a>
-      <a href="/series.html" class="btn">Series</a>
-      <a href="/player.html" class="btn btn--primary">Player</a>
+      <a href="movies.html" class="btn">Movies</a>
+      <a href="series.html" class="btn">Series</a>
+      <a href="player.html" class="btn btn--primary">Vidking backend</a>
     </nav>
     <button class="btn btn--ghost" type="button" id="backButton">← Back</button>
   </header>
 
-  <section class="ascii-banner" aria-hidden="true">
-    <pre class="ascii-art"><span style="--i:0">___________.__          __________.__                 __   __________              </span>
-<span style="--i:1">\\__    ___/|  |__   ____\\______   \  | _____    ____ |  | _\\______   \ _______  ___</span>
-<span style="--i:2">  |    |   |  |  \_/ __ \|    |  _/  | \__  \ _/ ___\|  |/ /|    |  _//  _ \  \/  /</span>
-<span style="--i:3">  |    |   |   Y  \  ___/|    |   \  |__/ __ \\  \___|    < |    |   (  <_> >    < </span>
-<span style="--i:4">  |____|   |___|  /\\___  >______  /____(____  /\\___  >__|_ \|______  /\\____/__\\/\\_ \</span>
-<span style="--i:5">                \/     \/       \/          \/     \/     \/       \/            \/</span></pre>
-    <p class="ascii-subtitle">signal locked · vidking harnessed · blackbox encrypted</p>
+  <section class="hero hero--banner">
+    <div class="hero-text">
+      <p class="hero-kicker">Vidking integration</p>
+      <h1>Resilient playback engineered for sponsored streams.</h1>
+      <p class="hero-subtitle">theblackbox routes every request through the Vidking backend so campaigns stay live through buffering, device shifts, and heavy demand.</p>
+    </div>
   </section>
 
   <main class="player-layout">
@@ -35,9 +100,9 @@
     <div class="player-status" role="status">
       <div class="loading-indicator" id="loadingIndicator" hidden aria-hidden="true">
         <span class="loading-box" aria-hidden="true"></span>
-        <span class="loading-text" id="loadingText">Buffering Vidking stream…</span>
+        <span class="loading-text" id="loadingText">Buffering via the Vidking backend…</span>
       </div>
-      <p id="playerStatus">Preparing Vidking stream…</p>
+      <p id="playerStatus">Preparing playback through the Vidking backend…</p>
     </div>
 
     <div class="player-frame" id="embedWrap" hidden>
@@ -46,8 +111,9 @@
         src=""
         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
         referrerpolicy="no-referrer"
-        title="Vidking video player"
+        title="Vidking backend player"
         allowfullscreen
+        sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation"
       ></iframe>
     </div>
 
@@ -69,7 +135,7 @@
     import {
       movieEmbed,
       tvEmbed,
-    } from "/providers/blackbox.js?v=5";
+    } from "./providers/vidking.js";
 
     const TMDB_BASE = "https://api.themoviedb.org/3";
     const TMDB_API_KEY = "b7d1cc8554fcab41e013428e2dc418de";
@@ -85,185 +151,35 @@
     const loadingIndicator = document.getElementById("loadingIndicator");
     const loadingText = document.getElementById("loadingText");
 
-    function toOptionalBoolean(value) {
-      if (value === undefined || value === null) return null;
-      if (typeof value === "boolean") return value;
-      if (typeof value === "string") {
-        const normalized = value.trim().toLowerCase();
-        if (!normalized) return null;
-        if (["false", "0", "no"].includes(normalized)) return false;
-        if (["true", "1", "yes"].includes(normalized)) return true;
-        return null;
-      }
-      return Boolean(value);
-    }
-
-    function parseProgressSeconds(value) {
-      if (value === undefined || value === null) return null;
-      const numeric = Number(value);
-      if (!Number.isFinite(numeric) || numeric <= 0) return null;
-      return Math.floor(numeric);
-    }
-
-    function parseLegacyVidkingUrl(raw) {
-      if (!raw || typeof raw !== "string") return null;
-      const trimmed = raw.trim();
-      if (!trimmed) return null;
-      if (!/^https?:\/\//i.test(trimmed)) return null;
-      let parsed;
-      try {
-        parsed = new URL(trimmed);
-      } catch (error) {
-        console.warn("Ignoring malformed legacy Vidking URL", raw, error);
-        return null;
-      }
-
-      if (!parsed.hostname || !parsed.hostname.toLowerCase().endsWith("theblackbox.watch")) {
-        return null;
-      }
-
-      const segments = parsed.pathname.split("/").filter(Boolean);
-      if (segments[0] !== "embed") return null;
-
-      const type = segments[1];
-      if (type !== "movie" && type !== "tv") return null;
-
-      const tmdb = parsed.searchParams.get("tmdb") || segments[2] || null;
-      if (!tmdb) return null;
-
-      const options = {};
-      const color = parsed.searchParams.get("color") || parsed.searchParams.get("colour");
-      if (color) options.color = color;
-
-      const autoplay = toOptionalBoolean(
-        parsed.searchParams.get("autoplay") ?? parsed.searchParams.get("autoPlay"),
-      );
-      if (autoplay != null) options.autoplay = autoplay;
-
-      const nextEpisode = toOptionalBoolean(
-        parsed.searchParams.get("nextepisode") ?? parsed.searchParams.get("nextEpisode"),
-      );
-      if (nextEpisode != null) options.nextEpisode = nextEpisode;
-
-      const episodeSelector = toOptionalBoolean(
-        parsed.searchParams.get("episodeselector") ?? parsed.searchParams.get("episodeSelector"),
-      );
-      if (episodeSelector != null) options.episodeSelector = episodeSelector;
-
-      const progress = parseProgressSeconds(parsed.searchParams.get("progress"));
-      if (progress != null) options.progress = progress;
-
-      if (type === "movie") {
-        return { mode: "movie", tmdb, options };
-      }
-
-      const season = parsed.searchParams.get("season") ?? segments[2] ?? null;
-      const episode = parsed.searchParams.get("episode") ?? segments[3] ?? null;
-
-      return {
-        mode: "tv",
-        tmdb,
-        season,
-        episode,
-        options,
-      };
-    }
-
     const url = new URL(window.location.href);
     const params = url.searchParams;
-    const rawVk = params.get("vk");
-    let mode = params.get("mode");
-    if (!mode && rawVk && !/^https?:/i.test(rawVk.trim())) {
-      mode = rawVk;
-    }
-
-    let tmdb = params.get("tmdb");
-    const explicitTitle = params.get("title") || "BLACKBOX Player";
-
-    const rawColorParam = params.get("color") || params.get("colour");
-    let color = (rawColorParam || "14ff9f").replace(/^#/, "");
+    const mode = params.get("mode") || params.get("vk");
+    const tmdb = params.get("tmdb");
+    const explicitTitle = params.get("title") || "theblackbox player";
+    const color = (params.get("color") || "14ff9f").replace(/^#/, "");
 
     const autoplayParam = params.has("autoplay") ? params.get("autoplay") : params.get("autoPlay");
-    let autoPlay = (() => {
-      const parsed = toOptionalBoolean(autoplayParam);
-      if (parsed == null) return true;
-      return parsed;
-    })();
+    const autoPlay =
+      autoplayParam == null
+        ? true
+        : !["false", "0", "no"].includes(String(autoplayParam).trim().toLowerCase());
 
     const nextEpisodeParam = params.has("nextepisode")
       ? params.get("nextepisode")
       : params.get("nextEpisode");
-    let nextEpisode = toOptionalBoolean(nextEpisodeParam) ?? false;
+    const nextEpisode =
+      nextEpisodeParam != null && ["true", "1", "yes"].includes(String(nextEpisodeParam).trim().toLowerCase());
 
     const episodeSelectorParam = params.has("episodeselector")
       ? params.get("episodeselector")
       : params.get("episodeSelector");
-    let episodeSelector = toOptionalBoolean(episodeSelectorParam) ?? false;
+    const episodeSelector =
+      episodeSelectorParam != null &&
+      ["true", "1", "yes"].includes(String(episodeSelectorParam).trim().toLowerCase());
 
-    const seasonParam = params.get("season");
-    const episodeParam = params.get("episode");
-
-    let seasonNumber = seasonParam != null ? parseInt(seasonParam, 10) : null;
-    if (!Number.isFinite(seasonNumber) || seasonNumber <= 0) seasonNumber = null;
-
-    let episodeNumber = episodeParam != null ? parseInt(episodeParam, 10) : null;
-    if (!Number.isFinite(episodeNumber) || episodeNumber <= 0) episodeNumber = null;
-
-    const progressParam = params.get("progress");
-    let forcedProgressSeconds = parseProgressSeconds(progressParam);
-
-    const legacyEmbedCandidate = (() => {
-      if (rawVk && /^https?:/i.test(rawVk.trim())) return rawVk.trim();
-      const embedParam = params.get("embed") || params.get("vkembed") || params.get("legacy");
-      if (embedParam && /^https?:/i.test(embedParam.trim())) return embedParam.trim();
-      return null;
-    })();
-
-    const legacyConfig = parseLegacyVidkingUrl(legacyEmbedCandidate);
-
-    if (legacyConfig) {
-      if (!mode || mode === rawVk) mode = legacyConfig.mode;
-      if (!tmdb) tmdb = legacyConfig.tmdb;
-
-      if (legacyConfig.mode === "tv") {
-        if (legacyConfig.season != null) {
-          const parsedSeason = parseInt(legacyConfig.season, 10);
-          if (Number.isFinite(parsedSeason) && parsedSeason > 0) seasonNumber = parsedSeason;
-        }
-        if (legacyConfig.episode != null) {
-          const parsedEpisode = parseInt(legacyConfig.episode, 10);
-          if (Number.isFinite(parsedEpisode) && parsedEpisode > 0) episodeNumber = parsedEpisode;
-        }
-      }
-
-      if (legacyConfig.options) {
-        if (legacyConfig.options.color && !rawColorParam) {
-          color = String(legacyConfig.options.color).replace(/^#/, "");
-        }
-        if (legacyConfig.options.autoplay != null && autoplayParam == null) {
-          autoPlay = Boolean(legacyConfig.options.autoplay);
-        }
-        if (legacyConfig.options.nextEpisode != null && nextEpisodeParam == null) {
-          nextEpisode = Boolean(legacyConfig.options.nextEpisode);
-        }
-        if (legacyConfig.options.episodeSelector != null && episodeSelectorParam == null) {
-          episodeSelector = Boolean(legacyConfig.options.episodeSelector);
-        }
-        if (legacyConfig.options.progress != null && progressParam == null) {
-          forcedProgressSeconds = legacyConfig.options.progress;
-        }
-      }
-    }
-
-    if (mode !== "tv") {
-      seasonNumber = null;
-      episodeNumber = null;
-    } else {
-      if (seasonNumber == null) seasonNumber = 1;
-      if (episodeNumber == null) episodeNumber = 1;
-    }
-
-    document.title = `${explicitTitle} · The Blackbox Player`;
+    const seasonNumber = mode === "tv" ? parseInt(params.get("season") || "1", 10) || 1 : null;
+    const episodeNumber = mode === "tv" ? parseInt(params.get("episode") || "1", 10) || 1 : null;
+    document.title = `${explicitTitle} · theblackbox (Vidking backend)`;
     titleEl.textContent = explicitTitle;
 
     function buildFacts(tags = []) {
@@ -339,7 +255,7 @@
       }
     }
 
-    const DEFAULT_LOADING_LABEL = "Buffering Vidking stream…";
+    const DEFAULT_LOADING_LABEL = "Buffering via the Vidking backend…";
 
     function setStatus(message) {
       if (!statusEl) return;
@@ -363,80 +279,6 @@
       }
     }
 
-    const PROGRESS_STORAGE_KEY = "vidking_progress_v1";
-    const MAX_PROGRESS_ENTRIES = 150;
-
-    function buildProgressKey() {
-      if (!tmdb) return "";
-      if (mode === "tv") {
-        const s = seasonNumber != null ? seasonNumber : 1;
-        const e = episodeNumber != null ? episodeNumber : 1;
-        return `tv:${tmdb}:${s}:${e}`;
-      }
-      return `movie:${tmdb}`;
-    }
-
-    function safeParseProgress(raw) {
-      if (!raw) return null;
-      try {
-        return JSON.parse(raw);
-      } catch (error) {
-        console.warn("Unable to parse Vidking progress store", error);
-        return null;
-      }
-    }
-
-    function persistProgress(map) {
-      if (!map) return;
-      try {
-        const entries = Object.entries(map)
-          .filter(([, value]) => value && typeof value === "object");
-        if (entries.length > MAX_PROGRESS_ENTRIES) {
-          entries
-            .sort((a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0))
-            .slice(MAX_PROGRESS_ENTRIES)
-            .forEach(([key]) => delete map[key]);
-        }
-        localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(map));
-      } catch (error) {
-        console.warn("Unable to persist Vidking progress", error);
-      }
-    }
-
-    function readProgress(key) {
-      if (!key) return null;
-      const raw = safeParseProgress(localStorage.getItem(PROGRESS_STORAGE_KEY));
-      if (!raw || !raw[key]) return null;
-      const entry = raw[key];
-      const seconds = Number(entry.seconds);
-      if (!Number.isFinite(seconds) || seconds <= 0) return null;
-      const duration = Number(entry.duration);
-      return {
-        seconds: Math.max(0, Math.floor(seconds)),
-        duration: Number.isFinite(duration) ? Math.max(0, Math.floor(duration)) : 0,
-      };
-    }
-
-    function writeProgress(key, seconds, duration) {
-      if (!key) return;
-      if (!Number.isFinite(seconds) || seconds < 0) return;
-      const raw = safeParseProgress(localStorage.getItem(PROGRESS_STORAGE_KEY)) || {};
-      raw[key] = {
-        seconds: Math.floor(seconds),
-        duration: Number.isFinite(duration) ? Math.max(0, Math.floor(duration)) : undefined,
-        updatedAt: Date.now(),
-      };
-      persistProgress(raw);
-    }
-
-    function clearProgress(key) {
-      if (!key) return;
-      const raw = safeParseProgress(localStorage.getItem(PROGRESS_STORAGE_KEY));
-      if (!raw || !raw[key]) return;
-      delete raw[key];
-      persistProgress(raw);
-    }
-
     function formatTime(totalSeconds) {
       const seconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
       const hours = Math.floor(seconds / 3600);
@@ -452,6 +294,19 @@
     function toFiniteNumber(value) {
       const num = Number(value);
       return Number.isFinite(num) ? num : null;
+    }
+
+    function toOptionalBoolean(value) {
+      if (value === undefined || value === null) return null;
+      if (typeof value === "boolean") return value;
+      if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (!normalized) return null;
+        if (["false", "0", "no"].includes(normalized)) return false;
+        if (["true", "1", "yes"].includes(normalized)) return true;
+        return null;
+      }
+      return Boolean(value);
     }
 
     function normalizeVidkingPayload(raw) {
@@ -552,9 +407,6 @@
         event: normalizedEvent,
         currentTime:
           toFiniteNumber(details.currentTime ?? details.current_time ?? details.position ?? details.seconds ?? details.time),
-        duration: toFiniteNumber(
-          details.duration ?? details.totalDuration ?? details.length ?? details.runtime ?? details.total_time,
-        ),
         message: rawMessage,
         id,
         mediaType,
@@ -564,27 +416,98 @@
       };
     }
 
-    const playbackKey = buildProgressKey();
-    const savedProgress = forcedProgressSeconds == null ? readProgress(playbackKey) : null;
-    const resumeSeconds =
-      forcedProgressSeconds != null
-        ? forcedProgressSeconds
-        : savedProgress && typeof savedProgress.seconds === "number"
-        ? savedProgress.seconds
-        : null;
-    let lastRecordedSecond = typeof resumeSeconds === "number" ? resumeSeconds : null;
+    function postVidkingMessages(payloads = []) {
+      if (!Array.isArray(payloads) || !payloads.length) return;
+      if (!embedFrame || !embedFrame.contentWindow) return;
+      const target = embedFrame.contentWindow;
+      for (const payload of payloads) {
+        if (payload == null) continue;
+        if (typeof payload === "string") {
+          try {
+            target.postMessage(payload, "*");
+          } catch (error) {
+            console.warn("Unable to post message to Vidking backend", error);
+          }
+          continue;
+        }
 
-    if (typeof resumeSeconds === "number" && resumeSeconds > 0) {
-      const verb = forcedProgressSeconds != null ? "starting" : "resuming";
-      setStatus(`Contacting Vidking… ${verb} at ${formatTime(resumeSeconds)}.`);
+        if (typeof payload === "object") {
+          let serialized;
+          try {
+            serialized = JSON.stringify(payload);
+          } catch (error) {
+            console.warn("Unable to serialize Vidking command", error);
+            continue;
+          }
+          try {
+            target.postMessage(serialized, "*");
+          } catch (error) {
+            console.warn("Unable to post serialized message to Vidking backend", error);
+          }
+          continue;
+        }
+
+        try {
+          target.postMessage(String(payload), "*");
+        } catch (error) {
+          console.warn("Unable to post coerced message to Vidking backend", error);
+        }
+      }
+    }
+
+    function sendVidkingPlay() {
+      postVidkingMessages([{ type: "PLAYER_COMMAND", command: "play" }]);
+    }
+
+    const AUTO_RESUME_DELAY = 1200;
+    let autoResumeTimer = null;
+    let manualPauseUntil = 0;
+
+    function clearAutoResume() {
+      if (autoResumeTimer) {
+        window.clearTimeout(autoResumeTimer);
+        autoResumeTimer = null;
+      }
+    }
+
+    function scheduleAutoResume() {
+      if (!autoPlay) return;
+      if (manualPauseUntil && Date.now() < manualPauseUntil) {
+        return;
+      }
+      clearAutoResume();
+      autoResumeTimer = window.setTimeout(() => {
+        autoResumeTimer = null;
+        sendVidkingPlay();
+      }, AUTO_RESUME_DELAY);
+    }
+
+    function isDeliberatePause(payload = {}) {
+      if (!payload) return false;
+      if (payload.userInitiated === true || payload.user === true) return true;
+      if (payload.manual === true || payload.fromUser === true) return true;
+      const descriptor = String(
+        payload.reason || payload.source || payload.origin || payload.pausedBy || ""
+      ).toLowerCase();
+      if (
+        descriptor.includes("user") ||
+        descriptor.includes("manual") ||
+        descriptor.includes("intent") ||
+        descriptor.includes("button")
+      ) {
+        return true;
+      }
+      return false;
     }
 
     function loadVidkingEmbed(src) {
       if (!embedFrame || !embedWrap) return;
+      clearAutoResume();
+      manualPauseUntil = 0;
       if (!src) {
         embedFrame.removeAttribute("src");
         embedWrap.hidden = true;
-        setStatus("Unable to prepare Vidking stream. Check the launch parameters.");
+        setStatus("Unable to prepare playback through the Vidking backend. Check the launch parameters.");
         setLoading(false);
         return;
       }
@@ -594,37 +517,38 @@
       window.requestAnimationFrame(() => {
         embedFrame.src = src;
       });
-      setStatus("Connecting to Vidking…");
-      setLoading(true, "Contacting Vidking…");
+      setStatus("Connecting to the Vidking backend…");
+      setLoading(true, "Contacting Vidking backend…");
     }
 
     if (embedFrame) {
       embedFrame.addEventListener("load", () => {
-        setStatus("Vidking player loaded. Waiting for playback…");
+        setStatus("Vidking backend loaded. Waiting for playback…");
       });
       embedFrame.addEventListener("error", () => {
         setLoading(false);
-        setStatus("Vidking embed failed to load. Please refresh or try again later.");
+        setStatus("Vidking backend embed failed to load. Please refresh or try again later.");
       });
     }
 
     function openMovie() {
       if (!tmdb) {
-        setStatus("Missing TMDB identifier for Vidking playback.");
+        setStatus("Missing TMDB identifier for Vidking backend playback.");
         setLoading(false);
         return;
       }
       const src = movieEmbed(tmdb, {
         color,
         autoplay: autoPlay,
-        progress: typeof resumeSeconds === "number" ? resumeSeconds : undefined,
+        autoPlay,
+        idleCheck: 0,
       });
       loadVidkingEmbed(src);
     }
 
     function openSeries() {
       if (!tmdb) {
-        setStatus("Missing TMDB identifier for Vidking playback.");
+        setStatus("Missing TMDB identifier for Vidking backend playback.");
         setLoading(false);
         return;
       }
@@ -633,9 +557,10 @@
       const src = tvEmbed(tmdb, season, episode, {
         color,
         autoplay: autoPlay,
+        autoPlay,
         nextEpisode,
         episodeSelector,
-        progress: typeof resumeSeconds === "number" ? resumeSeconds : undefined,
+        idleCheck: 0,
       });
       loadVidkingEmbed(src);
     }
@@ -644,81 +569,66 @@
       const eventName = data.event;
       if (!eventName) return;
       const currentTime = toFiniteNumber(data.currentTime);
-      const duration = toFiniteNumber(data.duration);
 
       if (eventName === "ready") {
         setLoading(false);
-        const readyTime =
-          Number.isFinite(currentTime) && currentTime > 0
-            ? currentTime
-            : typeof resumeSeconds === "number"
-            ? resumeSeconds
-            : null;
-        if (readyTime != null && readyTime > 0) {
-          setStatus(`Vidking ready. Resume at ${formatTime(readyTime)} when you’re set.`);
-        } else {
-          setStatus("Vidking player ready. Press play to begin.");
+        setStatus("Vidking backend ready. Preparing playback…");
+        if (autoPlay) {
+          sendVidkingPlay();
         }
         return;
       }
 
       if (eventName === "buffering") {
-        setLoading(true, "Vidking buffering…");
-        setStatus("Vidking is buffering…");
+        setLoading(true, "Buffering via the Vidking backend…");
+        setStatus("Vidking backend is buffering…");
+        scheduleAutoResume();
         return;
       }
 
       if (eventName === "play") {
+        clearAutoResume();
+        manualPauseUntil = 0;
         setLoading(false);
         if (Number.isFinite(currentTime) && currentTime > 0) {
-          setStatus(`Vidking playback started at ${formatTime(currentTime)}.`);
-          if (playbackKey) {
-            lastRecordedSecond = Math.floor(currentTime);
-          }
+          setStatus(`Playback started at ${formatTime(currentTime)} via the Vidking backend.`);
         } else {
-          setStatus("Vidking playback started.");
+          setStatus("Playback started via the Vidking backend.");
         }
       } else if (eventName === "timeupdate") {
+        clearAutoResume();
         setLoading(false);
-        if (playbackKey && Number.isFinite(currentTime) && currentTime >= 0) {
-          if (lastRecordedSecond == null || Math.abs(currentTime - lastRecordedSecond) >= 5) {
-            writeProgress(playbackKey, currentTime, duration);
-            lastRecordedSecond = Math.floor(currentTime);
-          }
-        }
       } else if (eventName === "seeked") {
         if (Number.isFinite(currentTime)) {
           setStatus(`Seeking to ${formatTime(currentTime)}…`);
-          if (playbackKey) {
-            writeProgress(playbackKey, currentTime, duration);
-            lastRecordedSecond = Math.floor(currentTime);
-          }
         }
       } else if (eventName === "pause") {
+        const userPaused = isDeliberatePause(data);
+        if (userPaused) {
+          manualPauseUntil = Date.now() + 5000;
+          clearAutoResume();
+        } else {
+          scheduleAutoResume();
+        }
         if (Number.isFinite(currentTime) && currentTime > 0) {
           setStatus(`Paused at ${formatTime(currentTime)}.`);
         }
-        if (playbackKey && Number.isFinite(currentTime)) {
-          writeProgress(playbackKey, currentTime, duration);
-          lastRecordedSecond = Math.floor(currentTime);
-        }
       } else if (eventName === "ended") {
+        clearAutoResume();
+        manualPauseUntil = 0;
         setLoading(false);
         if (data.nextEpisode) {
           setStatus("Episode complete. Awaiting the next installment…");
         } else {
-          setStatus("Playback finished. Thanks for watching on Vidking.");
-        }
-        if (playbackKey) {
-          clearProgress(playbackKey);
-          lastRecordedSecond = null;
+          setStatus("Playback finished. Thanks for watching with theblackbox + Vidking backend.");
         }
       } else if (eventName === "error") {
+        clearAutoResume();
         setLoading(false);
         if (data.message) {
-          setStatus(`Vidking error: ${data.message}`);
+          setStatus(`Vidking backend error: ${data.message}`);
         } else {
-          setStatus("Vidking reported an unexpected error.");
+          setStatus("Vidking backend reported an unexpected error.");
         }
       }
     }
@@ -751,14 +661,14 @@
 
     window.addEventListener("message", handlePlayerMessage);
 
-    setLoading(true, "Contacting Vidking…");
+    setLoading(true, "Contacting Vidking backend…");
 
     if (mode === "movie") {
       openMovie();
     } else if (mode === "tv") {
       openSeries();
     } else {
-      setStatus("Provide a valid Vidking mode (movie or tv) with a TMDB id to begin playback.");
+      setStatus("Provide a valid Vidking backend mode (movie or tv) with a TMDB id to begin playback.");
       setLoading(false);
       if (embedWrap) embedWrap.hidden = true;
     }
@@ -770,7 +680,7 @@
         if (window.history.length > 1) {
           window.history.back();
         } else {
-          window.location.href = mode === "tv" ? "/series.html" : "/movies.html";
+          window.location.href = mode === "tv" ? "series.html" : "movies.html";
         }
       });
     }

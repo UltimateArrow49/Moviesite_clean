@@ -126,7 +126,10 @@ function createCard(movie) {
   card.className = "card";
   card.href = buildPlayerUrl(movie);
   card.dataset.tmdbId = movie.id;
-  card.setAttribute("aria-label", `Play ${movie.title || movie.name || "movie"} in The Blackbox player`);
+  card.setAttribute(
+    "aria-label",
+    `Stream ${movie.title || movie.name || "movie"} on theblackbox via the Vidking backend`,
+  );
 
   const thumb = document.createElement("div");
   thumb.className = "thumb";
@@ -167,7 +170,8 @@ function createCard(movie) {
 
   const actions = document.createElement("div");
   actions.className = "actions";
-  actions.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>Play in The Blackbox</span>';
+  actions.innerHTML =
+    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>Stream via Vidking backend</span>';
   meta.appendChild(actions);
 
   card.appendChild(thumb);

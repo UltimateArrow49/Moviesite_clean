@@ -2,12 +2,15 @@ const VIDKING_ORIGIN = "https://www.vidking.net";
 
 function coerceBoolean(value) {
   if (value === undefined || value === null) return undefined;
+  if (typeof value === "boolean") return value;
   if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
     if (!normalized) return undefined;
-    if (["false", "0", "no"].includes(normalized)) return false;
-    return true;
+    if (["true", "1", "yes", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "off"].includes(normalized)) return false;
+    return undefined;
   }
+  if (typeof value === "number") return value !== 0;
   return Boolean(value);
 }
 
@@ -16,17 +19,33 @@ function applyOptions(url, options = {}) {
   const color = options.color ?? options.colour;
   if (color) params.set("color", String(color).replace(/^#/, ""));
 
+  const setFlag = (names, value) => {
+    for (const name of names) {
+      params.set(name, value);
+    }
+  };
+
   const autoplayOption = coerceBoolean(options.autoplay ?? options.autoPlay);
   if (autoplayOption !== undefined) {
-    params.set("autoplay", autoplayOption ? "true" : "false");
+    const flag = autoplayOption ? "true" : "false";
+    setFlag(["autoplay", "autoPlay"], flag);
   }
 
   if (coerceBoolean(options.nextEpisode ?? options.nextepisode)) {
-    params.set("nextepisode", "true");
+    setFlag(["nextepisode", "nextEpisode"], "true");
   }
 
   if (coerceBoolean(options.episodeSelector ?? options.episodeselector)) {
-    params.set("episodeselector", "true");
+    setFlag(["episodeselector", "episodeSelector"], "true");
+  }
+
+  const idleCheck = options.idleCheck ?? options.idlecheck;
+  if (idleCheck !== undefined && idleCheck !== null) {
+    const numeric = Number(idleCheck);
+    if (Number.isFinite(numeric) && numeric >= 0) {
+      const clamped = Math.max(0, Math.floor(numeric));
+      setFlag(["idlecheck", "idleCheck"], String(clamped));
+    }
   }
 
   if (typeof options.progress === "number" && Number.isFinite(options.progress)) {
