@@ -1,18 +1,23 @@
 const CACHE_NAME = "theblackbox-static-v1";
-const PRECACHE_URLS = [
-  "/",
-  "/index.html",
-  "/style.css",
-  "/background_motion.js",
-  "/movies.html",
-  "/movies.js",
-  "/series.html",
-  "/series.js",
-  "/series_detail.html",
-  "/series_detail.js",
-  "/player.html",
-  "/open_in_player.js"
+
+const PRECACHE_PATHS = [
+  "",
+  "index.html",
+  "style.css",
+  "background_motion.js",
+  "movies.html",
+  "movies.js",
+  "series.html",
+  "series.js",
+  "series_detail.html",
+  "series_detail.js",
+  "player.html",
+  "open_in_player.js",
 ];
+
+const scopeUrl = self.registration.scope;
+const PRECACHE_URLS = PRECACHE_PATHS.map((path) => new URL(path, scopeUrl).toString());
+const OFFLINE_FALLBACK_URL = new URL("index.html", scopeUrl).toString();
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -68,7 +73,7 @@ self.addEventListener("fetch", (event) => {
         })
         .catch((error) => {
           console.error("[ServiceWorker] Network request failed", error);
-          return caches.match("/index.html");
+          return caches.match(OFFLINE_FALLBACK_URL);
         });
     })
   );
