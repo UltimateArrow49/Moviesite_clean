@@ -281,8 +281,114 @@ a {
   align-items: flex-start;
 }
 
-.hero-card {
-  max-width: 520px;
+
+.home-minimal {
+  align-items: center;
+}
+
+.landing-screen {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(3rem, 12vw, 9rem) clamp(1.5rem, 8vw, 7rem);
+}
+
+.landing-card {
+  width: min(680px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1.75rem, 4vw, 2.75rem);
+  text-align: center;
+  padding: clamp(2.5rem, 6vw, 3.75rem) clamp(2rem, 6vw, 3.75rem);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(var(--accent-rgb), 0.16);
+  background: rgba(10, 10, 10, 0.72);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(26px);
+}
+
+.landing-logo svg {
+  width: min(320px, 100%);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 0 36px rgba(var(--accent-rgb), 0.42));
+}
+
+.landing-intro {
+  gap: 0.6rem;
+}
+
+.landing-title {
+  margin: 0;
+  font-size: clamp(2.25rem, 5vw, 3.15rem);
+  letter-spacing: 0.02em;
+}
+
+.landing-subtitle {
+  margin: 0;
+  color: rgba(var(--ink-rgb), 0.7);
+  font-size: 1.05rem;
+}
+
+.landing-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: clamp(1rem, 4vw, 1.5rem);
+}
+
+.landing-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: clamp(1.25rem, 4vw, 1.75rem) clamp(1.1rem, 4vw, 1.6rem);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--accent-rgb), 0.12);
+  background: rgba(8, 8, 8, 0.78);
+  text-decoration: none;
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.landing-tile:hover,
+.landing-tile:focus-visible {
+  transform: translateY(-6px);
+  border-color: rgba(var(--accent-rgb), 0.42);
+  background: rgba(12, 12, 12, 0.92);
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.52);
+}
+
+.landing-tile:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.55);
+  outline-offset: 4px;
+}
+
+.landing-tile__label {
+  font-size: 1rem;
+}
+
+.landing-tile__hint {
+  font-size: 0.86rem;
+  color: rgba(var(--ink-rgb), 0.65);
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.landing-footnote {
+  margin: 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(var(--ink-rgb), 0.52);
 }
 
 .hero h1 {
@@ -299,22 +405,32 @@ a {
   font-size: 1.02rem;
 }
 
-.hero-card .hero-kicker {
-  margin-top: 0;
-}
-
-.hero-card .hero-subtitle {
-  margin-top: 12px;
-}
-
-.hero-card .hero-actions {
-  margin-top: 16px;
-}
-
 .info-copy {
   max-width: 720px;
   margin: 0 auto 48px;
   padding: 0 7vw;
+}
+
+.info-copy .info-heading {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: 0.02em;
+}
+
+.info-copy .info-steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 10px;
+}
+
+.info-copy .info-steps li {
+  color: rgba(var(--ink-rgb), 0.78);
+  line-height: 1.6;
+}
+
+.info-copy .info-steps li strong {
+  color: var(--ink);
 }
 
 .hero-text {
@@ -356,10 +472,6 @@ a {
   box-shadow: var(--shadow-lg);
   padding: 28px;
   backdrop-filter: blur(24px);
-}
-
-.hero-card.glass-panel {
-  padding: 32px;
 }
 
 .toolbar {
@@ -862,6 +974,14 @@ footer.site-footer {
     padding-left: 28px;
     padding-right: 28px;
   }
+
+  .landing-screen {
+    padding: clamp(2.75rem, 16vw, 6.5rem) clamp(1.25rem, 8vw, 3.5rem);
+  }
+
+  .landing-card {
+    padding: clamp(2.25rem, 10vw, 3.25rem) clamp(1.6rem, 10vw, 3.1rem);
+  }
 }
 
 @media (max-width: 720px) {
@@ -893,6 +1013,14 @@ footer.site-footer {
 
   .hero--banner .hero-actions {
     justify-content: center;
+  }
+
+  .landing-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .landing-card {
+    gap: clamp(1.4rem, 6vw, 2.1rem);
   }
 
   .info-copy {
@@ -958,6 +1086,27 @@ footer.site-footer {
   .hero-actions {
     width: 100%;
     justify-content: center;
+  }
+
+  .landing-screen {
+    padding: clamp(2.25rem, 18vw, 4.75rem) clamp(1rem, 10vw, 2.25rem);
+  }
+
+  .landing-card {
+    padding: clamp(1.9rem, 14vw, 2.6rem) clamp(1.35rem, 12vw, 2.1rem);
+    border-radius: var(--radius-md);
+  }
+
+  .landing-title {
+    font-size: clamp(2rem, 7vw, 2.4rem);
+  }
+
+  .landing-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .landing-tile {
+    padding: 1.1rem 1rem;
   }
 
   .content {
