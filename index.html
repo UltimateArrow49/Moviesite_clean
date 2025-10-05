@@ -19,83 +19,79 @@
     }
   </script>
 </head>
-<body class="app-shell">
+<body class="app-shell home-minimal">
   <div class="side-ad left">
     <ins class="propeller-slot" data-zone="9961316"></ins>
   </div>
   <div class="side-ad right">
     <ins class="propeller-slot" data-zone="9961315"></ins>
   </div>
-  <header class="topbar">
-    <a class="brand" href="index.html" aria-label="theblackbox home">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 88" role="img" aria-labelledby="logoTitle logoDesc">
-        <title id="logoTitle">theblackbox logotype</title>
-        <desc id="logoDesc">A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
-        <defs>
-          <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#12ffb0" stop-opacity="0.8" />
-            <stop offset="100%" stop-color="#0b6751" stop-opacity="0.95" />
-          </linearGradient>
-          <linearGradient id="word" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#f7fff9" />
-            <stop offset="55%" stop-color="#8efed9" />
-            <stop offset="100%" stop-color="#12ffb0" />
-          </linearGradient>
-          <radialGradient id="pulse" cx="50%" cy="50%" r="65%">
-            <stop offset="0%" stop-color="#14ff9f" stop-opacity="0.3" />
-            <stop offset="100%" stop-color="#14ff9f" stop-opacity="0" />
-          </radialGradient>
-          <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur stdDeviation="6" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
+  <main class="landing-screen" aria-labelledby="landing-title">
+    <div class="landing-card">
+      <div class="landing-logo" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 88" role="img">
+          <title>theblackbox logotype</title>
+          <desc>A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
+          <defs>
+            <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#12ffb0" stop-opacity="0.8" />
+              <stop offset="100%" stop-color="#0b6751" stop-opacity="0.95" />
+            </linearGradient>
+            <linearGradient id="word" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#f7fff9" />
+              <stop offset="55%" stop-color="#8efed9" />
+              <stop offset="100%" stop-color="#12ffb0" />
+            </linearGradient>
+            <radialGradient id="pulse" cx="50%" cy="50%" r="65%">
+              <stop offset="0%" stop-color="#14ff9f" stop-opacity="0.3" />
+              <stop offset="100%" stop-color="#14ff9f" stop-opacity="0" />
+            </radialGradient>
+            <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="6" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
 
-        <g filter="url(#glow)">
-          <rect x="12" y="14" width="64" height="60" rx="18" fill="#050a08" stroke="#14ff9f" stroke-opacity="0.45" stroke-width="2.5" />
-          <rect x="22" y="24" width="44" height="40" rx="12" fill="url(#panel)" />
-          <path d="M33 52h6v-20h-6zm11 12h6V32h-6zm11-20h6v20h-6z" fill="#0f362c" opacity="0.6" />
-          <path d="M33 48h6V32h-6zm11 12h6V28h-6zm11-16h6v16h-6z" fill="#12ffb0" />
-          <circle cx="54" cy="44" r="22" fill="url(#pulse)" />
-        </g>
+          <g filter="url(#glow)">
+            <rect x="12" y="14" width="64" height="60" rx="18" fill="#050a08" stroke="#14ff9f" stroke-opacity="0.45" stroke-width="2.5" />
+            <rect x="22" y="24" width="44" height="40" rx="12" fill="url(#panel)" />
+            <path d="M33 52h6v-20h-6zm11 12h6V32h-6zm11-20h6v20h-6z" fill="#0f362c" opacity="0.6" />
+            <path d="M33 48h6V32h-6zm11 12h6V28h-6zm11-16h6v16h-6z" fill="#12ffb0" />
+            <circle cx="54" cy="44" r="22" fill="url(#pulse)" />
+          </g>
 
-        <text x="96" y="48" fill="url(#word)" font-family="'Inter','Segoe UI',sans-serif" font-weight="700" font-size="32" letter-spacing="0.08em">
-          theblackbox
-        </text>
-        <text x="96" y="68" fill="rgba(220,247,236,0.7)" font-family="'Inter','Segoe UI',sans-serif" font-size="12" letter-spacing="0.36em">
-          SHADOW SIGNAL
-        </text>
-      </svg>
-    </a>
-    <nav>
-      <a href="movies.html" class="btn">Movies</a>
-      <a href="series.html" class="btn">Shows</a>
-      <a href="player.html" class="btn btn--ghost">Info</a>
-    </nav>
-    <form class="search-bar" action="movies.html" method="get">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
-      <input type="search" name="q" placeholder="Search the catalog" aria-label="Search the catalog">
-    </form>
-  </header>
-
-  <main>
-    <section class="hero hero--compact">
-      <div class="hero-card glass-panel stack">
-        <p class="hero-kicker">Signal brief</p>
-        <h1>Movies and shows ready when you are.</h1>
-        <p class="hero-subtitle">theblackbox tracks reliable mirrors and TMDB notes so you know what&apos;s coming and when the ads roll.</p>
-        <div class="hero-actions">
-          <a class="btn btn--primary" href="movies.html">Browse movies</a>
-          <a class="btn btn--primary" href="series.html">Browse shows</a>
-        </div>
+          <text x="96" y="48" fill="url(#word)" font-family="'Inter','Segoe UI',sans-serif" font-weight="700" font-size="32" letter-spacing="0.08em">
+            theblackbox
+          </text>
+          <text x="96" y="68" fill="rgba(220,247,236,0.7)" font-family="'Inter','Segoe UI',sans-serif" font-size="12" letter-spacing="0.36em">
+            SHADOW SIGNAL
+          </text>
+        </svg>
       </div>
-    </section>
+      <div class="landing-intro stack">
+        <h1 class="landing-title" id="landing-title">Choose your lane.</h1>
+        <p class="landing-subtitle">Pick a catalog or jump straight to Info for playback guidance.</p>
+      </div>
+      <nav class="landing-grid" aria-label="Browse theblackbox">
+        <a class="landing-tile" href="movies.html">
+          <span class="landing-tile__label">Movies</span>
+          <span class="landing-tile__hint">Feature films &amp; specials</span>
+        </a>
+        <a class="landing-tile" href="series.html">
+          <span class="landing-tile__label">Shows</span>
+          <span class="landing-tile__hint">Series &amp; episodes</span>
+        </a>
+        <a class="landing-tile" href="player.html">
+          <span class="landing-tile__label">Info</span>
+          <span class="landing-tile__hint">Launch playback relay</span>
+        </a>
+      </nav>
+      <p class="landing-footnote">Powered by TMDB data · Streams launch through Info.</p>
+    </div>
   </main>
-
-  <footer class="site-footer">Powered by TMDB data · Playback details live in Info.</footer>
 
   <script src="background_motion.js" type="module"></script>
 </body>
