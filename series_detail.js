@@ -77,7 +77,7 @@ async function requestTmdb(path, params = {}) {
 
 function setSearchNavigation(show) {
   if (!searchInput) return;
-  searchInput.placeholder = `Search “${show.name || show.original_name || "series"}” on TMDB`;
+  searchInput.placeholder = `Search “${show.name || show.original_name || "show"}” on TMDB`;
   searchInput.addEventListener("input", () => {
     const value = searchInput.value;
     if (searchTimer) clearTimeout(searchTimer);
@@ -111,7 +111,7 @@ function renderPoster(show) {
   if (show.poster_path) {
     const img = document.createElement("img");
     img.src = IMG_BASE + show.poster_path;
-    img.alt = `${show.name || show.original_name || "Series"} poster`;
+    img.alt = `${show.name || show.original_name || "Show"} poster`;
     img.style.width = "100%";
     img.style.borderRadius = "18px";
     img.style.boxShadow = "0 28px 60px rgba(0,0,0,0.6)";
@@ -209,7 +209,7 @@ function renderEpisodes(season, episodes) {
     button.appendChild(heading);
     button.appendChild(summary);
     button.addEventListener("click", () => {
-      const url = buildPlayerUrl(season.season_number, episode.episode_number, `${state.show?.name || state.show?.original_name || "Series"} — ${episode.name || "Episode"}`);
+      const url = buildPlayerUrl(season.season_number, episode.episode_number, `${state.show?.name || state.show?.original_name || "Show"} — ${episode.name || "Episode"}`);
       window.location.href = url;
     });
     fragment.appendChild(button);
@@ -245,7 +245,7 @@ function filterSeasons(seasons) {
 
 function populateShow(show) {
   state.show = show;
-  showTitleEl.textContent = show.name || show.original_name || "Series";
+  showTitleEl.textContent = show.name || show.original_name || "Show";
   document.title = `${showTitleEl.textContent} · theblackbox`;
   renderPoster(show);
   renderTags(show);
@@ -267,7 +267,7 @@ async function loadShow(showId) {
   } catch (error) {
     if (error.name === "AbortError") return;
     console.error(error);
-    overviewEl.textContent = "We couldn't load this series right now.";
+    overviewEl.textContent = "We couldn't load this show right now.";
     seasonStatus.textContent = "";
   }
 }
@@ -287,12 +287,12 @@ function init() {
   const url = new URL(window.location.href);
   const idParam = url.searchParams.get("id");
   if (!idParam) {
-    overviewEl.textContent = "Missing series identifier.";
+    overviewEl.textContent = "Missing show identifier.";
     return;
   }
   state.showId = Number(idParam);
   if (!Number.isFinite(state.showId) || state.showId <= 0) {
-    overviewEl.textContent = "Invalid series identifier.";
+    overviewEl.textContent = "Invalid show identifier.";
     return;
   }
   initBackButton();

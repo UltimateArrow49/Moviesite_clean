@@ -128,7 +128,7 @@ function createCard(movie) {
   card.dataset.tmdbId = movie.id;
   card.setAttribute(
     "aria-label",
-    `Stream ${movie.title || movie.name || "movie"} on theblackbox via the Vidking backend`,
+    `Stream ${movie.title || movie.name || "movie"} on theblackbox via the Info relay`,
   );
 
   const thumb = document.createElement("div");
@@ -171,7 +171,7 @@ function createCard(movie) {
   const actions = document.createElement("div");
   actions.className = "actions";
   actions.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>Stream via Vidking backend</span>';
+    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>Stream via Info relay</span>';
   meta.appendChild(actions);
 
   card.appendChild(thumb);
