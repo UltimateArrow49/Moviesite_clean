@@ -275,17 +275,14 @@ a {
   align-items: center;
 }
 
-.hero--features {
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  align-items: stretch;
-  padding-top: 24px;
+.hero--compact {
+  padding-top: 48px;
+  padding-bottom: 36px;
+  align-items: flex-start;
 }
 
-.hero--features .glass-panel {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+.hero-card {
+  max-width: 520px;
 }
 
 .hero h1 {
@@ -300,6 +297,24 @@ a {
   max-width: 540px;
   color: rgba(var(--ink-rgb), 0.68);
   font-size: 1.02rem;
+}
+
+.hero-card .hero-kicker {
+  margin-top: 0;
+}
+
+.hero-card .hero-subtitle {
+  margin-top: 12px;
+}
+
+.hero-card .hero-actions {
+  margin-top: 16px;
+}
+
+.info-copy {
+  max-width: 720px;
+  margin: 0 auto 48px;
+  padding: 0 7vw;
 }
 
 .hero-text {
@@ -341,6 +356,10 @@ a {
   box-shadow: var(--shadow-lg);
   padding: 28px;
   backdrop-filter: blur(24px);
+}
+
+.hero-card.glass-panel {
+  padding: 32px;
 }
 
 .toolbar {
@@ -838,15 +857,15 @@ footer.site-footer {
 
   .content,
   .hero,
-  .player-layout {
+  .player-layout,
+  .info-copy {
     padding-left: 28px;
     padding-right: 28px;
   }
 }
 
 @media (max-width: 720px) {
-  .hero--banner,
-  .hero--features {
+  .hero--banner {
     grid-template-columns: 1fr;
   }
 
@@ -874,6 +893,12 @@ footer.site-footer {
 
   .hero--banner .hero-actions {
     justify-content: center;
+  }
+
+  .info-copy {
+    margin-bottom: 36px;
+    padding-left: 20px;
+    padding-right: 20px;
   }
 
   .toolbar {
