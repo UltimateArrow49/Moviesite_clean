@@ -7,14 +7,6 @@
   <title>theblackbox · shadow signal</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="style.css?v=4">
-  <script
-    data-cfasync="false"
-    src="ads/inpage-push-loader.js"
-    data-zone="ChmaorrCfoz"
-    data-hook="_mbeic"
-    data-loader-src="https://delivery.monetag.com/pfe/current/tag.min.js"
-    defer
-  ></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
@@ -80,8 +72,8 @@
     </a>
     <nav>
       <a href="movies.html" class="btn">Movies</a>
-      <a href="series.html" class="btn">Series</a>
-      <a href="player.html" class="btn btn--ghost">Vidking backend</a>
+      <a href="series.html" class="btn">Shows</a>
+      <a href="player.html" class="btn btn--ghost">Info</a>
     </nav>
     <form class="search-bar" action="movies.html" method="get">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
@@ -89,57 +81,21 @@
     </form>
   </header>
 
-  <section class="hero hero--banner">
-    <div class="hero-text">
-      <p class="hero-kicker">Premium inventory</p>
-      <h1>Streaming audiences engineered for confident campaigns.</h1>
-      <p class="hero-subtitle">theblackbox pairs curated films and series with TMDB intelligence and the Vidking delivery stack, keeping premium placements stable and brand-safe.</p>
-      <div class="hero-actions">
-        <a class="btn btn--primary" href="movies.html">Browse the vault</a>
-        <a class="btn" href="series.html">Track down series</a>
-        <a class="btn btn--ghost" href="player.html">Ping the Vidking backend</a>
-      </div>
-    </div>
-  </section>
-
   <main>
-    <section class="hero hero--features">
-      <div class="glass-panel stack">
-        <h2 class="section-title">Keep the feed sharp</h2>
-        <p>theblackbox keeps the feed alive with rotating community mirrors, TMDB metadata, and a hardened Vidking pipeline that refuses to die. No studios, no pop-ups—just a lean interface for the night crowd.</p>
-        <p class="muted">Dial in trending drops, quick-search the archives, or jump straight into a specific episode without losing your place. theblackbox routes every request through a sandboxed Vidking backend so the signal doesn&apos;t splinter.</p>
-      </div>
-      <div class="glass-panel stack">
-        <h2 class="section-title">What we patched in</h2>
-        <div class="meta-tags">
-          <span class="meta-tag">🚦 Mirror rotation with failover</span>
-          <span class="meta-tag">🛰️ TMDB-fed artwork &amp; intel</span>
-          <span class="meta-tag">🛠️ Offline-friendly UX</span>
-          <span class="meta-tag">🎚️ Raw fallback stream option</span>
+    <section class="hero hero--compact">
+      <div class="hero-card glass-panel stack">
+        <p class="hero-kicker">Signal brief</p>
+        <h1>Movies and shows ready when you are.</h1>
+        <p class="hero-subtitle">theblackbox tracks reliable mirrors and TMDB notes so you know what&apos;s coming and when the ads roll.</p>
+        <div class="hero-actions">
+          <a class="btn btn--primary" href="movies.html">Browse movies</a>
+          <a class="btn btn--primary" href="series.html">Browse shows</a>
         </div>
-        <div class="chip-group">
-          <span class="chip is-active">Trending heat</span>
-          <span class="chip">Queue memory</span>
-          <span class="chip">No corporate gloss</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="content">
-      <div class="glass-panel stack">
-        <h2 class="section-title">Quick launch</h2>
-        <div class="chip-group">
-          <a class="btn" href="movies.html#popular">Popular today</a>
-          <a class="btn" href="movies.html#top">Top rated</a>
-          <a class="btn" href="series.html#airing">Now airing</a>
-          <a class="btn" href="series.html#top">Fan favorites</a>
-        </div>
-        <p class="muted">Use the launchers or dive deeper in the catalog tabs—filters, search, and page state stay pinned so you can scan the archive without hammering the mirrors.</p>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer">Powered by TMDB data · Playback relayed through the Vidking backend.</footer>
+  <footer class="site-footer">Powered by TMDB data · Playback details live in Info.</footer>
 
   <script src="background_motion.js" type="module"></script>
 </body>

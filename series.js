@@ -16,9 +16,9 @@ let activeRequest = null;
 let searchTimer = null;
 
 const FILTERS = new Map([
-  ["trending", { label: "Trending series", path: "trending/tv/week" }],
-  ["popular", { label: "Popular series", path: "tv/popular" }],
-  ["top_rated", { label: "Top rated series", path: "tv/top_rated" }],
+  ["trending", { label: "Trending shows", path: "trending/tv/week" }],
+  ["popular", { label: "Popular shows", path: "tv/popular" }],
+  ["top_rated", { label: "Top rated shows", path: "tv/top_rated" }],
   ["airing_today", { label: "Airing today", path: "tv/airing_today" }],
   ["on_the_air", { label: "Currently on air", path: "tv/on_the_air" }],
 ]);
@@ -118,14 +118,14 @@ function createCard(show) {
   card.className = "card";
   card.href = buildSeriesUrl(show);
   card.dataset.tmdbId = show.id;
-  card.setAttribute("aria-label", `Open details for ${show.name || show.original_name || "series"}`);
+  card.setAttribute("aria-label", `Open details for ${show.name || show.original_name || "show"}`);
 
   const thumb = document.createElement("div");
   thumb.className = "thumb";
   if (show.poster_path) {
     const img = document.createElement("img");
     img.src = IMG_BASE + show.poster_path;
-    img.alt = `${show.name || show.original_name || "Series"} poster`;
+    img.alt = `${show.name || show.original_name || "Show"} poster`;
     thumb.appendChild(img);
   } else {
     const fallback = document.createElement("div");
@@ -170,7 +170,7 @@ function createCard(show) {
 function render(results = [], total = 0) {
   clearGrid();
   if (!results.length) {
-    placeholder(state.query ? "No series matched your search." : "No series to display right now.");
+    placeholder(state.query ? "No shows matched your search." : "No shows to display right now.");
     updateStatus(0, total, results.length);
     return;
   }
@@ -191,7 +191,7 @@ function updateStatus(count, total, pageCount) {
 
   if (!count) {
     statusLine.textContent = state.query
-      ? `We couldn’t find any series for “${state.query}”.`
+      ? `We couldn’t find any shows for “${state.query}”.`
       : `No ${filterInfo} at the moment. Try another filter or search.`;
     return;
   }
@@ -259,7 +259,7 @@ async function loadPage() {
     if (error.name === "AbortError") return;
     console.error(error);
     clearGrid();
-    placeholder("Unable to load series right now. Please try again shortly.");
+    placeholder("Unable to load shows right now. Please try again shortly.");
     statusLine.textContent = "A network error stopped the TMDB request. Retrying may help.";
   } finally {
     setBusy(false);

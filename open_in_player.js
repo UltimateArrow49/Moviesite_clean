@@ -93,8 +93,8 @@
       } catch {}
     });
     document.title = title
-      ? `${title} — theblackbox (Vidking backend)`
-      : 'theblackbox · Vidking backend';
+      ? `${title} — theblackbox (Info relay)`
+      : 'theblackbox · Info relay';
   }
 
   // -------- listing page: open tiles in new /player.html tab ----------
