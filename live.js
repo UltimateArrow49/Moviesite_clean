@@ -3,8 +3,7 @@ const CHANNELS_URL = `${API_BASE}/channels.json`;
 const STREAMS_URL = `${API_BASE}/streams.json`;
 const LOGOS_URL = `${API_BASE}/logos.json`;
 const CATEGORIES_URL = `${API_BASE}/categories.json`;
-const COUNTRIES_URL = `${API_BASE}/countries.json`;
-const DEFAULT_COUNTRY = "UK";
+const TARGET_COUNTRY = "UK";
 const STORAGE_PREFIX = "live:channel:";
 
 const grid = document.getElementById("grid");
@@ -12,18 +11,12 @@ const filtersEl = document.getElementById("filters");
 const searchInput = document.getElementById("search");
 const statusLine = document.getElementById("statusLine");
 const viewTitle = document.getElementById("viewTitle");
-const countrySelect = document.getElementById("countrySelect");
 
 const state = {
-  allChannels: [],
   channels: [],
   filter: "all",
   query: "",
   filterOptions: new Map(),
-  categories: new Map(),
-  countries: new Map(),
-  country: DEFAULT_COUNTRY,
-  countryOptions: [],
 };
 
 function setBusy(isBusy) {
@@ -33,26 +26,12 @@ function setBusy(isBusy) {
   if (searchInput) {
     searchInput.disabled = isBusy;
   }
-  if (countrySelect) {
-    if (isBusy) {
-      countrySelect.disabled = true;
-    } else if (state.countryOptions.length) {
-      countrySelect.disabled = false;
-    }
-  }
 }
 
 function setStatus(message) {
   if (statusLine) {
     statusLine.textContent = message;
   }
-}
-
-function getCountryLabel(code) {
-  if (!code) return "this region";
-  const entry = state.countries.get(code);
-  if (entry && entry.name) return entry.name;
-  return code;
 }
 
 function labelForCategory(id, categories) {
@@ -108,9 +87,7 @@ function isDirectVideo(url) {
 
 function pickLogo(entries = []) {
   if (!Array.isArray(entries) || !entries.length) return null;
-  const httpsOnly = entries.filter((entry) => /^https:/i.test(entry.url));
-  const pool = httpsOnly.length ? httpsOnly : entries;
-  const ranked = [...pool].sort((a, b) => {
+  const ranked = [...entries].sort((a, b) => {
     const formatScore = (entry) => {
       const format = (entry.format || "").toUpperCase();
       if (format === "SVG") return 5;
@@ -155,34 +132,41 @@ function buildMaps(logos, streams) {
 }
 
 function chooseStream(streams = []) {
-  if (!Array.isArray(streams) || !streams.length) {
-    return { stream: null, inlinePlayable: false, playbackKind: "external" };
-  }
+  const valid = streams.filter((stream) =>
+    /^https?:/i.test(stream.url || "")
+  );
+  if (!valid.length) return { stream: null, inlinePlayable: false };
 
-  const secureHls = streams.filter((stream) => {
-    if (!stream || !stream.url) return false;
-    if (stream.referrer || stream.user_agent) return false;
-    const url = String(stream.url);
-    if (!/^https:/i.test(url)) return false;
-    return isHls(url);
-  });
+  const httpsStreams = valid.filter((stream) => /^https:/i.test(stream.url));
+  const hlsHttps = httpsStreams.filter((stream) => isHls(stream.url));
+  const inlineCandidates = hlsHttps.length ? hlsHttps : httpsStreams;
 
-  if (!secureHls.length) {
-    return { stream: null, inlinePlayable: false, playbackKind: "external" };
-  }
-
-  const ranked = [...secureHls].sort((a, b) => {
+  const candidates = inlineCandidates.length ? inlineCandidates : valid;
+  const ranked = [...candidates].sort((a, b) => {
     const qualityDelta = qualityScore(b.quality) - qualityScore(a.quality);
     if (qualityDelta) return qualityDelta;
-    return (b.updated_at || 0) - (a.updated_at || 0);
+    const isHlsScore = (value) => (isHls(value.url) ? 1 : 0);
+    const protocolScore = (value) => (/^https:/i.test(value.url) ? 1 : 0);
+    return (
+      isHlsScore(b) - isHlsScore(a) ||
+      protocolScore(b) - protocolScore(a)
+    );
   });
 
   const selected = ranked[0] || null;
-  if (!selected) {
-    return { stream: null, inlinePlayable: false, playbackKind: "external" };
+  let playbackKind = "external";
+  if (selected) {
+    if (isHls(selected.url)) playbackKind = "hls";
+    else if (isDirectVideo(selected.url)) playbackKind = "file";
+    else if (/^https:/i.test(selected.url)) playbackKind = "https";
   }
 
-  return { stream: selected, inlinePlayable: true, playbackKind: "hls" };
+  const inlinePlayable = Boolean(
+    selected &&
+    /^https:/i.test(selected.url) &&
+    (isHls(selected.url) || isDirectVideo(selected.url))
+  );
+  return { stream: selected, inlinePlayable, playbackKind };
 }
 
 function buildFilterOptions(channels, categories) {
@@ -202,26 +186,6 @@ function buildFilterOptions(channels, categories) {
   return { list: sorted, map };
 }
 
-function buildCountryOptions(channels, countries) {
-  const counts = new Map();
-  for (const channel of channels) {
-    if (!channel || !channel.country) continue;
-    counts.set(channel.country, (counts.get(channel.country) || 0) + 1);
-  }
-  const options = [...counts.entries()].map(([code, count]) => {
-    const entry = countries.get(code);
-    const label = entry && entry.name ? entry.name : code;
-    return { code, label, count };
-  });
-  options.sort((a, b) => {
-    if (a.code === DEFAULT_COUNTRY) return -1;
-    if (b.code === DEFAULT_COUNTRY) return 1;
-    if (b.count !== a.count) return b.count - a.count;
-    return a.label.localeCompare(b.label);
-  });
-  return options;
-}
-
 function createChip(id, label, count) {
   const button = document.createElement("button");
   button.className = "chip";
@@ -230,45 +194,6 @@ function createChip(id, label, count) {
   button.textContent = count != null ? `${label} (${count})` : label;
   if (id === state.filter) button.classList.add("is-active");
   return button;
-}
-
-function rebuildFilterControls(options, totalCount) {
-  if (!filtersEl) return;
-  filtersEl.innerHTML = "";
-  const fragment = document.createDocumentFragment();
-  fragment.appendChild(createChip("all", "All", totalCount));
-  for (const option of options) {
-    fragment.appendChild(createChip(option.id, option.label, option.count));
-  }
-  filtersEl.appendChild(fragment);
-  updateActiveFilter();
-}
-
-function setCountry(code, { preserveQuery = false } = {}) {
-  if (!code) return;
-  state.country = code;
-  state.filter = "all";
-  if (countrySelect && countrySelect.value !== code) {
-    countrySelect.value = code;
-  }
-  if (!preserveQuery) {
-    state.query = "";
-    if (searchInput) {
-      searchInput.value = "";
-    }
-  } else if (searchInput) {
-    state.query = searchInput.value || "";
-  }
-
-  const channels = state.allChannels.filter((channel) => channel.country === code);
-  state.channels = channels;
-
-  const { list, map } = buildFilterOptions(channels, state.categories);
-  state.filterOptions = map;
-
-  rebuildFilterControls(list, channels.length);
-  updateViewTitle();
-  render();
 }
 
 function buildPlayerUrl(channel) {
@@ -286,12 +211,6 @@ function buildPlayerUrl(channel) {
   }
   if (channel.logo) {
     url.searchParams.set("logo", channel.logo);
-  }
-  if (channel.country) {
-    url.searchParams.set("country", channel.country);
-  }
-  if (channel.countryName) {
-    url.searchParams.set("countryName", channel.countryName);
   }
   if (channel.stream?.title) {
     url.searchParams.set("title", channel.stream.title);
@@ -315,8 +234,6 @@ function serializeChannel(channel) {
     network: channel.network,
     website: channel.website,
     logo: channel.logo,
-    country: channel.country,
-    countryName: channel.countryName,
     categoryLabel: channel.categoryLabel,
     categoryNames: channel.categoryNames,
     qualityLabel: channel.qualityLabel,
@@ -373,7 +290,6 @@ function createChannelCard(channel) {
     const img = document.createElement("img");
     img.src = channel.logo;
     img.alt = `${channel.name} logo`;
-    img.loading = "lazy";
     thumb.appendChild(img);
   } else {
     const placeholder = document.createElement("div");
@@ -406,7 +322,6 @@ function createChannelCard(channel) {
     : "External stream";
   details.push(playbackLabel);
   if (channel.network) details.push(channel.network);
-  if (channel.countryName) details.push(channel.countryName);
   const sub = document.createElement("p");
   sub.className = "sub";
   sub.textContent = details.join(" • ") || "Live channel";
@@ -457,16 +372,15 @@ function updateActiveFilter() {
 
 function updateViewTitle() {
   if (!viewTitle) return;
-  const countryLabel = getCountryLabel(state.country);
   if (state.filter === "all") {
-    viewTitle.textContent = `Live channels in ${countryLabel}`;
+    viewTitle.textContent = "Live channels";
     return;
   }
   const meta = state.filterOptions.get(state.filter);
   if (meta) {
-    viewTitle.textContent = `${meta.label} in ${countryLabel}`;
+    viewTitle.textContent = `${meta.label} live channels`;
   } else {
-    viewTitle.textContent = `Live channels in ${countryLabel}`;
+    viewTitle.textContent = "Live channels";
   }
 }
 
@@ -474,13 +388,14 @@ function render() {
   if (!grid) return;
   grid.innerHTML = "";
   const results = filterChannels();
-  const countryLabel = getCountryLabel(state.country);
+  const inlineCount = results.filter((channel) => channel.inlinePlayable).length;
+  const externalCount = results.length - inlineCount;
 
   if (!results.length) {
     setStatus(
       state.query
-        ? `No live channels match “${state.query}” in ${countryLabel}.`
-        : `No live channels found for ${countryLabel} in this filter.`
+        ? `No live channels match “${state.query}”.`
+        : "No live channels found for this filter."
     );
     return;
   }
@@ -492,14 +407,16 @@ function render() {
   grid.appendChild(fragment);
 
   const filterMeta = state.filter === "all" ? null : state.filterOptions.get(state.filter);
-  let summary = `${results.length} ${results.length === 1 ? "channel" : "channels"} available in ${countryLabel}`;
-  if (filterMeta) {
-    summary += ` · ${filterMeta.label}`;
+  const filterLabel = filterMeta ? ` in ${filterMeta.label}` : "";
+  const searchLabel = state.query ? ` matching “${state.query}”` : "";
+  let summary = `${results.length} ${results.length === 1 ? "channel" : "channels"}${filterLabel}${searchLabel}.`;
+  if (inlineCount && externalCount) {
+    summary += ` ${inlineCount} ready in-browser, ${externalCount} open externally.`;
+  } else if (inlineCount) {
+    summary += ` ${inlineCount} ready in-browser.`;
+  } else if (externalCount) {
+    summary += ` ${externalCount} require an external player.`;
   }
-  if (state.query) {
-    summary += ` · Matching “${state.query}”`;
-  }
-  summary += ". Streams ready for in-browser playback.";
   setStatus(summary);
 }
 
@@ -519,12 +436,6 @@ function onSearchInput(event) {
   render();
 }
 
-function onCountryChange(event) {
-  const code = event.target.value;
-  if (!code || code === state.country) return;
-  setCountry(code);
-}
-
 async function fetchJson(url) {
   const response = await fetch(url, { cache: "no-cache" });
   if (!response.ok) {
@@ -537,28 +448,23 @@ async function loadData() {
   setBusy(true);
   setStatus("Loading live channels…");
   try {
-    const [channels, streams, logos, categories, countries] = await Promise.all([
+    const [channels, streams, logos, categories] = await Promise.all([
       fetchJson(CHANNELS_URL),
       fetchJson(STREAMS_URL),
       fetchJson(LOGOS_URL),
       fetchJson(CATEGORIES_URL),
-      fetchJson(COUNTRIES_URL),
     ]);
 
     const categoriesMap = new Map((categories || []).map((cat) => [cat.id, cat]));
-    const countriesMap = new Map(
-      (countries || []).map((entry) => [entry.code, entry])
-    );
     const { logosByChannel, streamsByChannel } = buildMaps(logos, streams);
 
     const filtered = [];
     for (const channel of channels || []) {
-      if (!channel || channel.is_nsfw) continue;
-      if (!channel.id || !channel.country) continue;
+      if (!channel || channel.country !== TARGET_COUNTRY || channel.is_nsfw) continue;
       const streamCandidates = streamsByChannel.get(channel.id);
       if (!streamCandidates || !streamCandidates.length) continue;
       const { stream, inlinePlayable, playbackKind } = chooseStream(streamCandidates);
-      if (!stream || !inlinePlayable) continue;
+      if (!stream) continue;
 
       const categoryIds = (channel.categories || [])
         .filter((id) => id && id !== "xxx");
@@ -568,9 +474,7 @@ async function loadData() {
       const categoryLabel = categoryNames[0] || "General";
       const qualityLabel = formatQualityLabel(stream.quality);
       const logoEntries = logosByChannel.get(channel.id);
-      const fallbackLogo = /^https:/i.test(channel.logo || "") ? channel.logo : null;
-      const logo = pickLogo(logoEntries) || fallbackLogo;
-      const countryName = countriesMap.get(channel.country)?.name || channel.country;
+      const logo = pickLogo(logoEntries);
 
       filtered.push({
         id: channel.id,
@@ -579,8 +483,6 @@ async function loadData() {
         network: channel.network || "",
         owners: channel.owners || [],
         website: channel.website || "",
-        country: channel.country,
-        countryName,
         categoryIds,
         categoryNames,
         categoryLabel,
@@ -593,45 +495,24 @@ async function loadData() {
     }
 
     filtered.sort((a, b) => a.name.localeCompare(b.name));
-    state.allChannels = filtered;
-    state.categories = categoriesMap;
-    state.countries = countriesMap;
+    state.channels = filtered;
 
-    const countryOptions = buildCountryOptions(filtered, countriesMap);
-    state.countryOptions = countryOptions;
+    const { list, map } = buildFilterOptions(filtered, categoriesMap);
+    state.filterOptions = map;
 
-    if (countrySelect) {
-      countrySelect.innerHTML = "";
-      if (countryOptions.length) {
-        for (const option of countryOptions) {
-          const opt = document.createElement("option");
-          opt.value = option.code;
-          opt.textContent = `${option.label} (${option.count})`;
-          countrySelect.appendChild(opt);
-        }
-        countrySelect.disabled = false;
-      } else {
-        const placeholder = document.createElement("option");
-        placeholder.value = "";
-        placeholder.textContent = "No countries available";
-        countrySelect.appendChild(placeholder);
-        countrySelect.disabled = true;
+    if (filtersEl) {
+      filtersEl.innerHTML = "";
+      const fragment = document.createDocumentFragment();
+      fragment.appendChild(createChip("all", "All", filtered.length));
+      for (const option of list) {
+        fragment.appendChild(createChip(option.id, option.label, option.count));
       }
+      filtersEl.appendChild(fragment);
     }
 
-    const initialCountry =
-      countryOptions.find((option) => option.code === DEFAULT_COUNTRY)?.code ||
-      countryOptions[0]?.code ||
-      DEFAULT_COUNTRY;
-
-    if (countryOptions.length) {
-      setCountry(initialCountry);
-    } else {
-      state.channels = [];
-      rebuildFilterControls([], 0);
-      updateViewTitle();
-      render();
-    }
+    updateActiveFilter();
+    updateViewTitle();
+    render();
   } catch (error) {
     console.error(error);
     setStatus("Unable to load live channels right now. Please try again later.");
@@ -639,9 +520,6 @@ async function loadData() {
     setBusy(false);
     if (searchInput) {
       searchInput.disabled = false;
-    }
-    if (countrySelect && state.countryOptions.length) {
-      countrySelect.disabled = false;
     }
   }
 }
@@ -652,10 +530,6 @@ if (filtersEl) {
 
 if (searchInput) {
   searchInput.addEventListener("input", onSearchInput);
-}
-
-if (countrySelect) {
-  countrySelect.addEventListener("change", onCountryChange);
 }
 
 loadData();
