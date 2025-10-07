@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Live Player · theblackbox</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="app-shell">
+  <div class="side-ad left">
+    <ins class="propeller-slot" data-zone="9961316"></ins>
+  </div>
+  <div class="side-ad right">
+    <ins class="propeller-slot" data-zone="9961315"></ins>
+  </div>
+
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="theblackbox home">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 88" role="img" aria-labelledby="logoTitle logoDesc">
+        <title id="logoTitle">theblackbox logotype</title>
+        <desc id="logoDesc">A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
+        <defs>
+          <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#12ffb0" stop-opacity="0.8" />
+            <stop offset="100%" stop-color="#0b6751" stop-opacity="0.95" />
+          </linearGradient>
+          <linearGradient id="wordmark" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f8faff" stop-opacity="0.98" />
+            <stop offset="100%" stop-color="#80ffe6" stop-opacity="0.92" />
+          </linearGradient>
+        </defs>
+        <path fill="url(#panel)" d="M16 8h96v72H16z" />
+        <path fill="url(#wordmark)" d="M140 24h12v40h-12zm32 0h12v40h-12zm34 0c8 0 14 5.5 14 14v26h-12V39c0-3.5-1.5-6-5-6-3.6 0-5 2.5-5 6v25h-12V24h12v3.6c2.6-2.5 5.8-3.6 10-3.6zm72 0c11.9 0 20 8.3 20 20s-8.1 20-20 20-20-8.3-20-20 8.1-20 20-20zm0 12c-5.3 0-8 3.5-8 8s2.7 8 8 8 8-3.5 8-8-2.7-8-8-8zm-152 0c11.9 0 20 8.3 20 20s-8.1 20-20 20-20-8.3-20-20 8.1-20 20-20zm0 12c-5.3 0-8 3.5-8 8s2.7 8 8 8 8-3.5 8-8-2.7-8-8-8zm60-12h12l14 40h-12l-2-8h-12l-2 8h-12zm6 12-3 12h6zm122-12c8 0 13 4.3 13 11 0 6-3.6 8.8-9.2 10.2l-4.8 1.2c-2.8 0.7-4 1.5-4 3 0 1.9 1.7 3 4.6 3 3 0 5.4-1 7.4-3l6 7.2c-3.9 4-9.1 6.6-14.9 6.6-8 0-14-4.5-14-11 0-6 3.4-8.7 9.1-10.1l4.9-1.2c2.7-.6 4-1.4 4-3.1 0-2-1.8-3-4.7-3-2.6 0-5.5.9-7.5 3l-6.4-7c3.9-4.3 9.2-7 15.5-7z" />
+      </svg>
+    </a>
+    <nav>
+      <a href="movies.html" class="btn">Movies</a>
+      <a href="series.html" class="btn">Shows</a>
+      <a href="live.html" class="btn btn--primary">Live</a>
+      <a href="player.html" class="btn btn--ghost">Info</a>
+    </nav>
+    <button class="btn btn--ghost" id="backButton" type="button">Back to live guide</button>
+  </header>
+
+  <main class="player-layout">
+    <div class="player-header">
+      <div class="player-heading">
+        <img id="channelLogo" class="channel-logo" alt="" hidden>
+        <div>
+          <h1 class="player-title" id="channelTitle">Loading live stream…</h1>
+          <p class="player-subtitle" id="channelSubtitle"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="player-status" id="statusWrap" role="status">
+      <div class="loading-indicator" id="loadingIndicator" hidden aria-hidden="true">
+        <span class="loading-box" aria-hidden="true"></span>
+        <span class="loading-text" id="loadingText">Preparing live stream…</span>
+      </div>
+      <p id="playerStatus">Preparing live stream…</p>
+    </div>
+
+    <div class="player-frame" id="playerStage">
+      <video
+        id="liveVideo"
+        controls
+        playsinline
+        preload="auto"
+        controlslist="nodownload noplaybackrate noremoteplayback"
+        disablepictureinpicture
+      ></video>
+    </div>
+
+    <section class="player-details">
+      <div class="detail-card">
+        <h3>Channel information</h3>
+        <p id="channelDescription">Gathering broadcast details…</p>
+        <div class="meta-tags" id="channelTags"></div>
+        <p id="channelWebsite"></p>
+      </div>
+      <div class="detail-card">
+        <h3>Playback tips</h3>
+        <p id="streamDetails">Reviewing stream capabilities…</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">Live streams sourced from IPTV-Org · Playback powered by hls.js when available.</footer>
+
+  <script src="background_motion.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js" crossorigin="anonymous"></script>
+  <script src="live_player.js" type="module"></script>
+</body>
+</html>
