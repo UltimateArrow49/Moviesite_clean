@@ -96,19 +96,15 @@
     </div>
   </section>
 
-  <main class="content">
+    <main class="content">
     <div class="toolbar">
-      <div class="toolbar-main">
-        <h2 id="viewTitle">Live channels</h2>
-        <label class="select-control" for="countrySelect">
-          <span>Country</span>
-          <select id="countrySelect" name="countrySelect" autocomplete="off" aria-label="Select live channel country" disabled>
-            <option>Loading…</option>
-          </select>
-        </label>
-      </div>
+      <h2 id="viewTitle">Live channels</h2>
       <div class="chip-group" id="filters" role="tablist" aria-label="Live channel filters">
         <button class="chip is-active" data-filter="all" type="button">All</button>
+      </div>
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
+        <input id="search" type="search" placeholder="Search live channels" autocomplete="off" spellcheck="false" aria-label="Search live channels" disabled>
       </div>
     </div>
 

@@ -11,8 +11,6 @@ const channelName = params.get("name") || "Live channel";
 const categoryParam = params.get("category") || "";
 const qualityParam = params.get("quality") || "";
 const logoParam = params.get("logo") || "";
-const countryParam = params.get("country") || "";
-const countryNameParam = params.get("countryName") || "";
 const referrerParam = params.get("ref") || "";
 const userAgentParam = params.get("ua") || "";
 const feedParam = params.get("feed") || "";
@@ -31,23 +29,6 @@ const loadingText = document.getElementById("loadingText");
 const statusEl = document.getElementById("playerStatus");
 const videoEl = document.getElementById("liveVideo");
 const backButton = document.getElementById("backButton");
-
-if (videoEl) {
-  if (videoEl.controlsList && typeof videoEl.controlsList.add === "function") {
-    try {
-      videoEl.controlsList.add("nodownload");
-      videoEl.controlsList.add("noplaybackrate");
-      videoEl.controlsList.add("noremoteplayback");
-    } catch (error) {
-      // Some browsers throw if controlsList modifications are unsupported.
-    }
-  }
-  videoEl.disablePictureInPicture = true;
-  if ("disableRemotePlayback" in videoEl) {
-    videoEl.disableRemotePlayback = true;
-  }
-  videoEl.addEventListener("contextmenu", (event) => event.preventDefault());
-}
 
 function getStoredChannel(id) {
   if (!id) return null;
@@ -77,13 +58,6 @@ const channelData = {
   network: storedChannel?.network || "",
   website: storedChannel?.website || "",
   logo: storedChannel?.logo || logoParam,
-  country: storedChannel?.country || countryParam || "",
-  countryName:
-    storedChannel?.countryName ||
-    countryNameParam ||
-    storedChannel?.country ||
-    countryParam ||
-    "",
   qualityLabel: storedChannel?.qualityLabel || qualityParam,
   playbackKind: storedChannel?.playbackKind || storedChannel?.stream?.kind || fallbackKind,
   stream: {
@@ -145,32 +119,11 @@ function formatRequirements(data) {
   return hints;
 }
 
-function clampToLiveEdge(force = false) {
-  if (!videoEl) return;
-  const seekable = videoEl.seekable;
-  if (!seekable || !seekable.length) return;
-  const liveEdge = seekable.end(seekable.length - 1);
-  if (!Number.isFinite(liveEdge)) return;
-  const delta = liveEdge - videoEl.currentTime;
-  if (force || Math.abs(delta) > 1.5) {
-    try {
-      videoEl.currentTime = liveEdge;
-    } catch (error) {
-      // Ignore attempts to clamp when not supported.
-    }
-  }
-}
-
 function populateDetails() {
   document.title = `${channelData.name} · Live · theblackbox`;
   if (channelTitleEl) channelTitleEl.textContent = channelData.name;
 
-  const subtitleParts = [];
-  if (channelData.countryName) {
-    subtitleParts.push(`Live from ${channelData.countryName}`);
-  } else {
-    subtitleParts.push("Live broadcast");
-  }
+  const subtitleParts = ["Live from the United Kingdom"];
   if (channelData.categoryLabel) subtitleParts.push(channelData.categoryLabel);
   if (channelData.qualityLabel) subtitleParts.push(channelData.qualityLabel);
   channelSubtitleEl.textContent = subtitleParts.join(" • ");
@@ -186,19 +139,15 @@ function populateDetails() {
   }
 
   if (channelDescriptionEl) {
-    const origin = channelData.countryName ? ` from ${channelData.countryName}` : "";
     if (channelData.network) {
-      channelDescriptionEl.textContent = `${channelData.network}${origin} delivers ${channelData.name} live.`;
+      channelDescriptionEl.textContent = `${channelData.network} delivers ${channelData.name} live.`;
     } else {
-      channelDescriptionEl.textContent = `${channelData.name} is streaming live${origin} via the IPTV-Org catalog.`;
+      channelDescriptionEl.textContent = `${channelData.name} is streaming live via the IPTV-Org catalog.`;
     }
   }
 
   if (channelTagsEl) {
     channelTagsEl.innerHTML = "";
-    if (channelData.countryName) {
-      addTag(channelData.countryName);
-    }
     if (channelData.categoryNames?.length) {
       channelData.categoryNames.slice(0, 3).forEach((name) => addTag(name));
     }
@@ -260,14 +209,6 @@ function setupBackButton() {
 
 function attachVideoListeners() {
   if (!videoEl) return;
-  videoEl.addEventListener("loadedmetadata", () => {
-    clampToLiveEdge(true);
-  });
-  videoEl.addEventListener("seeking", () => {
-    if (!Number.isFinite(videoEl.duration) || videoEl.duration === Infinity) {
-      clampToLiveEdge(true);
-    }
-  });
   videoEl.addEventListener("playing", () => {
     setLoading(false);
     setStatus("Live stream playing.");
@@ -320,7 +261,6 @@ function playWithNativeHls(url) {
       setStatus("Press play to start the live stream.");
     });
   }
-  clampToLiveEdge(true);
 }
 
 function startPlayback() {
@@ -360,14 +300,10 @@ function startPlayback() {
     hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
       setLoading(false);
       setStatus("Live stream ready.");
-      clampToLiveEdge(true);
       const promise = videoEl.play();
       if (promise && typeof promise.catch === "function") {
         promise.catch(() => setStatus("Press play to start the live stream."));
       }
-    });
-    hls.on(window.Hls.Events.LEVEL_LOADED, () => {
-      clampToLiveEdge();
     });
     hls.on(window.Hls.Events.ERROR, (event, data) => {
       if (data?.fatal) {
@@ -395,7 +331,6 @@ function startPlayback() {
       setStatus("Press play to start the live stream.");
     });
   }
-  clampToLiveEdge(true);
   setLoading(false);
 }
 
