@@ -11,6 +11,9 @@ const channelName = params.get("name") || "Live channel";
 const categoryParam = params.get("category") || "";
 const qualityParam = params.get("quality") || "";
 const logoParam = params.get("logo") || "";
+const countryCodeParam = params.get("country") || "";
+const countryNameParam = params.get("countryName") || "";
+const countryFlagParam = params.get("countryFlag") || "";
 const referrerParam = params.get("ref") || "";
 const userAgentParam = params.get("ua") || "";
 const feedParam = params.get("feed") || "";
@@ -53,6 +56,9 @@ const fallbackKind = (function () {
 const channelData = {
   id: channelId,
   name: storedChannel?.name || channelName,
+  countryCode: storedChannel?.countryCode || countryCodeParam,
+  countryName: storedChannel?.countryName || countryNameParam,
+  countryFlag: storedChannel?.countryFlag || countryFlagParam,
   categoryLabel: storedChannel?.categoryLabel || categoryParam,
   categoryNames: storedChannel?.categoryNames || (categoryParam ? [categoryParam] : []),
   network: storedChannel?.network || "",
@@ -123,7 +129,15 @@ function populateDetails() {
   document.title = `${channelData.name} · Live · theblackbox`;
   if (channelTitleEl) channelTitleEl.textContent = channelData.name;
 
-  const subtitleParts = ["Live from the United Kingdom"];
+  const subtitleParts = [];
+  if (channelData.countryName) {
+    const location = channelData.countryFlag
+      ? `${channelData.countryFlag} ${channelData.countryName}`
+      : channelData.countryName;
+    subtitleParts.push(`Live from ${location}`);
+  } else {
+    subtitleParts.push("Live stream");
+  }
   if (channelData.categoryLabel) subtitleParts.push(channelData.categoryLabel);
   if (channelData.qualityLabel) subtitleParts.push(channelData.qualityLabel);
   channelSubtitleEl.textContent = subtitleParts.join(" • ");
@@ -140,14 +154,22 @@ function populateDetails() {
 
   if (channelDescriptionEl) {
     if (channelData.network) {
-      channelDescriptionEl.textContent = `${channelData.network} delivers ${channelData.name} live.`;
+      const origin = channelData.countryName ? ` from ${channelData.countryName}` : "";
+      channelDescriptionEl.textContent = `${channelData.network} delivers ${channelData.name}${origin} live.`;
     } else {
-      channelDescriptionEl.textContent = `${channelData.name} is streaming live via the IPTV-Org catalog.`;
+      const origin = channelData.countryName ? ` from ${channelData.countryName}` : "";
+      channelDescriptionEl.textContent = `${channelData.name}${origin} is streaming live via the IPTV-Org catalog.`;
     }
   }
 
   if (channelTagsEl) {
     channelTagsEl.innerHTML = "";
+    if (channelData.countryName) {
+      const locationTag = channelData.countryFlag
+        ? `${channelData.countryFlag} ${channelData.countryName}`
+        : channelData.countryName;
+      addTag(locationTag);
+    }
     if (channelData.categoryNames?.length) {
       channelData.categoryNames.slice(0, 3).forEach((name) => addTag(name));
     }
