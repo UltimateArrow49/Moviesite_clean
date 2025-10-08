@@ -14,6 +14,7 @@ const REGION_OPTIONS = [
   { id: "OCE", label: "Oceania" },
 ];
 const REGION_OPTION_MAP = new Map(REGION_OPTIONS.map((option) => [option.id, option]));
+const PAGE_SIZE = 40;
 const STORAGE_PREFIX = "live:channel:";
 
 const grid = document.getElementById("grid");
@@ -24,6 +25,7 @@ const viewTitle = document.getElementById("viewTitle");
 const countryListEl = document.getElementById("countryList");
 const regionSelect = document.getElementById("regionFilter");
 const countrySummary = document.getElementById("countrySummary");
+const paginationEl = document.getElementById("pagination");
 
 const state = {
   channels: [],
@@ -37,6 +39,7 @@ const state = {
   categoriesMap: new Map(),
   selectedCountry: "all",
   selectedRegion: "all",
+  page: 1,
 };
 
 function setBusy(isBusy) {
@@ -581,6 +584,85 @@ function updateViewTitle() {
   }
 }
 
+function createPaginationButton(label, targetPage, disabled, ariaLabel) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "pagination__button";
+  button.textContent = label;
+  if (ariaLabel) {
+    button.setAttribute("aria-label", ariaLabel);
+  }
+  if (disabled) {
+    button.disabled = true;
+  } else {
+    button.dataset.page = String(targetPage);
+  }
+  return button;
+}
+
+function renderPagination(totalResults, totalPages, rangeStart, rangeEnd) {
+  if (!paginationEl) return;
+  if (!totalResults || totalPages <= 1) {
+    paginationEl.innerHTML = "";
+    paginationEl.hidden = true;
+    return;
+  }
+
+  paginationEl.hidden = false;
+  paginationEl.innerHTML = "";
+
+  const fragment = document.createDocumentFragment();
+
+  const status = document.createElement("span");
+  status.className = "pagination__status";
+  const statusPlural = totalResults === 1 ? "channel" : "channels";
+  status.textContent = `Showing ${rangeStart.toLocaleString()}–${rangeEnd.toLocaleString()} of ${totalResults.toLocaleString()} ${statusPlural}`;
+  fragment.appendChild(status);
+
+  const controls = document.createElement("div");
+  controls.className = "pagination__controls";
+
+  controls.appendChild(
+    createPaginationButton("Previous", Math.max(1, state.page - 1), state.page === 1, "Go to previous page")
+  );
+
+  const indicator = document.createElement("span");
+  indicator.className = "pagination__indicator";
+  indicator.textContent = `Page ${state.page} of ${totalPages}`;
+  controls.appendChild(indicator);
+
+  controls.appendChild(
+    createPaginationButton(
+      "Next",
+      Math.min(totalPages, state.page + 1),
+      state.page === totalPages,
+      "Go to next page"
+    )
+  );
+
+  fragment.appendChild(controls);
+
+  paginationEl.appendChild(fragment);
+}
+
+function setPage(page) {
+  const baseChannels = getChannelsForSelection();
+  const results = filterChannels(baseChannels);
+  const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
+  const normalized = Math.min(Math.max(page, 1), totalPages);
+  if (normalized === state.page) return;
+  state.page = normalized;
+  render();
+}
+
+function onPaginationClick(event) {
+  const button = event.target.closest("button[data-page]");
+  if (!button) return;
+  const page = Number.parseInt(button.dataset.page, 10);
+  if (!Number.isFinite(page)) return;
+  setPage(page);
+}
+
 function render() {
   if (!grid) return;
   grid.innerHTML = "";
@@ -602,6 +684,7 @@ function render() {
         ? `No live channels are available in the ${regionMeta.label} region right now.`
         : "No live channels available for this region.";
     }
+    renderPagination(0, 0, 0, 0);
     setStatus(message);
     return;
   }
@@ -609,6 +692,7 @@ function render() {
   const results = filterChannels(baseChannels);
 
   if (!results.length) {
+    renderPagination(0, 0, 0, 0);
     setStatus(
       state.query
         ? `No live channels match “${state.query}”.`
@@ -617,11 +701,25 @@ function render() {
     return;
   }
 
+  const totalResults = results.length;
+  const totalPages = Math.max(1, Math.ceil(totalResults / PAGE_SIZE));
+  if (state.page > totalPages) {
+    state.page = totalPages;
+  } else if (state.page < 1) {
+    state.page = 1;
+  }
+
+  const startIndex = (state.page - 1) * PAGE_SIZE;
+  const endIndex = Math.min(startIndex + PAGE_SIZE, totalResults);
+  const visibleResults = results.slice(startIndex, endIndex);
+
   const fragment = document.createDocumentFragment();
-  for (const channel of results) {
+  for (const channel of visibleResults) {
     fragment.appendChild(createChannelCard(channel));
   }
   grid.appendChild(fragment);
+
+  renderPagination(totalResults, totalPages, startIndex + 1, endIndex);
 
   const filterMeta = state.filter === "all" ? null : state.filterOptions.get(state.filter);
   const filterLabel = filterMeta ? ` in ${filterMeta.label}` : "";
@@ -636,8 +734,10 @@ function render() {
     return countryMeta ? ` in ${countryMeta.name}` : "";
   })();
 
-  const summary = `${results.length.toLocaleString()} ${
-    results.length === 1 ? "channel" : "channels"
+  const summary = `Showing ${
+    (startIndex + 1).toLocaleString()
+  }–${endIndex.toLocaleString()} of ${totalResults.toLocaleString()} ${
+    totalResults === 1 ? "channel" : "channels"
   }${locationLabel}${filterLabel}${searchLabel}. Ready for in-browser playback.`;
   setStatus(summary);
 }
@@ -648,12 +748,14 @@ function onFilterClick(event) {
   const filter = button.dataset.filter || "all";
   if (state.filter === filter) return;
   state.filter = filter;
+  state.page = 1;
   updateActiveFilter();
   updateViewTitle();
   render();
 }
 
 function onSearchInput(event) {
+  state.page = 1;
   state.query = event.target.value || "";
   render();
 }
@@ -665,6 +767,7 @@ function onCountryListClick(event) {
   if (state.selectedCountry === code) return;
   state.selectedCountry = code;
   state.filter = "all";
+  state.page = 1;
   renderCountryList();
   const baseChannels = getChannelsForSelection();
   rebuildFilters(baseChannels);
@@ -688,6 +791,7 @@ function onRegionChange(event) {
     state.selectedCountry = "all";
   }
   state.filter = "all";
+  state.page = 1;
   renderCountryList();
   const baseChannels = getChannelsForSelection();
   rebuildFilters(baseChannels);
@@ -834,6 +938,7 @@ async function loadData() {
     state.filter = "all";
     state.selectedCountry = "all";
     state.selectedRegion = "all";
+    state.page = 1;
 
     populateRegionSelect();
     renderCountryList();
@@ -867,6 +972,10 @@ if (countryListEl) {
 
 if (regionSelect) {
   regionSelect.addEventListener("change", onRegionChange);
+}
+
+if (paginationEl) {
+  paginationEl.addEventListener("click", onPaginationClick);
 }
 
 loadData();
