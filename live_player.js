@@ -1,4 +1,7 @@
+import { applyChannelLogo } from "./logo-placeholder.js";
+
 const STORAGE_PREFIX = "live:channel:";
+
 const HLS_PATTERN = /\.m3u8(\?|$)/i;
 const DIRECT_VIDEO_PATTERN = /\.(mp4|m4v|mov|webm|ogg)(\?|$)/i;
 const HTTPS_PATTERN = /^https:/i;
@@ -173,13 +176,11 @@ function populateDetails() {
   channelSubtitleEl.textContent = subtitleParts.join(" • ");
 
   if (channelLogoEl) {
-    if (channelData.logo) {
-      channelLogoEl.src = channelData.logo;
-      channelLogoEl.alt = `${channelData.name} logo`;
-      channelLogoEl.hidden = false;
-    } else {
-      channelLogoEl.hidden = true;
-    }
+    applyChannelLogo(channelLogoEl, channelData.name, channelData.logo, {
+      aspect: "square",
+      lazy: false,
+    });
+    channelLogoEl.hidden = false;
   }
 
   if (channelDescriptionEl) {
