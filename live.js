@@ -1,3 +1,5 @@
+import { createChannelLogoElement } from "./logo-placeholder.js";
+
 const API_BASE = "https://iptv-org.github.io/api";
 const CHANNELS_URL = `${API_BASE}/channels.json`;
 const STREAMS_URL = `${API_BASE}/streams.json`;
@@ -480,17 +482,20 @@ function createChannelCard(channel) {
   thumb.className = "thumb";
 
   let thumbStatusBadge = null;
-  if (channel.logo) {
-    const img = document.createElement("img");
-    img.src = channel.logo;
-    img.alt = `${channel.name} logo`;
-    thumb.appendChild(img);
-  } else {
-    const placeholder = document.createElement("div");
-    placeholder.className = "placeholder";
-    placeholder.textContent = channel.name.charAt(0).toUpperCase();
-    thumb.appendChild(placeholder);
-  }
+  const logoImg = createChannelLogoElement(channel.name, channel.logo, {
+    aspect: "landscape",
+  });
+  const updateThumbPlaceholderState = () => {
+    if (logoImg.dataset.placeholder === "true") {
+      thumb.classList.add("thumb--placeholder");
+    } else {
+      thumb.classList.remove("thumb--placeholder");
+    }
+  };
+  logoImg.addEventListener("load", updateThumbPlaceholderState);
+  logoImg.addEventListener("error", updateThumbPlaceholderState);
+  thumb.appendChild(logoImg);
+  updateThumbPlaceholderState();
 
   if (channel.qualityLabel) {
     const badge = document.createElement("span");
