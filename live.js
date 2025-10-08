@@ -16,6 +16,9 @@ const REGION_OPTIONS = [
 const REGION_OPTION_MAP = new Map(REGION_OPTIONS.map((option) => [option.id, option]));
 const PAGE_SIZE = 40;
 const STORAGE_PREFIX = "live:channel:";
+const STREAM_STATUS_TIMEOUT_MS = 7000;
+const STREAM_STATUS_MAX_CONCURRENT = 4;
+const STREAM_STATUS_CACHE_TTL = 60 * 1000;
 
 const grid = document.getElementById("grid");
 const filtersEl = document.getElementById("filters");
@@ -41,6 +44,10 @@ const state = {
   selectedRegion: "all",
   page: 1,
 };
+
+const streamStatusQueue = [];
+let streamStatusActive = 0;
+const streamStatusCache = new Map();
 
 function setBusy(isBusy) {
   if (grid) {
@@ -296,11 +303,163 @@ function storeChannel(channel) {
   }
 }
 
+function readChannelStatus(channelId) {
+  if (!channelId) return null;
+  try {
+    return sessionStorage.getItem(`${STORAGE_PREFIX}${channelId}:status`);
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeChannelStatus(channelId, status) {
+  if (!channelId) return;
+  try {
+    sessionStorage.setItem(`${STORAGE_PREFIX}${channelId}:status`, status);
+  } catch (error) {
+    console.warn("Unable to persist live stream status", error);
+  }
+}
+
+function applyStreamStatus(card, statusIndicator, thumbBadge, state) {
+  if (!statusIndicator) return;
+  const normalized = state === "up" ? "up" : state === "down" ? "down" : "pending";
+  statusIndicator.classList.remove(
+    "stream-status--pending",
+    "stream-status--up",
+    "stream-status--down"
+  );
+  if (normalized === "up") {
+    statusIndicator.classList.add("stream-status--up");
+    statusIndicator.textContent = "Up";
+  } else if (normalized === "down") {
+    statusIndicator.classList.add("stream-status--down");
+    statusIndicator.textContent = "Down";
+  } else {
+    statusIndicator.classList.add("stream-status--pending");
+    statusIndicator.textContent = "Checking…";
+  }
+
+  if (thumbBadge) {
+    thumbBadge.classList.remove("thumb-status--up", "thumb-status--down");
+    if (normalized === "up") {
+      thumbBadge.hidden = false;
+      thumbBadge.classList.add("thumb-status--up");
+      thumbBadge.textContent = "Up";
+    } else if (normalized === "down") {
+      thumbBadge.hidden = false;
+      thumbBadge.classList.add("thumb-status--down");
+      thumbBadge.textContent = "Server down";
+    } else {
+      thumbBadge.hidden = true;
+    }
+  }
+
+  if (card) {
+    card.dataset.streamStatus = normalized;
+  }
+}
+
+function queueStreamStatusCheck(channel, onUpdate) {
+  if (!channel) return;
+  const cacheKey = channel.stream?.url || channel.id;
+  const now = Date.now();
+  if (cacheKey && streamStatusCache.has(cacheKey)) {
+    const cached = streamStatusCache.get(cacheKey);
+    if (now - cached.timestamp < STREAM_STATUS_CACHE_TTL) {
+      onUpdate(cached.status);
+      return;
+    }
+  }
+
+  const stored = readChannelStatus(channel.id);
+  if (stored === "up" || stored === "down") {
+    onUpdate(stored);
+  }
+
+  streamStatusQueue.push({ channel, onUpdate, cacheKey });
+  processStreamStatusQueue();
+}
+
+function processStreamStatusQueue() {
+  if (streamStatusActive >= STREAM_STATUS_MAX_CONCURRENT) return;
+  const next = streamStatusQueue.shift();
+  if (!next) return;
+  streamStatusActive += 1;
+  performStreamStatusCheck(next.channel)
+    .then((result) => {
+      const status = result === "up" ? "up" : "down";
+      if (next.cacheKey) {
+        streamStatusCache.set(next.cacheKey, { status, timestamp: Date.now() });
+      }
+      writeChannelStatus(next.channel.id, status);
+      next.onUpdate(status);
+    })
+    .catch(() => {
+      if (next.cacheKey) {
+        streamStatusCache.set(next.cacheKey, { status: "down", timestamp: Date.now() });
+      }
+      writeChannelStatus(next.channel.id, "down");
+      next.onUpdate("down");
+    })
+    .finally(() => {
+      streamStatusActive -= 1;
+      processStreamStatusQueue();
+    });
+}
+
+async function performStreamStatusCheck(channel) {
+  if (!channel?.stream?.url) return "down";
+  try {
+    return await pingStream(channel.stream.url);
+  } catch (error) {
+    return "down";
+  }
+}
+
+async function pingStream(url) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), STREAM_STATUS_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      mode: "cors",
+      signal: controller.signal,
+      cache: "no-store",
+      credentials: "omit",
+      redirect: "follow",
+      headers: {
+        Accept: "application/vnd.apple.mpegurl,text/plain;q=0.9,*/*;q=0.1",
+      },
+    });
+    if (response && (response.ok || response.status === 416)) {
+      if (response.body && typeof response.body.cancel === "function") {
+        try {
+          response.body.cancel();
+        } catch (error) {
+          /* ignore cancellation errors */
+        }
+      }
+      return "up";
+    }
+    return "down";
+  } catch (error) {
+    return "down";
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 function createChannelCard(channel) {
   const card = document.createElement("a");
   card.className = "card card--channel";
   card.dataset.channelId = channel.id;
   card.dataset.mode = channel.inlinePlayable ? "inline" : "external";
+  const shouldMonitorStream = Boolean(
+    channel.inlinePlayable &&
+      channel.playbackKind === "hls" &&
+      channel.stream?.url
+  );
   card.href = channel.inlinePlayable && channel.stream?.url ? buildPlayerUrl(channel) : channel.stream?.url || "#";
   card.rel = "noopener";
   if (!channel.inlinePlayable) {
@@ -320,6 +479,7 @@ function createChannelCard(channel) {
   const thumb = document.createElement("div");
   thumb.className = "thumb";
 
+  let thumbStatusBadge = null;
   if (channel.logo) {
     const img = document.createElement("img");
     img.src = channel.logo;
@@ -337,6 +497,13 @@ function createChannelCard(channel) {
     badge.className = "badge";
     badge.textContent = channel.qualityLabel;
     thumb.appendChild(badge);
+  }
+
+  if (shouldMonitorStream) {
+    thumbStatusBadge = document.createElement("span");
+    thumbStatusBadge.className = "thumb-status";
+    thumbStatusBadge.hidden = true;
+    thumb.appendChild(thumbStatusBadge);
   }
 
   const meta = document.createElement("div");
@@ -372,6 +539,18 @@ function createChannelCard(channel) {
   const actionLabel = channel.inlinePlayable ? "Watch live" : "Open stream link";
   actions.innerHTML =
     `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>${actionLabel}</span>`;
+
+  if (shouldMonitorStream) {
+    const statusIndicator = document.createElement("span");
+    statusIndicator.className = "stream-status stream-status--pending";
+    statusIndicator.textContent = "Checking…";
+    actions.appendChild(statusIndicator);
+    card.dataset.streamStatus = "pending";
+    queueStreamStatusCheck(channel, (state) => {
+      applyStreamStatus(card, statusIndicator, thumbStatusBadge, state);
+    });
+  }
+
   meta.appendChild(actions);
 
   card.appendChild(thumb);
