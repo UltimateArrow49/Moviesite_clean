@@ -32,6 +32,8 @@ const loadingText = document.getElementById("loadingText");
 const statusEl = document.getElementById("playerStatus");
 const videoEl = document.getElementById("liveVideo");
 const backButton = document.getElementById("backButton");
+const playerStageEl = document.getElementById("playerStage");
+const playerOverlayEl = document.getElementById("playerOverlay");
 
 function getStoredChannel(id) {
   if (!id) return null;
@@ -98,6 +100,34 @@ function setStatus(message) {
   if (statusEl) {
     statusEl.textContent = message;
   }
+}
+
+function recordChannelStatus(status) {
+  if (!channelId) return;
+  try {
+    sessionStorage.setItem(`${STORAGE_PREFIX}${channelId}:status`, status);
+  } catch (error) {
+    console.warn("Unable to persist stream status", error);
+  }
+}
+
+function showStreamOverlay(message, tone = "down") {
+  if (!playerOverlayEl) return;
+  playerOverlayEl.textContent = message;
+  if (tone) {
+    playerOverlayEl.dataset.tone = tone;
+  } else {
+    delete playerOverlayEl.dataset.tone;
+  }
+  playerOverlayEl.hidden = false;
+  playerStageEl?.classList.add("has-overlay");
+}
+
+function hideStreamOverlay() {
+  if (!playerOverlayEl) return;
+  playerOverlayEl.hidden = true;
+  playerOverlayEl.removeAttribute("data-tone");
+  playerStageEl?.classList.remove("has-overlay");
 }
 
 function addTag(label) {
@@ -234,6 +264,8 @@ function attachVideoListeners() {
   videoEl.addEventListener("playing", () => {
     setLoading(false);
     setStatus("Live stream playing.");
+    hideStreamOverlay();
+    recordChannelStatus("up");
   });
   videoEl.addEventListener("waiting", () => {
     setLoading(true, "Buffering live signal…");
@@ -272,10 +304,15 @@ function attachVideoListeners() {
         message = "Unknown error during playback.";
     }
     setStatus(message);
+    if (error.code === error.MEDIA_ERR_NETWORK) {
+      showStreamOverlay("Server down", "down");
+      recordChannelStatus("down");
+    }
   });
 }
 
 function playWithNativeHls(url) {
+  hideStreamOverlay();
   videoEl.src = url;
   const promise = videoEl.play();
   if (promise && typeof promise.catch === "function") {
@@ -293,6 +330,7 @@ function startPlayback() {
     return;
   }
 
+  hideStreamOverlay();
   setLoading(true);
   setStatus("Preparing live stream…");
 
@@ -322,6 +360,8 @@ function startPlayback() {
     hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
       setLoading(false);
       setStatus("Live stream ready.");
+      hideStreamOverlay();
+      recordChannelStatus("up");
       const promise = videoEl.play();
       if (promise && typeof promise.catch === "function") {
         promise.catch(() => setStatus("Press play to start the live stream."));
@@ -330,7 +370,9 @@ function startPlayback() {
     hls.on(window.Hls.Events.ERROR, (event, data) => {
       if (data?.fatal) {
         setLoading(false);
-        setStatus("Fatal error loading HLS stream.");
+        setStatus("Server down. Please try again later.");
+        showStreamOverlay("Server down", "down");
+        recordChannelStatus("down");
         hls.destroy();
       }
     });
@@ -346,6 +388,7 @@ function startPlayback() {
     setStatus("Attempting direct playback. Compatibility may vary.");
   }
 
+  hideStreamOverlay();
   videoEl.src = stream;
   const playPromise = videoEl.play();
   if (playPromise && typeof playPromise.catch === "function") {
