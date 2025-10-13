@@ -1,0 +1,486 @@
+{
+  "movies": [
+    {
+      "id": 1038392,
+      "title": "The Conjuring: Last Rites",
+      "original_title": "The Conjuring: Last Rites",
+      "release_date": "2025-09-03",
+      "poster_path": "/7JzOmJ1fIU43I3gLHYsY8UzNzjG.jpg",
+      "backdrop_path": "/9DYFYhmbXRGsMhfUgXM3VSP9uLX.jpg",
+      "vote_average": 6.957,
+      "vote_count": 899,
+      "original_language": "en"
+    },
+    {
+      "id": 1290879,
+      "title": "The Woman in Cabin 10",
+      "original_title": "The Woman in Cabin 10",
+      "release_date": "2025-10-09",
+      "poster_path": "/4kpdyePOlcELQQJcxXPF5GB1Adw.jpg",
+      "backdrop_path": "/a9SLDj7GPKxeuOjoYkgr5nz1IOl.jpg",
+      "vote_average": 6.16,
+      "vote_count": 178,
+      "original_language": "en"
+    },
+    {
+      "id": 533533,
+      "title": "TRON: Ares",
+      "original_title": "TRON: Ares",
+      "release_date": "2025-10-08",
+      "poster_path": "/chpWmskl3aKm1aTZqUHRCtviwPy.jpg",
+      "backdrop_path": "/2OvpmWYrsv8eMyV3AAqhoMnzMF.jpg",
+      "vote_average": 6.535,
+      "vote_count": 172,
+      "original_language": "en"
+    },
+    {
+      "id": 157336,
+      "title": "Interstellar",
+      "original_title": "Interstellar",
+      "release_date": "2014-11-05",
+      "poster_path": "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+      "backdrop_path": "/vgnoBSVzWAV9sNQUORaDGvDp7wx.jpg",
+      "vote_average": 8.461,
+      "vote_count": 38029,
+      "original_language": "en"
+    },
+    {
+      "id": 7451,
+      "title": "xXx",
+      "original_title": "xXx",
+      "release_date": "2002-08-09",
+      "poster_path": "/xeEw3eLeSFmJgXZzmF2Efww0q3s.jpg",
+      "backdrop_path": "/4QXRStvIJHsHLUf6hr7aweMX7em.jpg",
+      "vote_average": 5.965,
+      "vote_count": 4585,
+      "original_language": "en"
+    },
+    {
+      "id": 911430,
+      "title": "F1",
+      "original_title": "F1",
+      "release_date": "2025-06-25",
+      "poster_path": "/9PXZIUsSDh4alB80jheWX4fhZmy.jpg",
+      "backdrop_path": "/ZtcGMc204JsNqfjS9lU6udRgpo.jpg",
+      "vote_average": 7.834,
+      "vote_count": 2359,
+      "original_language": "en"
+    },
+    {
+      "id": 617126,
+      "title": "The Fantastic 4: First Steps",
+      "original_title": "The Fantastic 4: First Steps",
+      "release_date": "2025-07-23",
+      "poster_path": "/cm8TNGBGG0aBfWj0LgrESHv8tir.jpg",
+      "backdrop_path": "/7FnmZCAjAwaHydgpjFKnu11MoWs.jpg",
+      "vote_average": 7.142,
+      "vote_count": 1960,
+      "original_language": "en"
+    },
+    {
+      "id": 986097,
+      "title": "HIM",
+      "original_title": "HIM",
+      "release_date": "2025-09-18",
+      "poster_path": "/qPJzcYR2f1O1uynYBCVPPJuOiAH.jpg",
+      "backdrop_path": "/jzzpCJWkVZZwAxzzLmtYN0MBWFd.jpg",
+      "vote_average": 5.71,
+      "vote_count": 119,
+      "original_language": "en"
+    },
+    {
+      "id": 1236470,
+      "title": "The Lost Bus",
+      "original_title": "The Lost Bus",
+      "release_date": "2025-09-19",
+      "poster_path": "/zpygCOYY1DPBkeUsrrznLRN5js5.jpg",
+      "backdrop_path": "/lL4zajQbvvo63z2CNu36Ue6wpBX.jpg",
+      "vote_average": 7.186,
+      "vote_count": 269,
+      "original_language": "en"
+    },
+    {
+      "id": 1061474,
+      "title": "Superman",
+      "original_title": "Superman",
+      "release_date": "2025-07-09",
+      "poster_path": "/wPLysNDLffQLOVebZQCbXJEv6E6.jpg",
+      "backdrop_path": "/eGX66zonvc4bXg3rM08RUxdYSDx.jpg",
+      "vote_average": 7.447,
+      "vote_count": 3580,
+      "original_language": "en"
+    },
+    {
+      "id": 1054867,
+      "title": "One Battle After Another",
+      "original_title": "One Battle After Another",
+      "release_date": "2025-09-23",
+      "poster_path": "/m1jFoahEbeQXtx4zArT2FKdbNIj.jpg",
+      "backdrop_path": "/zpEWFNqoN8Qg1SzMMHmaGyOBTdW.jpg",
+      "vote_average": 7.8,
+      "vote_count": 809,
+      "original_language": "en"
+    },
+    {
+      "id": 575265,
+      "title": "Mission: Impossible - The Final Reckoning",
+      "original_title": "Mission: Impossible - The Final Reckoning",
+      "release_date": "2025-05-17",
+      "poster_path": "/z53D72EAOxGRqdr7KXXWp9dJiDe.jpg",
+      "backdrop_path": "/538U9snNc2fpnOmYXAPUh3zn31H.jpg",
+      "vote_average": 7.262,
+      "vote_count": 1910,
+      "original_language": "en"
+    },
+    {
+      "id": 1078605,
+      "title": "Weapons",
+      "original_title": "Weapons",
+      "release_date": "2025-08-04",
+      "poster_path": "/cpf7vsRZ0MYRQcnLWteD5jK9ymT.jpg",
+      "backdrop_path": "/Q2OajDi2kcO6yErb1IAyVDTKMs.jpg",
+      "vote_average": 7.403,
+      "vote_count": 1867,
+      "original_language": "en"
+    },
+    {
+      "id": 1125257,
+      "title": "Freakier Friday",
+      "original_title": "Freakier Friday",
+      "release_date": "2025-08-06",
+      "poster_path": "/9wV65OmsjLAqBfDnYTkMPutXH8j.jpg",
+      "backdrop_path": "/yQy9Y3p5INwkfTuHSnzYnz4MCV3.jpg",
+      "vote_average": 6.985,
+      "vote_count": 271,
+      "original_language": "en"
+    },
+    {
+      "id": 1197137,
+      "title": "Black Phone 2",
+      "original_title": "Black Phone 2",
+      "release_date": "2025-10-15",
+      "poster_path": "/evbguUd1BwExQgXMjG9n9AHMQpN.jpg",
+      "backdrop_path": "/GNeuKnbZRZj5JhKfnJOPyKJuVA.jpg",
+      "vote_average": 7.2,
+      "vote_count": 2,
+      "original_language": "en"
+    },
+    {
+      "id": 1311031,
+      "title": "Demon Slayer: Kimetsu no Yaiba Infinity Castle",
+      "original_title": "劇場版「鬼滅の刃」無限城編 第一章 猗窩座再来",
+      "release_date": "2025-07-18",
+      "poster_path": "/sUsVimPdA1l162FvdBIlmKBlWHx.jpg",
+      "backdrop_path": "/1RgPyOhN4DRs225BGTlHJqCudII.jpg",
+      "vote_average": 7.814,
+      "vote_count": 451,
+      "original_language": "ja"
+    },
+    {
+      "id": 941109,
+      "title": "Play Dirty",
+      "original_title": "Play Dirty",
+      "release_date": "2025-09-30",
+      "poster_path": "/ovZ0zq0NwRghtWI1oLaM0lWuoEw.jpg",
+      "backdrop_path": "/k6tdiMTO39RQj3dhfspuzprfoe0.jpg",
+      "vote_average": 6.64,
+      "vote_count": 278,
+      "original_language": "en"
+    },
+    {
+      "id": 1251717,
+      "title": "Vicious",
+      "original_title": "Vicious",
+      "release_date": "2025-09-19",
+      "poster_path": "/shKGDGrwqmc9x2aTJcQszoXinq0.jpg",
+      "backdrop_path": "/da1mXvCrQrFcw6BxovCavBFbIvz.jpg",
+      "vote_average": 6.0,
+      "vote_count": 41,
+      "original_language": "en"
+    },
+    {
+      "id": 1352755,
+      "title": "Maintenance Required",
+      "original_title": "Maintenance Required",
+      "release_date": "2025-10-07",
+      "poster_path": "/lM7Q1y0pmHPWZCPmGkAWGKdgu6W.jpg",
+      "backdrop_path": "/uxRCrEMJlfCILQhkcDuDpadkQC9.jpg",
+      "vote_average": 5.62,
+      "vote_count": 46,
+      "original_language": "en"
+    },
+    {
+      "id": 436969,
+      "title": "The Suicide Squad",
+      "original_title": "The Suicide Squad",
+      "release_date": "2021-06-06",
+      "poster_path": "/q61qEyssk2ku3okWICKArlAdhBn.jpg",
+      "backdrop_path": "/rAgsOIhqRS6tUthmHoqnqh9PIAE.jpg",
+      "vote_average": 7.481,
+      "vote_count": 9180,
+      "original_language": "en"
+    }
+  ],
+  "series": [
+    {
+      "id": 286801,
+      "name": "Monster: The Ed Gein Story",
+      "original_name": "Monster: The Ed Gein Story",
+      "first_air_date": "2025-10-03",
+      "poster_path": "/iDHzRALtZCzHVmx7uyjTTKvMAPB.jpg",
+      "backdrop_path": "/cm2oUAPiTE1ERoYYOzzgloQw4YZ.jpg",
+      "vote_average": 7.461,
+      "vote_count": 191,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 110492,
+      "name": "Peacemaker",
+      "original_name": "Peacemaker",
+      "first_air_date": "2022-01-13",
+      "poster_path": "/eYzbGcYnOUlvj2fa76pTgIXogd7.jpg",
+      "backdrop_path": "/pj1wFbZF3gpEg7F0EreXTvZNZTG.jpg",
+      "vote_average": 8.2,
+      "vote_count": 3098,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 221079,
+      "name": "The Last Frontier",
+      "original_name": "The Last Frontier",
+      "first_air_date": "2025-10-09",
+      "poster_path": "/4S2gS1mECZ5wDRBVAZE6KWmJHI3.jpg",
+      "backdrop_path": "/tppoXtkKVh26oEsMdkIGmUqdgVL.jpg",
+      "vote_average": 8.0,
+      "vote_count": 23,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 63926,
+      "name": "One-Punch Man",
+      "original_name": "ワンパンマン",
+      "first_air_date": "2015-10-05",
+      "poster_path": "/dT10AxJIXVvRwFAew4tt2RhzJrD.jpg",
+      "backdrop_path": "/3AXLSxMuqyZt8HyrKKfrcJtkswD.jpg",
+      "vote_average": 8.396,
+      "vote_count": 3839,
+      "origin_country": [
+        "JP"
+      ]
+    },
+    {
+      "id": 249551,
+      "name": "Néro the Assassin",
+      "original_name": "Néro",
+      "first_air_date": "2025-10-08",
+      "poster_path": "/twNHmxeFkDEdGzYMeGTp9stoGUC.jpg",
+      "backdrop_path": "/lMdOqInVxIvEapJjxAvOoHc7tl5.jpg",
+      "vote_average": 6.9,
+      "vote_count": 17,
+      "origin_country": [
+        "FR"
+      ]
+    },
+    {
+      "id": 271267,
+      "name": "The Chair Company",
+      "original_name": "The Chair Company",
+      "first_air_date": "2025-10-12",
+      "poster_path": "/xZgftEXZXTM47k2rZlXo8kr8HZF.jpg",
+      "backdrop_path": "/4mWtAo747prNwNqqmE4upngsbgY.jpg",
+      "vote_average": 8.5,
+      "vote_count": 4,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 225647,
+      "name": "Boots",
+      "original_name": "Boots",
+      "first_air_date": "2025-10-09",
+      "poster_path": "/eEwe68oPFFDU4ehZ3sXiETE44Rt.jpg",
+      "backdrop_path": "/7a78G7fisRp9N9upjyX5b3GNRNI.jpg",
+      "vote_average": 8.275,
+      "vote_count": 20,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 228305,
+      "name": "Task",
+      "original_name": "Task",
+      "first_air_date": "2025-09-07",
+      "poster_path": "/9JdL1aQdAQiyYYQ2xCqbHaEcZt8.jpg",
+      "backdrop_path": "/hEE8TV5jLQZQnpPN4QmYZ1lCJNq.jpg",
+      "vote_average": 5.57,
+      "vote_count": 79,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 37854,
+      "name": "One Piece",
+      "original_name": "ワンピース",
+      "first_air_date": "1999-10-20",
+      "poster_path": "/cMD9Ygz11zjJzAovURpO75Qg7rT.jpg",
+      "backdrop_path": "/4Mt7WHox67uJ1yErwTBFcV8KWgG.jpg",
+      "vote_average": 8.7,
+      "vote_count": 5007,
+      "origin_country": [
+        "JP"
+      ]
+    },
+    {
+      "id": 120089,
+      "name": "SPY x FAMILY",
+      "original_name": "SPY×FAMILY",
+      "first_air_date": "2022-04-09",
+      "poster_path": "/7NAvPYPAu7MeHwP8E9sn81PqsRh.jpg",
+      "backdrop_path": "/lysUnU6V0VfcthDbviuVlIqgHOR.jpg",
+      "vote_average": 8.539,
+      "vote_count": 2098,
+      "origin_country": [
+        "JP"
+      ]
+    },
+    {
+      "id": 205715,
+      "name": "Gen V",
+      "original_name": "Gen V",
+      "first_air_date": "2023-09-28",
+      "poster_path": "/tEv842Nd5uMSavURG4aQO1pNtst.jpg",
+      "backdrop_path": "/ScaVfT5IkwVC3Edhmxqyl0GbK0.jpg",
+      "vote_average": 7.717,
+      "vote_count": 1178,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 153312,
+      "name": "Tulsa King",
+      "original_name": "Tulsa King",
+      "first_air_date": "2022-11-13",
+      "poster_path": "/rOYLWCdAifpUtPlTf1WHxyaxeMt.jpg",
+      "backdrop_path": "/mNHRGO1gFpR2CYZdANe72kcKq7G.jpg",
+      "vote_average": 8.327,
+      "vote_count": 2290,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 211684,
+      "name": "The Walking Dead: Daryl Dixon",
+      "original_name": "The Walking Dead: Daryl Dixon",
+      "first_air_date": "2023-09-10",
+      "poster_path": "/sP5QdW9FN18XWcA4ROz3MPAQBTx.jpg",
+      "backdrop_path": "/g0eOZeci2vcrM0oxuiEJUR94ff7.jpg",
+      "vote_average": 8.1,
+      "vote_count": 764,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 157239,
+      "name": "Alien: Earth",
+      "original_name": "Alien: Earth",
+      "first_air_date": "2025-08-12",
+      "poster_path": "/yueXS3q8BtoWekcHOATFHicLl3e.jpg",
+      "backdrop_path": "/biIBy2LPOOtGCgUYOls3dUEWU3v.jpg",
+      "vote_average": 7.493,
+      "vote_count": 669,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 228689,
+      "name": "Genie, Make a Wish",
+      "original_name": "다 이루어질지니",
+      "first_air_date": "2025-10-03",
+      "poster_path": "/opop2u7Jav6lMNL8fSBTzOeFBDz.jpg",
+      "backdrop_path": "/2ds9EWX7cwGfZiRjYqhyw7SbzsW.jpg",
+      "vote_average": 7.338,
+      "vote_count": 34,
+      "origin_country": [
+        "KR"
+      ]
+    },
+    {
+      "id": 1396,
+      "name": "Breaking Bad",
+      "original_name": "Breaking Bad",
+      "first_air_date": "2008-01-20",
+      "poster_path": "/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg",
+      "backdrop_path": "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
+      "vote_average": 8.923,
+      "vote_count": 16231,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 225634,
+      "name": "Monsters: The Lyle and Erik Menendez Story",
+      "original_name": "Monsters: The Lyle and Erik Menendez Story",
+      "first_air_date": "2024-09-19",
+      "poster_path": "/x9YC2rpXHUFMqI1hCekKDm9UE4w.jpg",
+      "backdrop_path": "/is3ZdGCPEKTW7IyDe0khvE1nc6R.jpg",
+      "vote_average": 7.606,
+      "vote_count": 414,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 1399,
+      "name": "Game of Thrones",
+      "original_name": "Game of Thrones",
+      "first_air_date": "2011-04-17",
+      "poster_path": "/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
+      "backdrop_path": "/2OMB0ynKlyIenMJWI2Dy9IWT4c.jpg",
+      "vote_average": 8.458,
+      "vote_count": 25631,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "id": 110316,
+      "name": "Alice in Borderland",
+      "original_name": "今際の国のアリス",
+      "first_air_date": "2020-12-10",
+      "poster_path": "/Ac8ruycRXzgcsndTZFK6ouGA0FA.jpg",
+      "backdrop_path": "/bKxiLRPVWe2nZXCzt6JPr5HNWYm.jpg",
+      "vote_average": 8.148,
+      "vote_count": 2450,
+      "origin_country": [
+        "JP"
+      ]
+    },
+    {
+      "id": 66732,
+      "name": "Stranger Things",
+      "original_name": "Stranger Things",
+      "first_air_date": "2016-07-15",
+      "poster_path": "/uOOtwVbSr4QDjAGIifLDwpb2Pdl.jpg",
+      "backdrop_path": "/x93QzAgtHeRGgfK51Jh6URClBG8.jpg",
+      "vote_average": 8.594,
+      "vote_count": 18797,
+      "origin_country": [
+        "US"
+      ]
+    }
+  ]
+}

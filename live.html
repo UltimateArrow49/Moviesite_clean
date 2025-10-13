@@ -6,7 +6,9 @@
   <meta charset="utf-8">
   <title>Live · theblackbox</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#14ff9f">
+  <link rel="stylesheet" href="style.css?v=5">
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
@@ -82,10 +84,6 @@
       <a href="live.html" class="btn btn--primary">Live</a>
       <a href="player.html" class="btn btn--ghost">Info</a>
     </nav>
-    <a href="#download-app" class="btn btn--ghost btn--download download-app-btn" data-filename="theblackbox-desktop.zip">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.3 1.4 1.42L12 16.41l-4.7-4.7 1.4-1.42 2.3 2.3V4a1 1 0 0 1 1-1Zm-7 14h14v2H5v-2Z"/></svg>
-      <span>Download app</span>
-    </a>
     <div class="search-bar">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
       <input id="search" type="search" placeholder="Search live channels" autocomplete="off" spellcheck="false" aria-label="Search live channels">
@@ -144,7 +142,7 @@
 
   <footer class="site-footer">Live listings powered by IPTV-Org · Streams open via the live player.</footer>
 
-  <script src="download_app.js" defer></script>
+  <script src="install_app.js" defer></script>
   <script src="background_motion.js" type="module"></script>
   <script src="live.js?v=1" type="module"></script>
 </body>
