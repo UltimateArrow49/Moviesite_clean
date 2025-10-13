@@ -18,43 +18,8 @@ const searchSection = document.getElementById("searchResults");
 let searchTimer = null;
 let searchController = null;
 let activeQuery = "";
-let fallbackCatalogPromise = null;
 
 setupPreviewForGrid(grid, { mode: "movie" });
-
-function loadFallbackCatalog() {
-  if (!fallbackCatalogPromise) {
-    fallbackCatalogPromise = fetch("./catalog_fallback.json", { cache: "no-store" })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Fallback catalog unavailable");
-        }
-        return response.json();
-      })
-      .catch((error) => {
-        console.warn("Unable to load fallback catalog", error);
-        return {};
-      });
-  }
-  return fallbackCatalogPromise;
-}
-
-async function getFallbackMovies() {
-  const catalog = await loadFallbackCatalog();
-  return Array.isArray(catalog.movies) ? catalog.movies : [];
-}
-
-async function searchFallbackMovies(query) {
-  const movies = await getFallbackMovies();
-  const clean = query.trim().toLowerCase();
-  if (!clean) return movies;
-  return movies.filter((movie) => {
-    const fields = [movie.title, movie.original_title];
-    return fields.some((value) =>
-      typeof value === "string" && value.toLowerCase().includes(clean),
-    );
-  });
-}
 
 const CAROUSELS = [
   { id: "trending", label: "Trending movies", path: "trending/movie/week" },
@@ -431,27 +396,15 @@ async function loadCarousel(definition) {
   try {
     const data = await requestTmdb(definition.path, { page: "1" });
     const results = Array.isArray(data.results) ? data.results : [];
-    if (results.length) {
-      renderCarousel(state, results);
-      setCarouselMessage(state, "");
+    if (!results.length) {
+      renderCarousel(state, []);
+      setCarouselMessage(state, "No titles available right now. Please check back soon.");
       return;
     }
-    const fallback = await getFallbackMovies();
-    if (fallback.length) {
-      renderCarousel(state, fallback);
-      setCarouselMessage(state, "Showing offline picks while TMDB refreshes.");
-      return;
-    }
-    renderCarousel(state, []);
-    setCarouselMessage(state, "No titles available right now. Please check back soon.");
+    renderCarousel(state, results);
+    setCarouselMessage(state, "");
   } catch (error) {
     console.error(error);
-    const fallback = await getFallbackMovies();
-    if (fallback.length) {
-      renderCarousel(state, fallback);
-      setCarouselMessage(state, "Showing offline picks while TMDB reconnects.");
-      return;
-    }
     renderCarousel(state, []);
     setCarouselMessage(state, "Unable to load this row right now. Retry shortly.");
   }
@@ -541,18 +494,9 @@ async function performSearch(query) {
   } catch (error) {
     if (error.name === "AbortError") return;
     console.error(error);
-    const fallbackResults = await searchFallbackMovies(clean);
-    if (fallbackResults.length) {
-      renderSearchResults(fallbackResults, fallbackResults.length, clean);
-      if (statusLine) {
-        statusLine.textContent = "Showing offline results while TMDB is unreachable.";
-      }
-      syncUrl(clean);
-    } else {
-      placeholder("Unable to search right now. Please try again shortly.");
-      if (statusLine) {
-        statusLine.textContent = "A network error stopped the TMDB search. Retrying may help.";
-      }
+    placeholder("Unable to search right now. Please try again shortly.");
+    if (statusLine) {
+      statusLine.textContent = "A network error stopped the TMDB search. Retrying may help.";
     }
   } finally {
     if (grid) grid.setAttribute("aria-busy", "false");
