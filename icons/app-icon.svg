@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">The Blackbox</title>
+  <desc id="desc">Rounded square with stylised play symbol for The Blackbox streaming app.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1923" />
+      <stop offset="100%" stop-color="#041014" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#18ffb4" />
+      <stop offset="100%" stop-color="#09d88f" />
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="url(#bg)" stroke="#0cf5a2" stroke-width="8" />
+  <path d="M224 160c-13.255 0-24 10.745-24 24v144c0 13.255 10.745 24 24 24h16l120-96-120-96h-16z" fill="url(#accent)" />
+  <circle cx="208" cy="208" r="32" fill="#102630" opacity="0.8" />
+  <circle cx="208" cy="304" r="32" fill="#102630" opacity="0.6" />
+</svg>

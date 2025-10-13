@@ -1,0 +1,18 @@
+{
+  "name": "The Blackbox",
+  "short_name": "Blackbox",
+  "description": "Stream movies, shows, and live channels on The Blackbox.",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050d12",
+  "theme_color": "#14ff9f",
+  "icons": [
+    {
+      "src": "icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
