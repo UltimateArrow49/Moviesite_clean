@@ -76,6 +76,10 @@
       <a href="live.html" class="btn">Live</a>
       <a href="player.html" class="btn btn--ghost">Info</a>
     </nav>
+    <a href="#download-app" class="btn btn--ghost btn--download download-app-btn" data-filename="theblackbox-desktop.zip">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.3 1.4 1.42L12 16.41l-4.7-4.7 1.4-1.42 2.3 2.3V4a1 1 0 0 1 1-1Zm-7 14h14v2H5v-2Z"/></svg>
+      <span>Download app</span>
+    </a>
     <div class="search-bar">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
       <input id="search" type="search" placeholder="Search movies" autocomplete="off" spellcheck="false" aria-label="Search movies">
@@ -91,6 +95,13 @@
   </section>
 
   <main class="content">
+    <section class="continue" id="continueMovies" hidden aria-labelledby="continueMoviesTitle">
+      <div class="continue__header">
+        <h2 id="continueMoviesTitle">Continue watching</h2>
+      </div>
+      <div class="continue__scroller" id="continueMoviesList" role="list"></div>
+    </section>
+
     <div class="toolbar">
       <h2 id="viewTitle">Trending movies</h2>
       <div class="chip-group" id="filters" role="tablist" aria-label="Movie filters">
@@ -115,6 +126,7 @@
 
   <footer class="site-footer">Results powered by TMDB · Streams delivered through the Info relay.</footer>
 
+  <script src="download_app.js" defer></script>
   <script src="background_motion.js" type="module"></script>
   <script src="movies.js?v=4" type="module"></script>
 </body>

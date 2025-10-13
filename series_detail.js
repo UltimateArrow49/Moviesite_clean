@@ -1,4 +1,5 @@
-const IMG_BASE = "https://image.tmdb.org/t/p/w780";
+const BACKDROP_BASE = "https://image.tmdb.org/t/p/w780";
+const POSTER_BASE = "https://image.tmdb.org/t/p/w500";
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_API_KEY = "b7d1cc8554fcab41e013428e2dc418de";
 
@@ -91,7 +92,7 @@ function setSearchNavigation(show) {
   });
 }
 
-function buildPlayerUrl(seasonNumber, episodeNumber, title) {
+function buildPlayerUrl(seasonNumber, episodeNumber, title, runtimeMinutes) {
   const params = new URLSearchParams({
     mode: "tv",
     tmdb: String(state.showId),
@@ -103,6 +104,16 @@ function buildPlayerUrl(seasonNumber, episodeNumber, title) {
     autoplay: "true",
     color: "14ff9f",
   });
+  if (state.show?.poster_path) {
+    params.set("poster", `${POSTER_BASE}${state.show.poster_path}`);
+  }
+  if (state.show?.backdrop_path) {
+    params.set("backdrop", `${BACKDROP_BASE}${state.show.backdrop_path}`);
+  }
+  if (Number.isFinite(Number(runtimeMinutes)) && Number(runtimeMinutes) > 0) {
+    const runtimeSeconds = Math.max(0, Math.floor(Number(runtimeMinutes))) * 60;
+    params.set("runtime", String(runtimeSeconds));
+  }
   return `/player.html?${params.toString()}`;
 }
 
@@ -110,7 +121,7 @@ function renderPoster(show) {
   posterWrap.innerHTML = "";
   if (show.poster_path) {
     const img = document.createElement("img");
-    img.src = IMG_BASE + show.poster_path;
+    img.src = POSTER_BASE + show.poster_path;
     img.alt = `${show.name || show.original_name || "Show"} poster`;
     img.style.width = "100%";
     img.style.borderRadius = "18px";
@@ -209,7 +220,13 @@ function renderEpisodes(season, episodes) {
     button.appendChild(heading);
     button.appendChild(summary);
     button.addEventListener("click", () => {
-      const url = buildPlayerUrl(season.season_number, episode.episode_number, `${state.show?.name || state.show?.original_name || "Show"} — ${episode.name || "Episode"}`);
+      const runtimeMinutes = Number.isFinite(Number(episode.runtime)) ? Number(episode.runtime) : null;
+      const url = buildPlayerUrl(
+        season.season_number,
+        episode.episode_number,
+        `${state.show?.name || state.show?.original_name || "Show"} — ${episode.name || "Episode"}`,
+        runtimeMinutes,
+      );
       window.location.href = url;
     });
     fragment.appendChild(button);

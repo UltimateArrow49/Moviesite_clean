@@ -1,4 +1,8 @@
+import { getEntriesByMode, onHistoryChange } from "./continue_watching.js";
+import { setupPreviewForGrid } from "./preview_manager.js";
+
 const IMG_BASE = "https://image.tmdb.org/t/p/w500";
+const BACKDROP_BASE = "https://image.tmdb.org/t/p/w780";
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_API_KEY = "b7d1cc8554fcab41e013428e2dc418de";
 const MAX_PAGES = 500;
@@ -7,6 +11,8 @@ const grid = document.getElementById("grid");
 const searchInput = document.getElementById("search");
 const filtersEl = document.getElementById("filters");
 const statusLine = document.getElementById("statusLine");
+const continueSection = document.getElementById("continueMovies");
+const continueList = document.getElementById("continueMoviesList");
 const pageIndicator = document.getElementById("pageIndicator");
 const prevBtn = document.getElementById("prevPage");
 const nextBtn = document.getElementById("nextPage");
@@ -14,6 +20,8 @@ const viewTitle = document.getElementById("viewTitle");
 
 let activeRequest = null;
 let searchTimer = null;
+
+setupPreviewForGrid(grid, { mode: "movie" });
 
 const FILTERS = new Map([
   ["trending", { label: "Trending movies", path: "trending/movie/week" }],
@@ -118,6 +126,15 @@ function buildPlayerUrl(movie) {
     autoplay: "true",
     color: "14ff9f",
   });
+  if (movie.poster_path) {
+    params.set("poster", `${IMG_BASE}${movie.poster_path}`);
+  }
+  if (movie.backdrop_path) {
+    params.set("backdrop", `${BACKDROP_BASE}${movie.backdrop_path}`);
+  }
+  if (movie.release_date) {
+    params.set("release", movie.release_date);
+  }
   return `/player.html?${params.toString()}`;
 }
 
@@ -126,9 +143,10 @@ function createCard(movie) {
   card.className = "card";
   card.href = buildPlayerUrl(movie);
   card.dataset.tmdbId = movie.id;
+  card.dataset.mode = "movie";
   card.setAttribute(
     "aria-label",
-    `Stream ${movie.title || movie.name || "movie"} on theblackbox via the Info relay`,
+    `Stream ${movie.title || movie.name || "movie"} on theblackbox`,
   );
 
   const thumb = document.createElement("div");
@@ -171,12 +189,110 @@ function createCard(movie) {
   const actions = document.createElement("div");
   actions.className = "actions";
   actions.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>Stream via Info relay</span>';
+    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>Watch now</span>';
   meta.appendChild(actions);
 
   card.appendChild(thumb);
   card.appendChild(meta);
   return card;
+}
+
+function formatTime(seconds) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "0:00";
+  const total = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+  return `${minutes}:${String(secs).padStart(2, "0")}`;
+}
+
+function buildResumeUrl(entry) {
+  if (entry.href) return entry.href;
+  const params = new URLSearchParams({
+    mode: entry.mode,
+    tmdb: entry.tmdb,
+    title: entry.title || "theblackbox",
+    autoplay: "true",
+    color: "14ff9f",
+  });
+  if (entry.poster) params.set("poster", entry.poster);
+  if (entry.backdrop) params.set("backdrop", entry.backdrop);
+  if (entry.progress) params.set("progress", String(entry.progress));
+  return `/player.html?${params.toString()}`;
+}
+
+function createContinueCard(entry) {
+  const card = document.createElement("a");
+  card.className = "continue-card";
+  card.href = buildResumeUrl(entry);
+  card.dataset.mode = entry.mode;
+  card.setAttribute("aria-label", `Resume ${entry.title || "movie"}`);
+  card.setAttribute("role", "listitem");
+
+  const art = document.createElement("div");
+  art.className = "continue-card__art";
+  if (entry.poster) {
+    const img = document.createElement("img");
+    img.src = entry.poster;
+    img.alt = `${entry.title || "Movie"} artwork`;
+    art.appendChild(img);
+  } else {
+    const placeholder = document.createElement("div");
+    placeholder.className = "continue-card__placeholder";
+    placeholder.textContent = "No artwork";
+    art.appendChild(placeholder);
+  }
+
+  const meta = document.createElement("div");
+  meta.className = "continue-card__meta";
+
+  const title = document.createElement("p");
+  title.className = "continue-card__title";
+  title.textContent = entry.title || "Untitled";
+  meta.appendChild(title);
+
+  const resume = document.createElement("p");
+  resume.className = "continue-card__resume";
+  const progressLabel = formatTime(entry.progress || 0);
+  resume.textContent = entry.progress ? `Resume from ${progressLabel}` : "Start over";
+  meta.appendChild(resume);
+
+  const progressBar = document.createElement("div");
+  progressBar.className = "continue-card__progress";
+  const fill = document.createElement("span");
+  let percent = 0;
+  if (entry.runtime && entry.progress) {
+    percent = Math.min(100, Math.round((entry.progress / entry.runtime) * 100));
+  } else if (entry.progress) {
+    percent = 5;
+  }
+  fill.style.width = `${percent}%`;
+  progressBar.appendChild(fill);
+  meta.appendChild(progressBar);
+
+  card.appendChild(art);
+  card.appendChild(meta);
+  return card;
+}
+
+function renderContinueWatching() {
+  if (!continueSection || !continueList) return;
+  const entries = getEntriesByMode("movie").slice(0, 10);
+  if (!entries.length) {
+    continueSection.hidden = true;
+    continueList.innerHTML = "";
+    return;
+  }
+  continueSection.hidden = false;
+  continueList.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+  for (const entry of entries) {
+    fragment.appendChild(createContinueCard(entry));
+  }
+  continueList.appendChild(fragment);
 }
 
 function render(results = [], total = 0) {
@@ -353,6 +469,8 @@ function init() {
   highlightActiveFilter();
   updateTitle();
   updatePager();
+  renderContinueWatching();
+  onHistoryChange(renderContinueWatching);
   loadPage();
 }
 
