@@ -102,26 +102,15 @@
       <div class="continue__scroller" id="continueShowsList" role="list"></div>
     </section>
 
-    <div class="toolbar">
-      <h2 id="viewTitle">Trending series</h2>
-      <div class="chip-group" id="filters" role="tablist" aria-label="Shows filters">
-        <button class="chip is-active" data-filter="trending" type="button">Trending</button>
-        <button class="chip" data-filter="popular" type="button">Popular</button>
-        <button class="chip" data-filter="top_rated" type="button">Top rated</button>
-        <button class="chip" data-filter="airing_today" type="button">Airing today</button>
-        <button class="chip" data-filter="on_the_air" type="button">On the air</button>
+    <section class="search-results" id="searchResults" hidden aria-labelledby="viewTitle">
+      <div class="search-results__header">
+        <h2 id="viewTitle">Search results</h2>
+        <p class="status-line" id="statusLine"></p>
       </div>
-    </div>
+      <div id="grid" class="grid" aria-live="polite" aria-busy="false"></div>
+    </section>
 
-    <p class="status-line" id="statusLine">Loading shows…</p>
-
-    <div id="grid" class="grid" aria-live="polite" aria-busy="false"></div>
-
-    <div class="pager">
-      <button id="prevPage" class="btn" type="button">Previous</button>
-      <div class="page-indicator" id="pageIndicator">Page 1</div>
-      <button id="nextPage" class="btn" type="button">Next</button>
-    </div>
+    <section class="carousel-collection" id="carouselList" aria-label="Browse series"></section>
   </main>
 
   <footer class="site-footer">Browse by season with TMDB intel · every episode snaps into the Info relay.</footer>
