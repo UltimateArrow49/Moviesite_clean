@@ -31,6 +31,7 @@ const countryListEl = document.getElementById("countryList");
 const regionSelect = document.getElementById("regionFilter");
 const countrySummary = document.getElementById("countrySummary");
 const paginationEl = document.getElementById("pagination");
+const countrySelectMobile = document.getElementById("countrySelectMobile");
 
 const state = {
   channels: [],
@@ -63,6 +64,9 @@ function setBusy(isBusy) {
   }
   if (regionSelect) {
     regionSelect.disabled = isBusy;
+  }
+  if (countrySelectMobile) {
+    countrySelectMobile.disabled = isBusy;
   }
 }
 
@@ -682,13 +686,10 @@ function createCountryButton({ code, name, flag, count }) {
 }
 
 function renderCountryList() {
-  if (!countryListEl) return;
-  countryListEl.innerHTML = "";
-  const fragment = document.createDocumentFragment();
   const regionMeta = REGION_OPTION_MAP.get(state.selectedRegion);
   const baseCount = getRegionCount(state.selectedRegion);
-  fragment.appendChild(
-    createCountryButton({
+  const entries = [
+    {
       code: "all",
       name:
         state.selectedRegion === "all"
@@ -696,19 +697,47 @@ function renderCountryList() {
           : `All ${regionMeta?.label || "regions"}`,
       flag: "🌍",
       count: baseCount,
-    })
-  );
+    },
+    ...state.countryOptions.filter((option) =>
+      state.selectedRegion === "all" ? true : option.regionCodes?.has(state.selectedRegion)
+    ),
+  ];
 
-  const visibleCountries = state.countryOptions.filter((option) => {
-    if (state.selectedRegion === "all") return true;
-    return option.regionCodes?.has(state.selectedRegion);
-  });
-
-  for (const option of visibleCountries) {
-    fragment.appendChild(createCountryButton(option));
+  if (countryListEl) {
+    countryListEl.innerHTML = "";
+    const fragment = document.createDocumentFragment();
+    for (const entry of entries) {
+      fragment.appendChild(createCountryButton(entry));
+    }
+    countryListEl.appendChild(fragment);
   }
 
-  countryListEl.appendChild(fragment);
+  if (countrySelectMobile) {
+    const previousValue = countrySelectMobile.value;
+    countrySelectMobile.innerHTML = "";
+    const selectFragment = document.createDocumentFragment();
+    for (const entry of entries) {
+      const option = document.createElement("option");
+      option.value = entry.code;
+      const labelParts = [];
+      if (entry.flag) labelParts.push(entry.flag);
+      labelParts.push(entry.name);
+      if (entry.count != null) {
+        labelParts.push(`(${entry.count.toLocaleString()})`);
+      }
+      option.textContent = labelParts.join(" ");
+      if (entry.code === state.selectedCountry) {
+        option.selected = true;
+      }
+      selectFragment.appendChild(option);
+    }
+    countrySelectMobile.appendChild(selectFragment);
+    const normalizedValue = entries.find((entry) => entry.code === previousValue)
+      ? previousValue
+      : state.selectedCountry;
+    countrySelectMobile.value = normalizedValue;
+    countrySelectMobile.disabled = false;
+  }
 }
 
 function updateCountrySummary(baseChannels) {
@@ -959,6 +988,19 @@ function onCountryListClick(event) {
   render();
 }
 
+function onCountrySelectChange(event) {
+  const value = event.target.value || "all";
+  if (state.selectedCountry === value) return;
+  state.selectedCountry = value;
+  state.filter = "all";
+  state.page = 1;
+  renderCountryList();
+  const baseChannels = getChannelsForSelection();
+  rebuildFilters(baseChannels);
+  updateViewTitle();
+  render();
+}
+
 function onRegionChange(event) {
   const value = event.target.value || "all";
   const normalized = REGION_OPTION_MAP.has(value) ? value : "all";
@@ -999,6 +1041,10 @@ async function loadData() {
   }
   if (countryListEl) {
     countryListEl.innerHTML = "";
+  }
+  if (countrySelectMobile) {
+    countrySelectMobile.innerHTML = '<option value="all">All countries</option>';
+    countrySelectMobile.disabled = true;
   }
   try {
     const [channels, streams, logos, categories, countries, regions] = await Promise.all([
@@ -1156,6 +1202,10 @@ if (countryListEl) {
 
 if (regionSelect) {
   regionSelect.addEventListener("change", onRegionChange);
+}
+
+if (countrySelectMobile) {
+  countrySelectMobile.addEventListener("change", onCountrySelectChange);
 }
 
 if (paginationEl) {
