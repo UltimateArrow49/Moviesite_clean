@@ -4,6 +4,7 @@ const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_API_KEY = "b7d1cc8554fcab41e013428e2dc418de";
 const TMDB_READ_TOKEN =
   "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJiN2QxY2M4NTU0ZmNhYjQxZTAxMzQyOGUyZGM0MThkZSIsIm5iZiI6MTc1ODQ5NjE2Ny4yMDMsInN1YiI6IjY4ZDA4NWE3YzliZWIyZmZjYmQ0MTliMCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.Q2gi3xRWiPq8_2zICdbvvQ3hT0GQf6zQUGtRrBYXvcU";
+const INFO_RELAY_BASE = "https://info-relay.theblackbox.run";
 
 async function requestTmdb(path, params = {}, { signal } = {}) {
   const query = new URLSearchParams(params);
@@ -43,21 +44,32 @@ async function requestTmdb(path, params = {}, { signal } = {}) {
     directUrl.searchParams.set("api_key", TMDB_API_KEY);
   }
 
-  try {
-    return await attempt(directUrl.toString(), { headers });
-  } catch (directError) {
-    if (directError.name === "AbortError") throw directError;
-    console.warn("Direct TMDB request failed, retrying via proxy", directError);
+  const queryString = query.toString();
+  const attempts = [
+    { url: directUrl.toString(), options: { headers } },
+  ];
+
+  const proxyPath = `/api/tmdb/${cleanPath}${queryString ? `?${queryString}` : ""}`;
+  attempts.push({ url: proxyPath, options: {} });
+
+  if (INFO_RELAY_BASE) {
+    const base = INFO_RELAY_BASE.replace(/\/+$, "");
+    const relayUrl = `${base}${proxyPath}`;
+    attempts.push({ url: relayUrl, options: {} });
   }
 
-  try {
-    const proxyQuery = query.toString();
-    const proxyUrl = `/api/tmdb/${cleanPath}${proxyQuery ? `?${proxyQuery}` : ""}`;
-    return await attempt(proxyUrl);
-  } catch (proxyError) {
-    if (proxyError.name === "AbortError") throw proxyError;
-    throw proxyError;
+  let lastError = null;
+  for (const { url, options } of attempts) {
+    try {
+      return await attempt(url, options);
+    } catch (error) {
+      if (error.name === "AbortError") throw error;
+      lastError = error;
+      console.warn(`TMDB fetch via ${url} failed`, error);
+    }
   }
+
+  throw lastError || new Error("TMDB request failed");
 }
 
 export { BACKDROP_BASE, IMG_BASE, requestTmdb };
