@@ -1,9 +1,13 @@
-const CACHE_NAME = "theblackbox-static-v1";
+const CACHE_NAME = "theblackbox-static-v2";
 
 const PRECACHE_PATHS = [
   "",
   "index.html",
   "style.css",
+  "site.webmanifest",
+  "install_app.js",
+  "catalog_fallback.json",
+  "icons/app-icon.svg",
   "background_motion.js",
   "movies.html",
   "movies.js",

@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Live Player · theblackbox</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#14ff9f">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body class="app-shell">
   <div class="side-ad left">
@@ -79,9 +81,9 @@
       </div>
     </section>
   </main>
-
   <footer class="site-footer">Live streams sourced from IPTV-Org · Playback powered by hls.js when available.</footer>
 
+  <script src="install_app.js" defer></script>
   <script src="background_motion.js" type="module"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js" crossorigin="anonymous"></script>
   <script src="live_player.js" type="module"></script>
