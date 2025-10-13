@@ -1,7 +1,4 @@
-const BACKDROP_BASE = "https://image.tmdb.org/t/p/w780";
-const POSTER_BASE = "https://image.tmdb.org/t/p/w500";
-const TMDB_BASE = "https://api.themoviedb.org/3";
-const TMDB_API_KEY = "b7d1cc8554fcab41e013428e2dc418de";
+import { BACKDROP_BASE, IMG_BASE as POSTER_BASE, requestTmdb as requestTmdbBase } from "./tmdb_client.js";
 
 const showTitleEl = document.getElementById("showTitle");
 const overviewEl = document.getElementById("overview");
@@ -36,41 +33,8 @@ async function requestTmdb(path, params = {}) {
   const controller = new AbortController();
   activeRequest = controller;
 
-  const query = new URLSearchParams(params);
-  const cleanPath = path.replace(/^\/+/, "");
-
-  const attempt = async (url, extraOptions = {}) => {
-    const response = await fetch(url, {
-      cache: "no-store",
-      signal: controller.signal,
-      ...extraOptions,
-    });
-    const text = await response.text();
-    if (!response.ok) throw new Error(text || `TMDB request failed (${response.status})`);
-    if (!text) return {};
-    try {
-      return JSON.parse(text);
-    } catch (error) {
-      throw new Error("Received invalid JSON from TMDB");
-    }
-  };
-
   try {
-    try {
-      const proxyUrl = `/api/tmdb/${cleanPath}${query.toString() ? `?${query}` : ""}`;
-      return await attempt(proxyUrl);
-    } catch (proxyError) {
-      if (proxyError.name === "AbortError") throw proxyError;
-      console.warn("Proxy TMDB request failed, retrying direct", proxyError);
-    }
-
-    const direct = new URL(`${TMDB_BASE}/${cleanPath}`);
-    for (const [key, value] of query.entries()) direct.searchParams.set(key, value);
-    if (!direct.searchParams.has("api_key")) direct.searchParams.set("api_key", TMDB_API_KEY);
-
-    return await attempt(direct.toString(), {
-      headers: { Accept: "application/json" },
-    });
+    return await requestTmdbBase(path, params, { signal: controller.signal });
   } finally {
     if (activeRequest === controller) activeRequest = null;
   }

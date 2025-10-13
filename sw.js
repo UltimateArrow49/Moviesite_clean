@@ -19,6 +19,7 @@ const PRECACHE_PATHS = [
   "series.js",
   "series_detail.html",
   "series_detail.js",
+  "tmdb_client.js",
   "player.html",
   "open_in_player.js",
 ];
@@ -57,6 +58,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  const url = new URL(request.url);
+  const isSameOrigin = url.origin === self.location.origin;
+  const isApiRequest = url.pathname.startsWith("/api/") || url.pathname.startsWith("/ext/");
+
+  if (!isSameOrigin || isApiRequest) {
+    return;
+  }
+
+  const acceptsHtml =
+    request.mode === "navigate" || (request.headers.get("accept") || "").includes("text/html");
+
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -81,7 +93,10 @@ self.addEventListener("fetch", (event) => {
         })
         .catch((error) => {
           console.error("[ServiceWorker] Network request failed", error);
-          return caches.match(OFFLINE_FALLBACK_URL);
+          if (acceptsHtml) {
+            return caches.match(OFFLINE_FALLBACK_URL);
+          }
+          return Response.error();
         });
     })
   );
