@@ -7,6 +7,7 @@ const REDUCE_MOTION_QUERY = window.matchMedia
   ? window.matchMedia("(prefers-reduced-motion: reduce)")
   : null;
 const ALT_EMBED_ORIGINS = ["https://vidking.pro", "https://vidking.cloud"];
+const OFFSCREEN_TRANSFORM = "translate3d(-9999px, -9999px, 0)";
 const DEFAULT_PROGRESS = {
   movie: 1800,
   tv: 600,
@@ -84,8 +85,6 @@ export function setupPreviewForGrid(container, { mode = "movie" } = {}) {
   let pointerPosition = { x: 0, y: 0 };
   let fallbackTimer = null;
   let embedAttempt = null;
-
-  const OFFSCREEN_TRANSFORM = "translate3d(-9999px, -9999px, 0)";
 
   function clearFallbackTimer() {
     if (fallbackTimer) {
