@@ -53,7 +53,7 @@ async function requestTmdb(path, params = {}, { signal } = {}) {
   attempts.push({ url: proxyPath, options: {} });
 
   if (INFO_RELAY_BASE) {
-    const base = INFO_RELAY_BASE.replace(/\/+$, "");
+    const base = INFO_RELAY_BASE.replace(/\/+$/, "");
     const relayUrl = `${base}${proxyPath}`;
     attempts.push({ url: relayUrl, options: {} });
   }
