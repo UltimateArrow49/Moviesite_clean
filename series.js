@@ -2,39 +2,53 @@ import { getEntriesByMode, onHistoryChange } from "./continue_watching.js";
 import { setupPreviewForGrid } from "./preview_manager.js";
 import { IMG_BASE, requestTmdb } from "./tmdb_client.js";
 
-const grid = document.getElementById("grid");
-const searchInput = document.getElementById("search");
-const statusLine = document.getElementById("statusLine");
 const continueSection = document.getElementById("continueShows");
 const continueList = document.getElementById("continueShowsList");
-const viewTitle = document.getElementById("viewTitle");
 const carouselList = document.getElementById("carouselList");
-const searchSection = document.getElementById("searchResults");
+const searchForm = document.getElementById("searchForm");
+const searchInput = document.getElementById("search");
 
-let searchTimer = null;
-let searchController = null;
-let activeQuery = "";
+const usedSeriesIds = new Set();
+const ROW_TARGET = 18;
+const MAX_FETCH_PAGES = 4;
 
-setupPreviewForGrid(grid, { mode: "tv" });
+if (continueList) {
+  setupPreviewForGrid(continueList, { mode: "tv" });
+}
 
 const CAROUSELS = [
   { id: "trending", label: "Trending series", path: "trending/tv/week" },
-  { id: "popular", label: "Popular series", path: "tv/popular" },
-  { id: "top_rated", label: "Top rated series", path: "tv/top_rated" },
+  { id: "popular", label: "Popular right now", path: "tv/popular" },
+  { id: "top_rated", label: "Top rated shows", path: "tv/top_rated" },
   { id: "airing_today", label: "Airing today", path: "tv/airing_today" },
   { id: "on_the_air", label: "Currently on air", path: "tv/on_the_air" },
+  {
+    id: "sci_fi",
+    label: "Sci-fi & fantasy epics",
+    path: "discover/tv",
+    params: { with_genres: "10765", sort_by: "popularity.desc" },
+  },
+  {
+    id: "crime_thrillers",
+    label: "True crime & thrillers",
+    path: "discover/tv",
+    params: { with_genres: "80,9648", sort_by: "popularity.desc" },
+  },
+  {
+    id: "animated_adventures",
+    label: "Animated adventures",
+    path: "discover/tv",
+    params: { with_genres: "16", sort_by: "popularity.desc" },
+  },
+  {
+    id: "family_series",
+    label: "Family nights",
+    path: "discover/tv",
+    params: { with_genres: "10751", sort_by: "popularity.desc" },
+  },
 ];
 
 const carouselStates = new Map();
-
-function clearGrid() {
-  if (grid) grid.innerHTML = "";
-}
-
-function placeholder(message) {
-  if (!grid) return;
-  grid.innerHTML = `<p class="empty">${message}</p>`;
-}
 
 function formatFacts(show) {
   const facts = [];
@@ -124,10 +138,9 @@ function formatTime(seconds) {
 }
 
 function formatEpisodeLabel(entry) {
-  if (entry.mode !== "tv") return "Episode";
   const season = Number(entry.season) || 1;
   const episode = Number(entry.episode) || 1;
-  return `S${String(season).padStart(2, "0")} • E${String(episode).padStart(2, "0")}`;
+  return `S${String(season).padStart(2, "0")} • E${String(episode).padStart(2, "0")}`;
 }
 
 function buildResumeUrl(entry) {
@@ -149,41 +162,36 @@ function buildResumeUrl(entry) {
 
 function createContinueCard(entry) {
   const card = document.createElement("a");
-  card.className = "continue-card";
+  card.className = "card card--continue";
   card.href = buildResumeUrl(entry);
   card.dataset.mode = entry.mode;
-  card.setAttribute("aria-label", `Resume ${entry.title || "show"}`);
-  card.setAttribute("role", "listitem");
+  card.dataset.tmdbId = entry.tmdb;
+  card.dataset.season = entry.season;
+  card.dataset.episode = entry.episode;
+  card.setAttribute(
+    "aria-label",
+    entry.progress
+      ? `Resume ${entry.title || "show"} at ${formatTime(entry.progress)}`
+      : `Start ${entry.title || "show"}`,
+  );
 
-  const art = document.createElement("div");
-  art.className = "continue-card__art";
+  const thumb = document.createElement("div");
+  thumb.className = "thumb thumb--continue";
   if (entry.poster) {
     const img = document.createElement("img");
     img.src = entry.poster;
     img.alt = `${entry.title || "Show"} artwork`;
-    art.appendChild(img);
+    thumb.appendChild(img);
   } else {
     const placeholderEl = document.createElement("div");
-    placeholderEl.className = "continue-card__placeholder";
+    placeholderEl.className = "placeholder";
     placeholderEl.textContent = "No artwork";
-    art.appendChild(placeholderEl);
+    thumb.appendChild(placeholderEl);
   }
-
-  const meta = document.createElement("div");
-  meta.className = "continue-card__meta";
-
-  const title = document.createElement("p");
-  title.className = "continue-card__title";
-  title.textContent = entry.title || "Untitled";
-  meta.appendChild(title);
-
-  const episode = document.createElement("p");
-  episode.className = "continue-card__resume";
-  episode.textContent = `${formatEpisodeLabel(entry)} · ${entry.progress ? `Resume at ${formatTime(entry.progress)}` : "Start over"}`;
-  meta.appendChild(episode);
+  card.appendChild(thumb);
 
   const progressBar = document.createElement("div");
-  progressBar.className = "continue-card__progress";
+  progressBar.className = "card-progress";
   const fill = document.createElement("span");
   let percent = 0;
   if (entry.runtime && entry.progress) {
@@ -191,18 +199,36 @@ function createContinueCard(entry) {
   } else if (entry.progress) {
     percent = 5;
   }
-  fill.style.width = `${percent}%`;
+  if (percent > 0) {
+    fill.style.width = `${Math.max(5, percent)}%`;
+  } else {
+    fill.style.width = "0%";
+  }
   progressBar.appendChild(fill);
-  meta.appendChild(progressBar);
+  card.appendChild(progressBar);
 
-  card.appendChild(art);
+  const meta = document.createElement("div");
+  meta.className = "meta meta--continue";
+
+  const title = document.createElement("p");
+  title.className = "title";
+  title.textContent = entry.title || "Untitled";
+  meta.appendChild(title);
+
+  const episode = document.createElement("p");
+  episode.className = "resume";
+  episode.textContent = entry.progress
+    ? `${formatEpisodeLabel(entry)} · Resume from ${formatTime(entry.progress)}`
+    : `${formatEpisodeLabel(entry)} · Start over`;
+  meta.appendChild(episode);
+
   card.appendChild(meta);
   return card;
 }
 
 function renderContinueWatching() {
   if (!continueSection || !continueList) return;
-  const entries = getEntriesByMode("tv").slice(0, 10);
+  const entries = getEntriesByMode("tv").slice(0, 12);
   if (!entries.length) {
     continueSection.hidden = true;
     continueList.innerHTML = "";
@@ -328,6 +354,30 @@ function renderCarousel(state, items) {
   state.updateArrows();
 }
 
+async function fetchCarouselItems(definition) {
+  const items = [];
+  const params = { ...(definition.params || {}) };
+  let page = 1;
+  let totalPages = 1;
+
+  while (items.length < ROW_TARGET && page <= MAX_FETCH_PAGES && page <= totalPages) {
+    const response = await requestTmdb(definition.path, { ...params, page: String(page) });
+    totalPages = Number(response.total_pages) || totalPages || 1;
+    const results = Array.isArray(response.results) ? response.results : [];
+    for (const result of results) {
+      if (!result || !result.id) continue;
+      if (usedSeriesIds.has(result.id)) continue;
+      usedSeriesIds.add(result.id);
+      items.push(result);
+      if (items.length >= ROW_TARGET) break;
+    }
+    if (!results.length) break;
+    page += 1;
+  }
+
+  return items;
+}
+
 async function loadCarousel(definition) {
   let state = carouselStates.get(definition.id);
   if (!state) {
@@ -335,16 +385,15 @@ async function loadCarousel(definition) {
   }
   if (!state) return;
 
-  setCarouselMessage(state, "Loading titles…");
+  setCarouselMessage(state, "Loading series…");
   try {
-    const data = await requestTmdb(definition.path, { page: "1" });
-    const results = Array.isArray(data.results) ? data.results : [];
-    if (!results.length) {
+    const items = await fetchCarouselItems(definition);
+    if (!items.length) {
       renderCarousel(state, []);
       setCarouselMessage(state, "No series available right now. Please check back soon.");
       return;
     }
-    renderCarousel(state, results);
+    renderCarousel(state, items);
     setCarouselMessage(state, "");
   } catch (error) {
     console.error(error);
@@ -353,133 +402,31 @@ async function loadCarousel(definition) {
   }
 }
 
-function showSearchSection() {
-  if (!searchSection) return;
-  searchSection.hidden = false;
-}
-
-function hideSearchSection() {
-  if (!searchSection || !statusLine) return;
-  searchSection.hidden = true;
-  statusLine.textContent = "";
-  activeQuery = "";
-  clearGrid();
-  if (grid) grid.setAttribute("aria-busy", "false");
-}
-
-function syncUrl(query) {
-  const url = new URL(window.location.href);
-  if (query) {
-    url.searchParams.set("q", query);
-  } else {
-    url.searchParams.delete("q");
-  }
-  url.hash = "";
-  history.replaceState({}, "", url);
-}
-
-function renderSearchResults(results, total, query) {
-  clearGrid();
-  if (!results.length) {
-    const message = `We couldn’t find any shows for “${query}”. Try a different keyword.`;
-    placeholder(message);
-    if (statusLine) statusLine.textContent = message;
-    return;
-  }
-
-  const fragment = document.createDocumentFragment();
-  for (const show of results) {
-    if (!show || !show.id) continue;
-    fragment.appendChild(createCard(show));
-  }
-  grid.appendChild(fragment);
-
-  const totalLabel = total ? total.toLocaleString() : results.length.toLocaleString();
-  statusLine.textContent = `Showing ${results.length.toLocaleString()} of ${totalLabel} results for “${query}”.`;
-}
-
-async function performSearch(query) {
-  const clean = query.trim();
-  if (!clean) {
-    if (searchController) {
-      searchController.abort();
-      searchController = null;
-    }
-    hideSearchSection();
-    syncUrl("");
-    return;
-  }
-  if (clean === activeQuery && !searchSection?.hidden) return;
-
-  if (searchController) searchController.abort();
-  const controller = new AbortController();
-  searchController = controller;
-  activeQuery = clean;
-
-  showSearchSection();
-  if (grid) {
-    grid.setAttribute("aria-busy", "true");
-    clearGrid();
-  }
-  if (viewTitle) viewTitle.textContent = `Results for “${clean}”`;
-  if (statusLine) statusLine.textContent = "Searching…";
-
-  try {
-    const data = await requestTmdb(
-      "search/tv",
-      { page: "1", query: clean },
-      { signal: controller.signal },
-    );
-    const results = Array.isArray(data.results) ? data.results : [];
-    const total = Number(data.total_results) || results.length;
-    renderSearchResults(results, total, clean);
-    syncUrl(clean);
-  } catch (error) {
-    if (error.name === "AbortError") return;
-    console.error(error);
-    placeholder("Unable to search right now. Please try again shortly.");
-    if (statusLine) {
-      statusLine.textContent = "A network error stopped the TMDB search. Retrying may help.";
-    }
-  } finally {
-    if (grid) grid.setAttribute("aria-busy", "false");
-    if (searchController === controller) {
-      searchController = null;
-    }
-  }
-}
-
-function initSearch() {
-  if (!searchInput) return;
-  searchInput.addEventListener("input", () => {
-    const value = searchInput.value;
-    if (searchTimer) clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => performSearch(value), 350);
-  });
-}
-
 function initCarousels() {
   for (const def of CAROUSELS) {
     loadCarousel(def);
   }
 }
 
-function applyInitialQuery() {
-  if (!searchInput) return;
-  const url = new URL(window.location.href);
-  const initialQuery = url.searchParams.get("q");
-  if (initialQuery) {
-    searchInput.value = initialQuery;
-    performSearch(initialQuery);
-  }
+function initSearchRedirect() {
+  if (!searchForm || !searchInput) return;
+  searchForm.addEventListener("submit", (event) => {
+    const value = searchInput.value.trim();
+    if (!value) {
+      event.preventDefault();
+      return;
+    }
+    event.preventDefault();
+    const query = encodeURIComponent(value);
+    window.location.href = `/search.html?q=${query}`;
+  });
 }
 
 function init() {
   renderContinueWatching();
   onHistoryChange(renderContinueWatching);
-  initSearch();
   initCarousels();
-  applyInitialQuery();
+  initSearchRedirect();
 }
 
 document.addEventListener("DOMContentLoaded", init);

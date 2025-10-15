@@ -31,6 +31,18 @@ function applyOptions(url, options = {}) {
     setFlag(["autoplay", "autoPlay"], flag);
   }
 
+  const controlsOption = coerceBoolean(options.controls ?? options.showControls);
+  if (controlsOption !== undefined) {
+    const flag = controlsOption ? "true" : "false";
+    setFlag(["controls", "showControls", "showcontrols"], flag);
+  }
+
+  const mutedOption = coerceBoolean(options.muted ?? options.mute);
+  if (mutedOption !== undefined) {
+    const flag = mutedOption ? "true" : "false";
+    setFlag(["muted", "mute"], flag);
+  }
+
   if (coerceBoolean(options.nextEpisode ?? options.nextepisode)) {
     setFlag(["nextepisode", "nextEpisode"], "true");
   }
