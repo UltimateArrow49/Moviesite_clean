@@ -1,9 +1,11 @@
 import { getEntriesByMode, onHistoryChange } from "./continue_watching.js";
+import { getCurrentUser, onAuthChange } from "./auth.js";
 import { setupPreviewForGrid } from "./preview_manager.js";
 import { BACKDROP_BASE, IMG_BASE, requestTmdb } from "./tmdb_client.js";
 
 const continueSection = document.getElementById("continueMovies");
 const continueList = document.getElementById("continueMoviesList");
+const continueMessage = document.getElementById("continueMoviesMessage");
 const carouselList = document.getElementById("carouselList");
 const searchForm = document.getElementById("searchForm");
 const searchInput = document.getElementById("search");
@@ -232,14 +234,24 @@ function createContinueCard(entry) {
 
 function renderContinueWatching() {
   if (!continueSection || !continueList) return;
+  const user = getCurrentUser();
   const entries = getEntriesByMode("movie").slice(0, 12);
-  if (!entries.length) {
-    continueSection.hidden = true;
-    continueList.innerHTML = "";
-    return;
-  }
   continueSection.hidden = false;
   continueList.innerHTML = "";
+  if (!entries.length) {
+    continueSection.classList.add("continue--empty");
+    if (continueMessage) {
+      continueMessage.hidden = false;
+      continueMessage.textContent = user
+        ? "Start watching a movie to see it appear here."
+        : "Log in to start tracking the movies you're watching.";
+    }
+    return;
+  }
+  continueSection.classList.remove("continue--empty");
+  if (continueMessage) {
+    continueMessage.hidden = true;
+  }
   const fragment = document.createDocumentFragment();
   for (const entry of entries) {
     fragment.appendChild(createContinueCard(entry));
@@ -429,6 +441,7 @@ function initSearchRedirect() {
 function init() {
   renderContinueWatching();
   onHistoryChange(renderContinueWatching);
+  onAuthChange(renderContinueWatching);
   initCarousels();
   initSearchRedirect();
 }
