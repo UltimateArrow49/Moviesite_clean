@@ -177,6 +177,56 @@ a {
   z-index: 80;
 }
 
+.account-menu__section {
+  display: grid;
+  gap: 14px;
+}
+
+.account-menu__section + .account-menu__section {
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.account-menu__section--signup {
+  gap: 10px;
+}
+
+.account-menu__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(var(--ink-rgb), 0.86);
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.account-menu__toggle::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid rgba(var(--ink-rgb), 0.5);
+  border-bottom: 2px solid rgba(var(--ink-rgb), 0.5);
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.account-menu__toggle[aria-expanded="true"]::after {
+  transform: rotate(-135deg);
+}
+
+.account-menu__toggle:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.65);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
 .account-menu__form {
   display: grid;
   gap: 12px;
