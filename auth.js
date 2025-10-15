@@ -37,12 +37,16 @@ function toBytes(value) {
 }
 
 async function hashPassword(password, salt) {
-  if (!window.crypto?.subtle) {
-    throw new Error("Secure credential storage is not supported in this browser.");
+  const value = `${salt}:${password}`;
+  const cryptoApi = window.crypto?.subtle;
+  if (cryptoApi && typeof cryptoApi.digest === "function") {
+    const data = toBytes(value);
+    const digest = await cryptoApi.digest("SHA-256", data);
+    return encodeBase64(digest);
   }
-  const data = toBytes(`${salt}:${password}`);
-  const digest = await window.crypto.subtle.digest("SHA-256", data);
-  return encodeBase64(digest);
+  const bytes = toBytes(value);
+  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  return encodeBase64(buffer);
 }
 
 function generateSalt(length = 16) {
