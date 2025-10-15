@@ -44,9 +44,7 @@ async function hashPassword(password, salt) {
     const digest = await cryptoApi.digest("SHA-256", data);
     return encodeBase64(digest);
   }
-  const bytes = toBytes(value);
-  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  return encodeBase64(buffer);
+  throw new Error("Secure password hashing is unavailable in this browser.");
 }
 
 function generateSalt(length = 16) {
