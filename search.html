@@ -64,45 +64,55 @@
         <input id="search" type="search" name="q" placeholder="Search movies &amp; shows" autocomplete="off" spellcheck="false" aria-label="Search the entire catalog">
       </form>
       <div class="account-controls" id="accountControls">
-        <button type="button" id="accountButton" class="btn btn--ghost account-controls__trigger" aria-controls="accountMenu" aria-expanded="false" aria-label="Open account menu"><span id="accountButtonLabel">Account</span></button>
+        <button
+          type="button"
+          id="accountButton"
+          class="btn btn--ghost account-controls__trigger"
+          aria-controls="accountMenu"
+          aria-expanded="false"
+          aria-label="Open account menu"
+        ><span id="accountButtonLabel">Account</span></button>
         <div class="account-menu" id="accountMenu" hidden>
-          <form class="account-menu__form" id="loginForm" autocomplete="off">
-            <div class="account-menu__field">
-              <label class="account-menu__label" for="loginName">Display name</label>
-              <input class="account-menu__input" id="loginName" name="loginName" type="text" autocomplete="username" maxlength="48" required>
-            </div>
-            <div class="account-menu__field">
-              <label class="account-menu__label" for="loginPassword">Password</label>
-              <input class="account-menu__input" id="loginPassword" name="loginPassword" type="password" autocomplete="current-password" minlength="8" required>
-            </div>
-            <div class="account-menu__field account-menu__field--compact">
-              <label class="account-menu__checkbox" for="loginRemember">
-                <input class="account-menu__checkbox-input" id="loginRemember" name="loginRemember" type="checkbox">
-                <span>Remember me on this device</span>
-              </label>
-            </div>
-            <p class="account-menu__hint" id="loginHint">Log in to keep your watch progress on this device.</p>
-            <p class="account-menu__error" id="loginError" role="alert" hidden></p>
-            <button class="btn btn--primary account-menu__submit" id="loginSubmit" type="submit">Log in</button>
-            <button class="btn btn--ghost account-menu__switch" id="showSignup" type="button">Create account</button>
-          </form>
-          <form class="account-menu__form" id="signupForm" autocomplete="off" hidden>
-            <div class="account-menu__field">
-              <label class="account-menu__label" for="signupName">Display name</label>
-              <input class="account-menu__input" id="signupName" name="signupName" type="text" autocomplete="username" maxlength="48" required>
-            </div>
-            <div class="account-menu__field">
-              <label class="account-menu__label" for="signupPassword">Create a password</label>
-              <input class="account-menu__input" id="signupPassword" name="signupPassword" type="password" autocomplete="new-password" maxlength="128" minlength="8" required>
-            </div>
-            <div class="account-menu__field">
-              <label class="account-menu__label" for="signupPasswordConfirm">Confirm password</label>
-              <input class="account-menu__input" id="signupPasswordConfirm" name="signupPasswordConfirm" type="password" autocomplete="new-password" maxlength="128" minlength="8" required>
-            </div>
-            <p class="account-menu__error" id="signupError" role="alert" hidden></p>
-            <button class="btn btn--primary account-menu__submit" id="signupSubmit" type="submit">Create account</button>
-            <button class="btn btn--ghost account-menu__switch" id="showLogin" type="button">Back to log in</button>
-          </form>
+          <div class="account-menu__section">
+            <form class="account-menu__form" id="loginForm" autocomplete="off">
+              <div class="account-menu__field">
+                <label class="account-menu__label" for="loginName">Display name</label>
+                <input class="account-menu__input" id="loginName" name="loginName" type="text" autocomplete="username" maxlength="48" required>
+              </div>
+              <div class="account-menu__field">
+                <label class="account-menu__label" for="loginPassword">Password</label>
+                <input class="account-menu__input" id="loginPassword" name="loginPassword" type="password" autocomplete="current-password" minlength="8" required>
+              </div>
+              <div class="account-menu__field account-menu__field--compact">
+                <label class="account-menu__checkbox" for="loginRemember">
+                  <input class="account-menu__checkbox-input" id="loginRemember" name="loginRemember" type="checkbox">
+                  <span>Remember me on this device</span>
+                </label>
+              </div>
+              <p class="account-menu__hint" id="loginHint">Log in to keep your watch progress on this device.</p>
+              <p class="account-menu__error" id="loginError" role="alert" hidden></p>
+              <button class="btn btn--primary account-menu__submit" id="loginSubmit" type="submit">Log in</button>
+            </form>
+          </div>
+          <div class="account-menu__section account-menu__section--signup" id="signupSection">
+            <button class="account-menu__toggle" id="signupToggle" type="button" aria-controls="signupForm" aria-expanded="false">Create account</button>
+            <form class="account-menu__form" id="signupForm" autocomplete="off" hidden>
+              <div class="account-menu__field">
+                <label class="account-menu__label" for="signupName">Display name</label>
+                <input class="account-menu__input" id="signupName" name="signupName" type="text" autocomplete="username" maxlength="48" required>
+              </div>
+              <div class="account-menu__field">
+                <label class="account-menu__label" for="signupPassword">Create a password</label>
+                <input class="account-menu__input" id="signupPassword" name="signupPassword" type="password" autocomplete="new-password" maxlength="128" minlength="8" required>
+              </div>
+              <div class="account-menu__field">
+                <label class="account-menu__label" for="signupPasswordConfirm">Confirm password</label>
+                <input class="account-menu__input" id="signupPasswordConfirm" name="signupPasswordConfirm" type="password" autocomplete="new-password" maxlength="128" minlength="8" required>
+              </div>
+              <p class="account-menu__error" id="signupError" role="alert" hidden></p>
+              <button class="btn btn--primary account-menu__submit" id="signupSubmit" type="submit">Create account</button>
+            </form>
+          </div>
           <div class="account-menu__profile" id="accountProfile" tabindex="-1" hidden>
             <p class="account-menu__greeting">Watching as <span id="accountNameDisplay"></span></p>
             <button class="btn account-menu__logout" id="logoutButton" type="button">Log out</button>
