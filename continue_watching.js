@@ -111,6 +111,14 @@ export function upsertEntry(entry, { silent = false } = {}) {
   if (!normalized) return;
   const entries = loadEntries();
   const existingIndex = entries.findIndex((item) => item && item.id === normalized.id);
+
+  if (normalized.progress < 30) {
+    if (existingIndex >= 0) {
+      entries.splice(existingIndex, 1);
+      writeEntries(entries, { silent });
+    }
+    return;
+  }
   if (existingIndex >= 0) {
     const existing = entries[existingIndex] || {};
     const merged = { ...existing, ...normalized, updatedAt: normalized.updatedAt };
