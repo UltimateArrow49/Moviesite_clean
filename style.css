@@ -143,10 +143,104 @@ a {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .account-controls__trigger {
   white-space: nowrap;
+}
+
+.account-controls__status {
+  font-size: 0.875rem;
+  color: rgba(var(--ink-rgb), 0.65);
+  white-space: nowrap;
+}
+
+.account-controls__logout {
+  white-space: nowrap;
+}
+
+.account-page__hero {
+  display: grid;
+  gap: 12px;
+  text-align: center;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.account-page__hero h1 {
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  margin: 0;
+}
+
+.account-page__hero p {
+  margin: 0;
+  color: rgba(var(--ink-rgb), 0.72);
+  font-size: 1rem;
+}
+
+.account-page__panel {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.account-page__card {
+  width: min(440px, 100%);
+}
+
+.account-page .account-menu {
+  position: static;
+  width: 100%;
+  padding: clamp(1.8rem, 4vw, 2.4rem);
+  background: rgba(8, 14, 28, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  box-shadow: 0 28px 64px rgba(2, 6, 23, 0.45);
+  display: grid;
+  gap: 20px;
+}
+
+.account-page .account-menu__section {
+  gap: 16px;
+}
+
+.account-page .account-menu__toggle {
+  justify-content: space-between;
+}
+
+.account-page .account-menu__profile {
+  padding: 20px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed rgba(var(--accent-rgb), 0.4);
+  background: rgba(12, 20, 35, 0.75);
+}
+
+.account-page__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding: clamp(3.5rem, 10vw, 5rem) clamp(1.6rem, 8vw, 3.2rem) 80px;
+}
+
+.account-page__links {
+  text-align: center;
+  color: rgba(var(--ink-rgb), 0.65);
+  font-size: 0.95rem;
+}
+
+.account-page__links a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.account-page__links a:hover,
+.account-page__links a:focus-visible {
+  text-decoration: underline;
 }
 
 .sr-only {
@@ -2027,6 +2121,19 @@ footer.site-footer {
 
   .account-controls {
     justify-content: flex-end;
+  }
+
+  .account-controls__status {
+    width: 100%;
+    text-align: right;
+  }
+
+  .account-page__content {
+    padding: 72px 20px 72px;
+  }
+
+  .account-page .account-menu {
+    padding: 1.6rem;
   }
 
   .account-menu {
