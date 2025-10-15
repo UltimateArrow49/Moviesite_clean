@@ -84,9 +84,57 @@
       <a href="live.html" class="btn btn--primary">Live</a>
       <a href="player.html" class="btn btn--ghost">Info</a>
     </nav>
-    <div class="search-bar">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
-      <input id="search" type="search" placeholder="Search live channels" autocomplete="off" spellcheck="false" aria-label="Search live channels">
+    <div class="topbar__actions">
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
+        <input id="search" type="search" placeholder="Search live channels" autocomplete="off" spellcheck="false" aria-label="Search live channels">
+      </div>
+      <div class="account-controls" id="accountControls">
+        <button type="button" id="accountButton" class="btn btn--ghost account-controls__trigger" aria-controls="accountMenu" aria-expanded="false" aria-label="Open account menu"><span id="accountButtonLabel">Account</span></button>
+        <div class="account-menu" id="accountMenu" hidden>
+          <form class="account-menu__form" id="loginForm" autocomplete="off">
+            <div class="account-menu__field">
+              <label class="account-menu__label" for="loginName">Display name</label>
+              <input class="account-menu__input" id="loginName" maxlength="48" name="loginName" required type="text" autocomplete="username" />
+            </div>
+          <div class="account-menu__field">
+            <label class="account-menu__label" for="loginPassword">Password</label>
+            <input class="account-menu__input" id="loginPassword" minlength="8" name="loginPassword" required type="password" autocomplete="current-password" />
+          </div>
+          <div class="account-menu__field account-menu__field--compact">
+            <label class="account-menu__checkbox" for="loginRemember">
+              <input class="account-menu__checkbox-input" id="loginRemember" name="loginRemember" type="checkbox" />
+              <span>Remember me on this device</span>
+            </label>
+          </div>
+          <p class="account-menu__hint" id="loginHint">Log in to keep your watch progress on this device.</p>
+            <p class="account-menu__error" id="loginError" role="alert" hidden></p>
+            <button class="btn btn--primary account-menu__submit" id="loginSubmit" type="submit">Log in</button>
+            <button class="btn btn--ghost account-menu__switch" id="showSignup" type="button">Create account</button>
+          </form>
+          <form class="account-menu__form" id="signupForm" autocomplete="off" hidden>
+            <div class="account-menu__field">
+              <label class="account-menu__label" for="signupName">Display name</label>
+              <input class="account-menu__input" id="signupName" maxlength="48" name="signupName" required type="text" autocomplete="username" />
+            </div>
+            <div class="account-menu__field">
+              <label class="account-menu__label" for="signupPassword">Create a password</label>
+              <input class="account-menu__input" id="signupPassword" maxlength="128" minlength="8" name="signupPassword" required type="password" autocomplete="new-password" />
+            </div>
+            <div class="account-menu__field">
+              <label class="account-menu__label" for="signupPasswordConfirm">Confirm password</label>
+              <input class="account-menu__input" id="signupPasswordConfirm" maxlength="128" minlength="8" name="signupPasswordConfirm" required type="password" autocomplete="new-password" />
+            </div>
+            <p class="account-menu__error" id="signupError" role="alert" hidden></p>
+            <button class="btn btn--primary account-menu__submit" id="signupSubmit" type="submit">Create account</button>
+            <button class="btn btn--ghost account-menu__switch" id="showLogin" type="button">Back to log in</button>
+          </form>
+          <div class="account-menu__profile" id="accountProfile" tabindex="-1" hidden>
+            <p class="account-menu__greeting">Watching as <span id="accountNameDisplay"></span></p>
+            <button class="btn account-menu__logout" id="logoutButton" type="button">Log out</button>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -143,6 +191,7 @@
   <footer class="site-footer">Live listings powered by IPTV-Org · Streams open via the live player.</footer>
 
   <script src="install_app.js" defer></script>
+  <script src="account.js" type="module"></script>
   <script src="background_motion.js" type="module"></script>
   <script src="live.js?v=1" type="module"></script>
 </body>

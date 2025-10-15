@@ -77,25 +77,77 @@
 <a class="btn" href="live.html">Live</a>
 <a class="btn btn--primary" href="player.html">Info</a>
 </nav>
+<div class="topbar__actions">
+<div class="account-controls" id="accountControls">
+<button aria-controls="accountMenu" aria-expanded="false" aria-label="Open account menu" class="btn btn--ghost account-controls__trigger" id="accountButton" type="button"><span id="accountButtonLabel">Account</span></button>
+<div class="account-menu" id="accountMenu" hidden>
+<form class="account-menu__form" id="loginForm" autocomplete="off">
+<div class="account-menu__field">
+<label class="account-menu__label" for="loginName">Display name</label>
+<input class="account-menu__input" id="loginName" maxlength="48" name="loginName" required type="text" autocomplete="username" />
+</div>
+<div class="account-menu__field">
+  <label class="account-menu__label" for="loginPassword">Password</label>
+  <input class="account-menu__input" id="loginPassword" minlength="8" name="loginPassword" required type="password" autocomplete="current-password" />
+</div>
+<div class="account-menu__field account-menu__field--compact">
+  <label class="account-menu__checkbox" for="loginRemember">
+    <input class="account-menu__checkbox-input" id="loginRemember" name="loginRemember" type="checkbox" />
+    <span>Remember me on this device</span>
+  </label>
+</div>
+<p class="account-menu__hint" id="loginHint">Log in to keep your watch progress on this device.</p>
+<p class="account-menu__error" id="loginError" role="alert" hidden></p>
+<button class="btn btn--primary account-menu__submit" id="loginSubmit" type="submit">Log in</button>
+<button class="btn btn--ghost account-menu__switch" id="showSignup" type="button">Create account</button>
+</form>
+<form class="account-menu__form" id="signupForm" autocomplete="off" hidden>
+<div class="account-menu__field">
+<label class="account-menu__label" for="signupName">Display name</label>
+<input class="account-menu__input" id="signupName" maxlength="48" name="signupName" required type="text" autocomplete="username" />
+</div>
+<div class="account-menu__field">
+<label class="account-menu__label" for="signupPassword">Create a password</label>
+<input class="account-menu__input" id="signupPassword" maxlength="128" minlength="8" name="signupPassword" required type="password" autocomplete="new-password" />
+</div>
+<div class="account-menu__field">
+<label class="account-menu__label" for="signupPasswordConfirm">Confirm password</label>
+<input class="account-menu__input" id="signupPasswordConfirm" maxlength="128" minlength="8" name="signupPasswordConfirm" required type="password" autocomplete="new-password" />
+</div>
+<p class="account-menu__error" id="signupError" role="alert" hidden></p>
+<button class="btn btn--primary account-menu__submit" id="signupSubmit" type="submit">Create account</button>
+<button class="btn btn--ghost account-menu__switch" id="showLogin" type="button">Back to log in</button>
+</form>
+<div class="account-menu__profile" id="accountProfile" tabindex="-1" hidden>
+<p class="account-menu__greeting">Watching as <span id="accountNameDisplay"></span></p>
+<button class="btn account-menu__logout" id="logoutButton" type="button">Log out</button>
+</div>
+</div>
+</div>
 <button class="btn btn--ghost" id="backButton" type="button">← Back</button>
+</div>
 </header>
-<section class="hero hero--banner">
+<section class="hero hero--banner hero--info">
 <div class="hero-text">
-<p class="hero-kicker">Quick start</p>
-<h1>Play what you find in a clean, steady frame.</h1>
-<p class="hero-subtitle">Launch the Info relay to open your stream without the pop-up detours.</p>
+<p class="hero-kicker">Info relay</p>
+<h1>Launch streams without the clutter.</h1>
+<p class="hero-subtitle">Send a title here from Movies, Shows, or Live to play it in a steady, pop-up-free frame.</p>
 </div>
 </section>
-<section class="info-copy">
-<div class="glass-panel stack">
-<h2 class="info-heading">How to use theblackbox</h2>
-<ol class="info-steps">
-<li><strong>Browse</strong> the Movies or Shows tabs to open a title card with its synopsis, release status, and streaming links.</li>
-<li><strong>Select Play</strong> to send the title to the Info relay. We'll fetch the best mirror and prepare backup sources in the background.</li>
-<li><strong>Stay on this tab</strong> while the stream loads. The player highlights progress and swaps mirrors automatically if a source stalls.</li>
-<li><strong>Use the controls</strong> to jump episodes, toggle next-episode autoplay, or adjust quality without leaving the clean embed.</li>
-</ol>
-<p class="muted">Tip: Keep the Info tab open during playback so the relay can maintain the connection and refresh mirrors when needed.</p>
+<section class="info-guides" aria-label="How the Info relay works">
+<div class="info-grid">
+<article class="info-card">
+<h2>1. Send a title</h2>
+<p>Open any movie, episode, or channel and choose <strong>Play</strong> to route it through the Info relay.</p>
+</article>
+<article class="info-card">
+<h2>2. Stay synced</h2>
+<p>Keep this tab open while you watch so the relay can refresh mirrors and recover if a source slows down.</p>
+</article>
+<article class="info-card">
+<h2>3. Resume securely</h2>
+<p>Log in to store encrypted watch progress per profile and jump back in on this device instantly.</p>
+</article>
 </div>
 </section>
 <main class="player-layout">
@@ -124,6 +176,7 @@
 </section>
 </main>
 <footer class="site-footer">Independent node · sandboxed embeds · Info relay keeps playback steady.</footer>
+<script type="module" src="account.js"></script>
 <script type="module">
     import { movieEmbed, tvEmbed } from "./providers/vidking.js";
     import { historyId, removeEntry, upsertEntry } from "./continue_watching.js";
