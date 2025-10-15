@@ -24,8 +24,8 @@ const signupNameInput = document.getElementById("signupName");
 const signupPasswordInput = document.getElementById("signupPassword");
 const signupPasswordConfirmInput = document.getElementById("signupPasswordConfirm");
 const signupErrorEl = document.getElementById("signupError");
-const showSignupButton = document.getElementById("showSignup");
-const showLoginButton = document.getElementById("showLogin");
+const signupSection = document.getElementById("signupSection");
+const signupToggleButton = document.getElementById("signupToggle");
 const loginHintEl = document.getElementById("loginHint");
 const profileEl = document.getElementById("accountProfile");
 const nameDisplay = document.getElementById("accountNameDisplay");
@@ -34,7 +34,7 @@ const loginSubmit = document.getElementById("loginSubmit");
 const signupSubmit = document.getElementById("signupSubmit");
 
 let menuOpen = false;
-let authMode = "login";
+let signupExpanded = false;
 let sessionUser = getCurrentUser();
 
 function setMenuVisibility(visible) {
@@ -43,12 +43,9 @@ function setMenuVisibility(visible) {
   menu.hidden = !visible;
   menuOpen = visible;
   trigger.setAttribute("aria-expanded", String(visible));
-  if (visible && !wasOpen && !sessionUser && authMode !== "login") {
-    toggleForms("login");
-  }
   if (visible) {
     if (!sessionUser) {
-      if (authMode === "signup" && signupNameInput && signupForm && !signupForm.hidden) {
+      if (signupExpanded && signupNameInput && signupForm && !signupForm.hidden) {
         signupNameInput.focus();
         signupNameInput.select?.();
       } else if (loginForm && !loginForm.hidden && loginNameInput) {
@@ -76,24 +73,17 @@ function showError(element, message) {
   element.textContent = message;
 }
 
-function toggleForms(mode) {
-  if (sessionUser) {
-    if (loginForm) loginForm.hidden = true;
-    if (signupForm) signupForm.hidden = true;
-    if (loginHintEl) {
-      loginHintEl.hidden = true;
-    }
-    return;
-  }
-  authMode = mode === "signup" ? "signup" : "login";
-  if (loginForm) {
-    loginForm.hidden = authMode !== "login";
-  }
+function setSignupVisibility(visible) {
+  const shouldShow = !!visible && !sessionUser;
+  signupExpanded = shouldShow;
   if (signupForm) {
-    signupForm.hidden = authMode !== "signup";
+    signupForm.hidden = !shouldShow;
   }
-  if (loginHintEl) {
-    loginHintEl.hidden = authMode !== "login";
+  if (signupToggleButton) {
+    signupToggleButton.setAttribute("aria-expanded", String(shouldShow));
+  }
+  if (!shouldShow) {
+    showError(signupErrorEl, "");
   }
 }
 
@@ -116,20 +106,27 @@ function updateForUser(user) {
   if (loginNameInput) {
     loginNameInput.value = isLoggedIn ? user.name : "";
   }
-  if (signupNameInput && authMode === "signup" && !isLoggedIn) {
+  if (signupNameInput && !isLoggedIn && !signupExpanded) {
     signupNameInput.value = "";
   }
   if (profileEl) {
     profileEl.hidden = !isLoggedIn;
   }
   if (loginForm) {
-    loginForm.hidden = isLoggedIn || authMode !== "login";
-  }
-  if (signupForm) {
-    signupForm.hidden = isLoggedIn || authMode !== "signup";
+    loginForm.hidden = isLoggedIn;
   }
   if (loginHintEl) {
-    loginHintEl.hidden = isLoggedIn || authMode !== "login";
+    loginHintEl.hidden = isLoggedIn;
+  }
+  if (signupSection) {
+    signupSection.hidden = isLoggedIn;
+  }
+  if (signupToggleButton) {
+    signupToggleButton.hidden = isLoggedIn;
+    signupToggleButton.setAttribute("aria-expanded", String(!isLoggedIn && signupExpanded));
+  }
+  if (signupForm) {
+    signupForm.hidden = isLoggedIn || !signupExpanded;
   }
   if (loginRememberInput) {
     loginRememberInput.checked = false;
@@ -145,17 +142,16 @@ trigger?.addEventListener("click", () => {
   setMenuVisibility(!menuOpen);
 });
 
-showSignupButton?.addEventListener("click", () => {
-  toggleForms("signup");
+signupToggleButton?.addEventListener("click", () => {
+  setSignupVisibility(!signupExpanded);
   if (menuOpen) {
-    setMenuVisibility(true);
-  }
-});
-
-showLoginButton?.addEventListener("click", () => {
-  toggleForms("login");
-  if (menuOpen) {
-    setMenuVisibility(true);
+    if (signupExpanded && signupNameInput && !signupForm?.hidden) {
+      signupNameInput.focus();
+      signupNameInput.select?.();
+    } else if (!signupExpanded && loginNameInput && !loginForm?.hidden) {
+      loginNameInput.focus();
+      loginNameInput.select?.();
+    }
   }
 });
 
@@ -184,6 +180,7 @@ loginForm?.addEventListener("submit", async (event) => {
     loginRememberInput.checked = false;
   }
   sessionUser = result.user || null;
+  setSignupVisibility(false);
   setMenuVisibility(false);
 });
 
@@ -224,7 +221,7 @@ signupForm?.addEventListener("submit", async (event) => {
     signupPasswordConfirmInput.value = "";
   }
   sessionUser = result.user || null;
-  toggleForms("login");
+  setSignupVisibility(false);
   setMenuVisibility(false);
 });
 
@@ -245,11 +242,11 @@ window.addEventListener("keydown", (event) => {
 onAuthChange((user) => {
   sessionUser = user;
   if (!sessionUser) {
-    toggleForms("login");
+    setSignupVisibility(false);
   }
   updateForUser(user);
 });
 
-toggleForms(authMode);
+setSignupVisibility(false);
 updateForUser(sessionUser);
 
