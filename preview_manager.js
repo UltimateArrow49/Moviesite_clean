@@ -9,8 +9,8 @@ const REDUCE_MOTION_QUERY = window.matchMedia
 const ALT_EMBED_ORIGINS = ["https://vidking.pro", "https://vidking.cloud"];
 const OFFSCREEN_TRANSFORM = "translate3d(-9999px, -9999px, 0)";
 const DEFAULT_PROGRESS = {
-  movie: 1800,
-  tv: 600,
+  movie: 120,
+  tv: 60,
 };
 
 function onReduceMotionChange(callback) {
@@ -55,18 +55,25 @@ function computeEmbed(card, fallbackMode) {
   const entryId = historyId(mode, tmdbId, season, episode);
   const entry = getEntryById(entryId);
   const progress = entry?.progress;
-  const fallbackProgress = DEFAULT_PROGRESS[mode] || 0;
-  const resolvedProgress = progress && progress > 0 ? progress : fallbackProgress;
+  const fallbackProgress = DEFAULT_PROGRESS[mode] ?? 0;
+  let resolvedProgress = fallbackProgress;
+  if (progress && progress > 0) {
+    resolvedProgress = fallbackProgress > 0 ? Math.min(progress, fallbackProgress) : progress;
+  }
 
   if (mode === "tv") {
     return tvEmbed(tmdbId, season, episode, {
-      autoplay: false,
+      autoplay: true,
+      muted: true,
+      controls: false,
       idleCheck: 0,
       progress: resolvedProgress,
     });
   }
   return movieEmbed(tmdbId, {
-    autoplay: false,
+    autoplay: true,
+    muted: true,
+    controls: false,
     idleCheck: 0,
     progress: resolvedProgress,
   });
