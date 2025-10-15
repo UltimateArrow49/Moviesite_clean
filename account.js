@@ -6,61 +6,34 @@ import {
   onAuthChange,
 } from "./auth.js";
 
-const controls = document.getElementById("accountControls");
-if (!controls) {
-  return;
-}
+const accountButton = document.getElementById("accountButton");
+const accountButtonLabel = document.getElementById("accountButtonLabel");
+const accountStatus = document.getElementById("accountStatus");
+const navLogoutButton = document.getElementById("accountLogoutButton");
 
-const trigger = document.getElementById("accountButton");
-const triggerLabel = document.getElementById("accountButtonLabel");
-const menu = document.getElementById("accountMenu");
 const loginForm = document.getElementById("loginForm");
 const loginNameInput = document.getElementById("loginName");
 const loginPasswordInput = document.getElementById("loginPassword");
 const loginRememberInput = document.getElementById("loginRemember");
 const loginErrorEl = document.getElementById("loginError");
+const loginHintEl = document.getElementById("loginHint");
+const loginSubmit = document.getElementById("loginSubmit");
+
+const signupSection = document.getElementById("signupSection");
+const signupToggleButton = document.getElementById("signupToggle");
 const signupForm = document.getElementById("signupForm");
 const signupNameInput = document.getElementById("signupName");
 const signupPasswordInput = document.getElementById("signupPassword");
 const signupPasswordConfirmInput = document.getElementById("signupPasswordConfirm");
 const signupErrorEl = document.getElementById("signupError");
-const signupSection = document.getElementById("signupSection");
-const signupToggleButton = document.getElementById("signupToggle");
-const loginHintEl = document.getElementById("loginHint");
-const profileEl = document.getElementById("accountProfile");
-const nameDisplay = document.getElementById("accountNameDisplay");
-const logoutButton = document.getElementById("logoutButton");
-const loginSubmit = document.getElementById("loginSubmit");
 const signupSubmit = document.getElementById("signupSubmit");
 
-let menuOpen = false;
+const profileEl = document.getElementById("accountProfile");
+const nameDisplay = document.getElementById("accountNameDisplay");
+const profileLogoutButton = document.getElementById("logoutButton");
+
 let signupExpanded = false;
 let sessionUser = getCurrentUser();
-
-function setMenuVisibility(visible) {
-  if (!menu || !trigger) return;
-  const wasOpen = menuOpen;
-  menu.hidden = !visible;
-  menuOpen = visible;
-  trigger.setAttribute("aria-expanded", String(visible));
-  if (visible) {
-    if (!sessionUser) {
-      if (signupExpanded && signupNameInput && signupForm && !signupForm.hidden) {
-        signupNameInput.focus();
-        signupNameInput.select?.();
-      } else if (loginForm && !loginForm.hidden && loginNameInput) {
-        loginNameInput.focus();
-        loginNameInput.select?.();
-      }
-    } else if (profileEl && !profileEl.hidden) {
-      profileEl.focus?.();
-    }
-  }
-}
-
-function closeMenu() {
-  setMenuVisibility(false);
-}
 
 function showError(element, message) {
   if (!element) return;
@@ -96,13 +69,24 @@ function setFormBusy(form, busy) {
 }
 
 function updateForUser(user) {
-  if (!trigger || !triggerLabel) return;
   const isLoggedIn = !!user;
-  triggerLabel.textContent = isLoggedIn ? user.name : "Account";
-  trigger.setAttribute(
-    "aria-label",
-    isLoggedIn ? `Account menu for ${user.name}` : "Open account menu",
-  );
+  if (accountButtonLabel) {
+    accountButtonLabel.textContent = isLoggedIn ? user.name : "Log in";
+  }
+  if (accountButton) {
+    accountButton.setAttribute(
+      "aria-label",
+      isLoggedIn ? `Account for ${user.name}` : "Open account page",
+    );
+  }
+  if (accountStatus) {
+    accountStatus.hidden = !isLoggedIn;
+    accountStatus.textContent = isLoggedIn ? `Watching as ${user.name}` : "";
+  }
+  if (navLogoutButton) {
+    navLogoutButton.hidden = !isLoggedIn;
+    navLogoutButton.disabled = !isLoggedIn;
+  }
   if (loginNameInput) {
     loginNameInput.value = isLoggedIn ? user.name : "";
   }
@@ -111,6 +95,10 @@ function updateForUser(user) {
   }
   if (profileEl) {
     profileEl.hidden = !isLoggedIn;
+  }
+  if (profileLogoutButton) {
+    profileLogoutButton.hidden = !isLoggedIn;
+    profileLogoutButton.disabled = !isLoggedIn;
   }
   if (loginForm) {
     loginForm.hidden = isLoggedIn;
@@ -138,20 +126,14 @@ function updateForUser(user) {
   showError(signupErrorEl, "");
 }
 
-trigger?.addEventListener("click", () => {
-  setMenuVisibility(!menuOpen);
-});
-
 signupToggleButton?.addEventListener("click", () => {
   setSignupVisibility(!signupExpanded);
-  if (menuOpen) {
-    if (signupExpanded && signupNameInput && !signupForm?.hidden) {
-      signupNameInput.focus();
-      signupNameInput.select?.();
-    } else if (!signupExpanded && loginNameInput && !loginForm?.hidden) {
-      loginNameInput.focus();
-      loginNameInput.select?.();
-    }
+  if (signupExpanded && signupNameInput && !signupForm?.hidden) {
+    signupNameInput.focus();
+    signupNameInput.select?.();
+  } else if (!signupExpanded && loginNameInput && !loginForm?.hidden) {
+    loginNameInput.focus();
+    loginNameInput.select?.();
   }
 });
 
@@ -181,12 +163,14 @@ loginForm?.addEventListener("submit", async (event) => {
   }
   sessionUser = result.user || null;
   setSignupVisibility(false);
-  setMenuVisibility(false);
 });
 
-logoutButton?.addEventListener("click", () => {
+navLogoutButton?.addEventListener("click", () => {
   logout();
-  closeMenu();
+});
+
+profileLogoutButton?.addEventListener("click", () => {
+  logout();
 });
 
 signupForm?.addEventListener("submit", async (event) => {
@@ -222,21 +206,6 @@ signupForm?.addEventListener("submit", async (event) => {
   }
   sessionUser = result.user || null;
   setSignupVisibility(false);
-  setMenuVisibility(false);
-});
-
-window.addEventListener("click", (event) => {
-  if (!menuOpen) return;
-  if (!controls.contains(event.target)) {
-    closeMenu();
-  }
-});
-
-window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && menuOpen) {
-    closeMenu();
-    trigger?.focus();
-  }
 });
 
 onAuthChange((user) => {
