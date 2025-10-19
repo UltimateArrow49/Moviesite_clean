@@ -43,20 +43,6 @@
       <a href="player.html" class="btn btn--ghost">Info</a>
     </nav>
     <div class="topbar__actions">
-      <div class="account-controls" id="accountControls">
-        <a
-          class="btn btn--ghost account-controls__trigger"
-          id="accountButton"
-          href="login.html"
-          aria-label="Open account page"
-        >
-          <span id="accountButtonLabel">Log in</span>
-        </a>
-        <span class="account-controls__status" id="accountStatus" hidden></span>
-        <button class="btn btn--ghost account-controls__logout" id="accountLogoutButton" type="button" hidden>
-          Log out
-        </button>
-      </div>
       <button class="btn btn--ghost" id="backButton" type="button">Back to live guide</button>
     </div>
   </header>
@@ -101,7 +87,6 @@
   <footer class="site-footer">Live streams sourced from IPTV-Org · Playback powered by hls.js when available.</footer>
 
   <script src="install_app.js" defer></script>
-  <script src="account.js" type="module"></script>
   <script src="background_motion.js" type="module"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js" crossorigin="anonymous"></script>
   <script src="live_player.js" type="module"></script>

@@ -79,20 +79,6 @@
 <a class="btn btn--primary" href="player.html">Info</a>
 </nav>
 <div class="topbar__actions">
-<div class="account-controls" id="accountControls">
-  <a
-    class="btn btn--ghost account-controls__trigger"
-    id="accountButton"
-    href="login.html"
-    aria-label="Open account page"
-  >
-    <span id="accountButtonLabel">Log in</span>
-  </a>
-  <span class="account-controls__status" id="accountStatus" hidden></span>
-  <button class="btn btn--ghost account-controls__logout" id="accountLogoutButton" type="button" hidden>
-    Log out
-  </button>
-</div>
 <button class="btn btn--ghost" id="backButton" type="button">← Back</button>
 </div>
 </header>
@@ -100,7 +86,8 @@
 <div class="hero-text">
 <p class="hero-kicker">Info relay</p>
 <h1>Launch streams without the clutter.</h1>
-<p class="hero-subtitle">Send a title here from Movies, Shows, or Live to play it in a steady, pop-up-free frame.</p>
+<p class="hero-subtitle">Send a title from Movies, Shows, or Live to keep playback steady while Continue Watching tracks your progress automatically.</p>
+<p class="hero-subtitle" id="deviceSummary"></p>
 </div>
 </section>
 <section class="info-guides" aria-label="How the Info relay works">
@@ -111,11 +98,11 @@
 </article>
 <article class="info-card">
 <h2>2. Stay synced</h2>
-<p>Keep this tab open while you watch so the relay can refresh mirrors and recover if a source slows down.</p>
+<p>Keep this tab open while you watch so the relay can refresh mirrors, recover if a source slows down, and match controls to your device.</p>
 </article>
 <article class="info-card">
-<h2>3. Resume securely</h2>
-<p>Log in to store encrypted watch progress per profile and jump back in on this device instantly.</p>
+<h2>3. Resume automatically</h2>
+<p>Continue Watching saves progress locally per device—no login required—so you can jump back in instantly.</p>
 </article>
 </div>
 </section>
@@ -145,8 +132,8 @@
 </section>
 </main>
 <footer class="site-footer">Independent node · sandboxed embeds · Info relay keeps playback steady.</footer>
-<script type="module" src="account.js"></script>
 <script type="module">
+    import detection from "./device.js";
     import { movieEmbed, tvEmbed } from "./providers/vidking.js";
     import { historyId, removeEntry, upsertEntry } from "./continue_watching.js";
     import {
@@ -158,6 +145,49 @@
     const titleEl = document.getElementById("title");
     const overviewEl = document.getElementById("overview");
     const factsEl = document.getElementById("facts");
+    const deviceSummaryEl = document.getElementById("deviceSummary");
+
+    const formatLabel = (value) => {
+      if (typeof value !== "string" || !value) return "";
+      const lower = value.toLowerCase();
+      switch (lower) {
+        case "ios":
+          return "iOS";
+        case "mac":
+          return "macOS";
+        case "windows":
+          return "Windows";
+        case "android":
+          return "Android";
+        case "chromeos":
+          return "ChromeOS";
+        case "linux":
+          return "Linux";
+        case "mobile":
+          return "Mobile";
+        case "tablet":
+          return "Tablet";
+        case "desktop":
+          return "Desktop";
+        default:
+          return value.replace(/^[a-z]/, (char) => char.toUpperCase());
+      }
+    };
+
+    if (deviceSummaryEl) {
+      const info = detection || window.__DEVICE__ || {};
+      const parts = [];
+      const osLabel = formatLabel(info.os);
+      if (osLabel) {
+        parts.push(osLabel);
+      }
+      const deviceLabel = formatLabel(info.device);
+      if (deviceLabel && deviceLabel !== "Desktop") {
+        parts.push(deviceLabel);
+      }
+      const descriptor = parts.length ? parts.join(" ") : "your device";
+      deviceSummaryEl.textContent = `You're on ${descriptor}. We'll tune embeds and controls for this setup.`;
+    }
     const backButton = document.getElementById("backButton");
     const embedWrap = document.getElementById("embedWrap");
     const embedFrame = document.getElementById("embedFrame");
