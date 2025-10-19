@@ -80,21 +80,7 @@
 </nav>
 <div class="topbar__actions">
 <form action="search.html" class="search-bar" id="searchForm" method="get"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z" fill="currentColor"></path></svg><input aria-label="Search the entire catalog" autocomplete="off" id="search" name="q" placeholder="Search movies &amp; shows" spellcheck="false" type="search"/></form>
-        <div class="account-controls" id="accountControls">
-          <a
-            class="btn btn--ghost account-controls__trigger"
-            id="accountButton"
-            href="login.html"
-            aria-label="Open account page"
-          >
-            <span id="accountButtonLabel">Log in</span>
-          </a>
-          <span class="account-controls__status" id="accountStatus" hidden></span>
-          <button class="btn btn--ghost account-controls__logout" id="accountLogoutButton" type="button" hidden>
-            Log out
-          </button>
-        </div>
-</div>
+      </div>
 </header>
 <section class="hero hero--banner">
 <div class="hero-text">
@@ -107,7 +93,7 @@
 <section aria-labelledby="continueMoviesTitle" class="continue" hidden="" id="continueMovies">
 <div class="continue__header">
 <h2 id="continueMoviesTitle">Continue watching</h2>
-<p class="continue__message" id="continueMoviesMessage" hidden>Log in or create an account to start tracking the movies you're watching.</p>
+<p class="continue__message" id="continueMoviesMessage" hidden>Start watching to build your list. Progress saves automatically on this device.</p>
 </div>
 <div class="continue__scroller" id="continueMoviesList" role="list"></div>
 </section>
@@ -115,7 +101,6 @@
 </main>
 <footer class="site-footer">Results powered by TMDB · Streams delivered through the Info relay.</footer>
 <script defer="" src="install_app.js"></script>
-<script src="account.js" type="module"></script>
 <script src="background_motion.js" type="module"></script>
 <script src="movies.js?v=5" type="module"></script>
 </body>
