@@ -1,5 +1,4 @@
 import { getEntriesByMode, onHistoryChange } from "./continue_watching.js";
-import { getCurrentUser, onAuthChange } from "./auth.js";
 import { setupPreviewForGrid } from "./preview_manager.js";
 import { IMG_BASE, requestTmdb } from "./tmdb_client.js";
 
@@ -230,7 +229,6 @@ function createContinueCard(entry) {
 
 function renderContinueWatching() {
   if (!continueSection || !continueList) return;
-  const user = getCurrentUser();
   const entries = getEntriesByMode("tv").slice(0, 12);
   continueSection.hidden = false;
   continueList.innerHTML = "";
@@ -238,9 +236,8 @@ function renderContinueWatching() {
     continueSection.classList.add("continue--empty");
     if (continueMessage) {
       continueMessage.hidden = false;
-      continueMessage.textContent = user
-        ? "Start an episode to see it appear here."
-        : "Log in to keep track of the shows you're watching.";
+      continueMessage.textContent =
+        "Start an episode to see it appear here. Progress saves automatically on this device.";
     }
     return;
   }
@@ -437,7 +434,6 @@ function initSearchRedirect() {
 function init() {
   renderContinueWatching();
   onHistoryChange(renderContinueWatching);
-  onAuthChange(renderContinueWatching);
   initCarousels();
   initSearchRedirect();
 }

@@ -1,9 +1,32 @@
-import { getActiveUserKey, onAuthChange } from "./auth.js";
+import detection from "./device.js";
 
 const STORAGE_ROOT_KEY = "tbb:continue:v1";
 const MAX_ENTRIES = 25;
+const LEGACY_NAMESPACES = ["guest", "device"];
+const DEVICE_ID_STORAGE_KEY = `${STORAGE_ROOT_KEY}:device-id`;
 
-let activeNamespace = getActiveUserKey();
+function resolveDeviceNamespace() {
+  const fallback = LEGACY_NAMESPACES[0];
+  try {
+    const fingerprint = [];
+    const info = detection || window.__DEVICE__ || {};
+    if (info.os) fingerprint.push(String(info.os));
+    if (info.device) fingerprint.push(String(info.device));
+    const base = fingerprint.length ? fingerprint.join("-") : "device";
+    const storedId = localStorage.getItem(DEVICE_ID_STORAGE_KEY);
+    let identifier = typeof storedId === "string" && storedId.trim() ? storedId.trim() : "";
+    if (!identifier) {
+      identifier = Math.random().toString(36).slice(2, 10);
+      localStorage.setItem(DEVICE_ID_STORAGE_KEY, identifier);
+    }
+    return `${base}-${identifier}`;
+  } catch (error) {
+    console.warn("Unable to resolve device namespace", error);
+    return fallback;
+  }
+}
+
+let activeNamespace = resolveDeviceNamespace();
 
 function buildStorageKey(namespace = activeNamespace) {
   return `${STORAGE_ROOT_KEY}:${namespace}`;
@@ -40,6 +63,19 @@ function safeWriteRaw(key, payload) {
 function safeRead() {
   const key = buildStorageKey();
   let payload = safeReadRaw(key);
+  if (payload == null) {
+    for (const legacy of LEGACY_NAMESPACES) {
+      if (!legacy) continue;
+      const legacyKey = buildStorageKey(legacy);
+      if (legacyKey === key) continue;
+      const legacyPayload = safeReadRaw(legacyKey);
+      if (legacyPayload != null) {
+        safeWriteRaw(key, legacyPayload);
+        payload = legacyPayload;
+        break;
+      }
+    }
+  }
   if (payload == null && key !== STORAGE_ROOT_KEY) {
     const legacy = safeReadRaw(STORAGE_ROOT_KEY);
     if (legacy != null) {
@@ -198,13 +234,6 @@ export function onHistoryChange(callback) {
     window.removeEventListener("storage", storageHandler);
   };
 }
-
-onAuthChange(() => {
-  const nextNamespace = getActiveUserKey();
-  if (nextNamespace === activeNamespace) return;
-  activeNamespace = nextNamespace;
-  window.dispatchEvent(new CustomEvent("continuewatchingchange"));
-});
 
 export const STORAGE_KEY = STORAGE_ROOT_KEY;
 

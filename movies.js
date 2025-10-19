@@ -1,5 +1,4 @@
 import { getEntriesByMode, onHistoryChange } from "./continue_watching.js";
-import { getCurrentUser, onAuthChange } from "./auth.js";
 import { setupPreviewForGrid } from "./preview_manager.js";
 import { BACKDROP_BASE, IMG_BASE, requestTmdb } from "./tmdb_client.js";
 
@@ -234,7 +233,6 @@ function createContinueCard(entry) {
 
 function renderContinueWatching() {
   if (!continueSection || !continueList) return;
-  const user = getCurrentUser();
   const entries = getEntriesByMode("movie").slice(0, 12);
   continueSection.hidden = false;
   continueList.innerHTML = "";
@@ -242,9 +240,8 @@ function renderContinueWatching() {
     continueSection.classList.add("continue--empty");
     if (continueMessage) {
       continueMessage.hidden = false;
-      continueMessage.textContent = user
-        ? "Start watching a movie to see it appear here."
-        : "Log in to start tracking the movies you're watching.";
+      continueMessage.textContent =
+        "Start watching a movie to see it appear here. Progress saves automatically on this device.";
     }
     return;
   }
@@ -441,7 +438,6 @@ function initSearchRedirect() {
 function init() {
   renderContinueWatching();
   onHistoryChange(renderContinueWatching);
-  onAuthChange(renderContinueWatching);
   initCarousels();
   initSearchRedirect();
 }

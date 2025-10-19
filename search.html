@@ -64,20 +64,6 @@
         <svg aria-hidden="true" viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
         <input id="search" type="search" name="q" placeholder="Search movies &amp; shows" autocomplete="off" spellcheck="false" aria-label="Search the entire catalog">
       </form>
-      <div class="account-controls" id="accountControls">
-        <a
-          class="btn btn--ghost account-controls__trigger"
-          id="accountButton"
-          href="login.html"
-          aria-label="Open account page"
-        >
-          <span id="accountButtonLabel">Log in</span>
-        </a>
-        <span class="account-controls__status" id="accountStatus" hidden></span>
-        <button class="btn btn--ghost account-controls__logout" id="accountLogoutButton" type="button" hidden>
-          Log out
-        </button>
-      </div>
     </div>
   </header>
   <main class="content content--search" aria-labelledby="searchTitle">
@@ -105,7 +91,6 @@
   </main>
   <footer class="site-footer">Independent node · sandboxed embeds · Info relay keeps playback steady.</footer>
   <script defer src="install_app.js"></script>
-  <script type="module" src="account.js"></script>
   <script defer src="background_motion.js"></script>
   <script type="module" src="search.js"></script>
 </body>
