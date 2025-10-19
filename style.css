@@ -10,6 +10,8 @@
   --accent-rgb: 20, 255, 159;
   --accent-strong: #3afcd0;
   --accent-strong-rgb: 58, 252, 208;
+  --ink-strong: #0f172a;
+  --ink-strong-rgb: 15, 23, 42;
   --danger: #ff3864;
   --radius-sm: 12px;
   --radius-md: 18px;
@@ -947,7 +949,7 @@ body.is-mobile .content {
   border-radius: 999px;
   border: 1px solid rgba(16, 34, 58, 0.1);
   background: rgba(255, 255, 255, 0.86);
-  color: rgba(var(--ink-rgb), 0.65);
+  color: rgba(var(--ink-strong-rgb), 0.78);
   font-weight: 600;
   letter-spacing: 0.01em;
   cursor: pointer;
@@ -1660,6 +1662,7 @@ body.is-mobile .player-layout {
   height: 100%;
   border: none;
   display: block;
+  touch-action: pan-y;
 }
 
 .player-frame .player-overlay {
@@ -2123,6 +2126,13 @@ footer.site-footer {
 
   .chip-group {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .player-frame {
+    aspect-ratio: auto;
+    height: clamp(260px, 62vh, 560px);
   }
 }
 
