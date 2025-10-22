@@ -37,6 +37,7 @@ const videoEl = document.getElementById("liveVideo");
 const backButton = document.getElementById("backButton");
 const playerStageEl = document.getElementById("playerStage");
 const playerOverlayEl = document.getElementById("playerOverlay");
+let overlayHideTimer = null;
 
 function getStoredChannel(id) {
   if (!id) return null;
@@ -116,6 +117,10 @@ function recordChannelStatus(status) {
 
 function showStreamOverlay(message, tone = "down") {
   if (!playerOverlayEl) return;
+  if (overlayHideTimer) {
+    window.clearTimeout(overlayHideTimer);
+    overlayHideTimer = null;
+  }
   playerOverlayEl.textContent = message;
   if (tone) {
     playerOverlayEl.dataset.tone = tone;
@@ -123,14 +128,40 @@ function showStreamOverlay(message, tone = "down") {
     delete playerOverlayEl.dataset.tone;
   }
   playerOverlayEl.hidden = false;
+  playerOverlayEl.setAttribute("aria-hidden", "false");
+  void playerOverlayEl.offsetWidth;
+  playerOverlayEl.classList.add("player-overlay--visible");
   playerStageEl?.classList.add("has-overlay");
 }
 
 function hideStreamOverlay() {
   if (!playerOverlayEl) return;
-  playerOverlayEl.hidden = true;
+  playerOverlayEl.classList.remove("player-overlay--visible");
+  playerOverlayEl.setAttribute("aria-hidden", "true");
   playerOverlayEl.removeAttribute("data-tone");
   playerStageEl?.classList.remove("has-overlay");
+
+  const finalize = () => {
+    playerOverlayEl.hidden = true;
+    playerOverlayEl.removeAttribute("aria-hidden");
+  };
+
+  playerOverlayEl.addEventListener(
+    "transitionend",
+    () => {
+      finalize();
+      if (overlayHideTimer) {
+        window.clearTimeout(overlayHideTimer);
+        overlayHideTimer = null;
+      }
+    },
+    { once: true },
+  );
+
+  overlayHideTimer = window.setTimeout(() => {
+    overlayHideTimer = null;
+    finalize();
+  }, 360);
 }
 
 function addTag(label) {
