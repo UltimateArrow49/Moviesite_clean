@@ -136,6 +136,7 @@
     import detection from "./device.js";
     import { movieEmbed, tvEmbed } from "./providers/vidking.js";
     import { historyId, removeEntry, upsertEntry } from "./continue_watching.js";
+    import { recordRecentlyWatched } from "./recently_watched.js";
     import {
       requestTmdb,
       IMG_BASE as IMG_POSTER_BASE,
@@ -282,6 +283,24 @@
       removeEntry(historyKey);
     }
 
+    function storeRecently(progress, { completed = false } = {}) {
+      if (!tmdb || !mode) return;
+      const normalized = Number.isFinite(progress) ? Math.max(0, Math.floor(progress)) : 0;
+      recordRecentlyWatched({
+        mode,
+        tmdb,
+        title: explicitTitle,
+        poster: posterUrl,
+        backdrop: backdropUrl,
+        href: window.location.href,
+        progress: completed ? 0 : normalized,
+        runtime: runtimeSeconds,
+        season: seasonNumber,
+        episode: episodeNumber,
+        lastPlayedAt: Date.now(),
+      });
+    }
+
     function buildFacts(tags = []) {
       factsEl.innerHTML = "";
       if (!tags.length) {
@@ -337,6 +356,7 @@
         buildFacts(tags);
         overviewEl.textContent = data.overview || "No synopsis available.";
         persistHistory(lastProgress, { immediate: true, force: resumeProgress > 0 });
+        storeRecently(lastProgress, { completed: lastProgress <= 0 });
       } catch (error) {
         overviewEl.textContent = "Unable to load TMDB details right now.";
         buildFacts([]);
@@ -777,6 +797,7 @@
         if (Number.isFinite(currentTime)) {
           persistHistory(currentTime, { immediate: true });
         }
+        storeRecently(Number.isFinite(currentTime) ? currentTime : 0, { completed: false });
         if (Number.isFinite(currentTime) && currentTime > 0) {
           setStatus(`Playback started at ${formatTime(currentTime)} via the Info relay.`);
         } else {
@@ -809,6 +830,7 @@
         clearAutoResume();
         manualPauseUntil = 0;
         setLoading(false);
+        storeRecently(0, { completed: true });
         clearHistoryEntry();
         if (data.nextEpisode) {
           setStatus("Episode complete. Awaiting the next installment…");
