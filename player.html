@@ -570,6 +570,94 @@
       }, AUTO_RESUME_DELAY);
     }
 
+    function isEditingText(target) {
+      if (!target) return false;
+      if (target.isContentEditable) return true;
+      const tagName = target.tagName;
+      return tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT";
+    }
+
+    function requestFullscreenFor(element) {
+      if (!element) return;
+      const method =
+        element.requestFullscreen ||
+        element.webkitRequestFullscreen ||
+        element.msRequestFullscreen ||
+        element.mozRequestFullScreen;
+      if (!method) return;
+      try {
+        const result = method.call(element);
+        if (result && typeof result.catch === "function") {
+          result.catch((error) => {
+            console.warn("Fullscreen request was denied", error);
+          });
+        }
+      } catch (error) {
+        console.warn("Unable to enter fullscreen", error);
+      }
+    }
+
+    function exitFullscreenIfNeeded() {
+      const doc = document;
+      const exit =
+        doc.exitFullscreen ||
+        doc.webkitExitFullscreen ||
+        doc.msExitFullscreen ||
+        doc.mozCancelFullScreen;
+      if (!exit) return;
+      try {
+        const result = exit.call(doc);
+        if (result && typeof result.catch === "function") {
+          result.catch((error) => {
+            console.warn("Unable to exit fullscreen", error);
+          });
+        }
+      } catch (error) {
+        console.warn("Unable to exit fullscreen", error);
+      }
+    }
+
+    function toggleFullscreenShortcut() {
+      const doc = document;
+      const isFull =
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.msFullscreenElement ||
+        doc.mozFullScreenElement;
+      if (isFull) {
+        exitFullscreenIfNeeded();
+        setStatus("Exited fullscreen view.");
+        return;
+      }
+      const target = embedWrap || embedFrame;
+      if (!target) return;
+      requestFullscreenFor(target);
+      setStatus("Attempting fullscreen playback…");
+    }
+
+    function toggleMuteShortcut() {
+      if (!embedFrame) return;
+      postVidkingMessages([{ type: "PLAYER_COMMAND", command: "toggle_mute" }]);
+      setStatus("Toggled mute via keyboard shortcut.");
+    }
+
+    function handleKeyboardShortcut(event) {
+      if (!event) return;
+      if (event.defaultPrevented) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (isEditingText(event.target)) return;
+      const key = typeof event.key === "string" ? event.key.toLowerCase() : "";
+      if (key === "f") {
+        event.preventDefault();
+        toggleFullscreenShortcut();
+      } else if (key === "m") {
+        event.preventDefault();
+        toggleMuteShortcut();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyboardShortcut);
+
     function isDeliberatePause(payload = {}) {
       if (!payload) return false;
       if (payload.userInitiated === true || payload.user === true) return true;
