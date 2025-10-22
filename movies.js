@@ -50,6 +50,8 @@ const CAROUSELS = [
 ];
 
 const carouselStates = new Map();
+const suggestedItemIds = new Set();
+let suggestionsController = null;
 
 function formatFacts(movie) {
   const facts = [];
@@ -296,6 +298,13 @@ function createCarouselSection(definition) {
   scroller.setAttribute("role", "list");
   section.appendChild(scroller);
 
+  const loader = document.createElement("div");
+  loader.className = "carousel__loader";
+  loader.innerHTML =
+    '<span class="spinner" aria-hidden="true"></span><span class="carousel__loader-text">Loading titles…</span>';
+  loader.hidden = true;
+  section.appendChild(loader);
+
   const message = document.createElement("p");
   message.className = "carousel__message";
   message.hidden = true;
@@ -310,6 +319,8 @@ function createCarouselSection(definition) {
     prev,
     next,
     message,
+    loader,
+    loaderText: loader.querySelector(".carousel__loader-text"),
   };
 
   const updateArrows = () => {
@@ -342,6 +353,20 @@ function createCarouselSection(definition) {
   carouselStates.set(definition.id, enhancedState);
   updateArrows();
   return enhancedState;
+}
+
+function setCarouselLoading(state, isLoading, label = "Loading titles…") {
+  if (!state || !state.loader) return;
+  if (state.loaderText && label) {
+    state.loaderText.textContent = label;
+  }
+  state.loader.hidden = !isLoading;
+  state.section.classList.toggle("carousel--loading", Boolean(isLoading));
+  if (isLoading) {
+    state.scroller.setAttribute("aria-busy", "true");
+  } else {
+    state.scroller.removeAttribute("aria-busy");
+  }
 }
 
 function setCarouselMessage(state, message) {
@@ -398,27 +423,148 @@ async function loadCarousel(definition) {
   }
   if (!state) return;
 
-  setCarouselMessage(state, "Loading titles…");
+  setCarouselMessage(state, "");
+  setCarouselLoading(state, true, "Loading titles…");
   try {
     const items = await fetchCarouselItems(definition);
     if (!items.length) {
       renderCarousel(state, []);
       setCarouselMessage(state, "No titles available right now. Please check back soon.");
+      setCarouselLoading(state, false);
       return;
     }
     renderCarousel(state, items);
     setCarouselMessage(state, "");
+    setCarouselLoading(state, false);
   } catch (error) {
     console.error(error);
     renderCarousel(state, []);
     setCarouselMessage(state, "Unable to load this row right now. Retry shortly.");
+    setCarouselLoading(state, false);
+  }
+}
+
+function releaseSuggestedItems() {
+  for (const id of suggestedItemIds) {
+    usedMovieIds.delete(id);
+  }
+  suggestedItemIds.clear();
+}
+
+async function fetchSuggestedFromHistory(historyEntries, { signal } = {}) {
+  const suggestions = [];
+  const seenSources = new Set();
+
+  for (const entry of historyEntries) {
+    if (!entry || !entry.tmdb) continue;
+    if (seenSources.has(entry.tmdb)) continue;
+    seenSources.add(entry.tmdb);
+
+    const endpoints = [`movie/${entry.tmdb}/recommendations`, `movie/${entry.tmdb}/similar`];
+    for (const endpoint of endpoints) {
+      if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+      try {
+        const payload = await requestTmdb(endpoint, { page: "1" }, { signal });
+        const results = Array.isArray(payload.results) ? payload.results : [];
+        for (const result of results) {
+          if (!result || !result.id) continue;
+          if (usedMovieIds.has(result.id)) continue;
+          if (suggestions.some((item) => item && item.id === result.id)) continue;
+          suggestions.push(result);
+          if (suggestions.length >= ROW_TARGET) break;
+        }
+      } catch (error) {
+        if (error.name === "AbortError") throw error;
+        console.warn(`Unable to load suggestions from ${endpoint}`, error);
+      }
+      if (suggestions.length >= ROW_TARGET) break;
+    }
+    if (suggestions.length >= ROW_TARGET) break;
+  }
+
+  return suggestions;
+}
+
+async function loadSuggestedRow() {
+  const historyEntries = getEntriesByMode("movie");
+  if (!historyEntries.length) {
+    const existing = carouselStates.get("suggested");
+    if (existing) {
+      releaseSuggestedItems();
+      existing.section.remove();
+      carouselStates.delete("suggested");
+    }
+    return;
+  }
+
+  if (suggestionsController) {
+    suggestionsController.abort();
+  }
+  const controller = new AbortController();
+  suggestionsController = controller;
+
+  let state = carouselStates.get("suggested");
+  if (!state) {
+    state = createCarouselSection({ id: "suggested", label: "Suggested for you" });
+    if (state) {
+      carouselList?.prepend(state.section);
+    }
+  }
+  if (!state) {
+    suggestionsController = null;
+    return;
+  }
+
+  releaseSuggestedItems();
+  setCarouselMessage(state, "");
+  setCarouselLoading(state, true, "Personalizing recommendations…");
+
+  try {
+    const items = await fetchSuggestedFromHistory(historyEntries, { signal: controller.signal });
+    if (suggestionsController !== controller) return;
+    if (!items.length) {
+      renderCarousel(state, []);
+      setCarouselMessage(
+        state,
+        "Watch a few more movies to unlock personalized suggestions.",
+      );
+      setCarouselLoading(state, false);
+      return;
+    }
+    renderCarousel(state, items);
+    for (const item of items) {
+      if (!item || !item.id) continue;
+      suggestedItemIds.add(item.id);
+      usedMovieIds.add(item.id);
+    }
+    setCarouselMessage(state, "");
+    setCarouselLoading(state, false);
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      console.error("Unable to build suggested row", error);
+      renderCarousel(state, []);
+      setCarouselMessage(state, "Personalized picks are unavailable right now. Try again soon.");
+      setCarouselLoading(state, false);
+    }
+  } finally {
+    if (suggestionsController === controller) {
+      suggestionsController = null;
+    }
   }
 }
 
 function initCarousels() {
-  for (const def of CAROUSELS) {
-    loadCarousel(def);
-  }
+  loadSuggestedRow()
+    .catch((error) => {
+      if (error.name !== "AbortError") {
+        console.error("Failed to prepare suggestions", error);
+      }
+    })
+    .finally(() => {
+      for (const def of CAROUSELS) {
+        loadCarousel(def);
+      }
+    });
 }
 
 function initSearchRedirect() {
@@ -437,7 +583,14 @@ function initSearchRedirect() {
 
 function init() {
   renderContinueWatching();
-  onHistoryChange(renderContinueWatching);
+  onHistoryChange(() => {
+    renderContinueWatching();
+    loadSuggestedRow().catch((error) => {
+      if (error.name !== "AbortError") {
+        console.error("Failed to refresh suggestions", error);
+      }
+    });
+  });
   initCarousels();
   initSearchRedirect();
 }
