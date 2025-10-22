@@ -275,6 +275,7 @@
         runtime: runtimeSeconds,
         updatedAt: now,
       });
+      storeRecently(normalized, { completed: normalized <= 0 });
     }
 
     function clearHistoryEntry() {

@@ -69,6 +69,37 @@ self.addEventListener("fetch", (event) => {
   const acceptsHtml =
     request.mode === "navigate" || (request.headers.get("accept") || "").includes("text/html");
 
+  if (acceptsHtml) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (!response || response.status !== 200) {
+            return response;
+          }
+
+          const responseToCache = response.clone();
+
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseToCache).catch((error) => {
+              console.error("[ServiceWorker] Cache put failed", error);
+            });
+          });
+
+          return response;
+        })
+        .catch((error) => {
+          console.error("[ServiceWorker] Network request for HTML failed", error);
+          return caches.match(request).then((cachedResponse) => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            return caches.match(OFFLINE_FALLBACK_URL);
+          });
+        })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -93,9 +124,6 @@ self.addEventListener("fetch", (event) => {
         })
         .catch((error) => {
           console.error("[ServiceWorker] Network request failed", error);
-          if (acceptsHtml) {
-            return caches.match(OFFLINE_FALLBACK_URL);
-          }
           return Response.error();
         });
     })
