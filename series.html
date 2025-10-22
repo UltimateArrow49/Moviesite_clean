@@ -90,7 +90,59 @@
 </div>
 </section>
 <main class="content">
-<section aria-labelledby="continueShowsTitle" class="continue" hidden="" id="continueShows">
+  <section aria-labelledby="seriesDiscoveryTitle" class="discovery" id="seriesDiscovery">
+    <div class="discovery__header">
+      <div>
+        <p class="discovery__kicker">Smart filters</p>
+        <h2 class="discovery__title" id="seriesDiscoveryTitle">Line up your next show</h2>
+        <p class="discovery__subtitle">
+          Layer genres and premiere years or type in a title to surface the perfect season to binge.
+        </p>
+      </div>
+    </div>
+    <div class="discovery__controls">
+      <label class="discovery__field" for="seriesDiscoverySearch">
+        <span class="discovery__label">Search</span>
+        <input
+          autocomplete="off"
+          class="discovery__input"
+          id="seriesDiscoverySearch"
+          name="seriesDiscoverySearch"
+          placeholder="Search shows"
+          type="search"
+        />
+      </label>
+      <div class="discovery__chips" role="group" aria-label="Filter chips">
+        <div class="chip-group">
+          <span class="chip-group__label">Genre</span>
+          <div class="chip-list" id="seriesGenreChips"></div>
+        </div>
+        <div class="chip-group">
+          <span class="chip-group__label">Year</span>
+          <div class="chip-list" id="seriesYearChips"></div>
+        </div>
+      </div>
+    </div>
+    <p aria-live="polite" class="discovery__status" id="seriesDiscoveryStatus">
+      Pick a genre chip or start typing to explore episodic hits.
+    </p>
+    <div class="discovery__grid" id="seriesDiscoveryResults" role="list"></div>
+  </section>
+  <section
+    aria-labelledby="recentlyShowsTitle"
+    class="continue continue--recently"
+    hidden
+    id="recentlyShows"
+  >
+    <div class="continue__header">
+      <h2 id="recentlyShowsTitle">Recently watched</h2>
+      <p class="continue__message" id="recentlyShowsMessage" hidden>
+        Episodes you finish or hop back into will stay here for quick access across seasons.
+      </p>
+    </div>
+    <div class="continue__scroller" id="recentlyShowsList" role="list"></div>
+  </section>
+  <section aria-labelledby="continueShowsTitle" class="continue" hidden="" id="continueShows">
 <div class="continue__header">
 <h2 id="continueShowsTitle">Continue watching</h2>
 <p class="continue__message" id="continueShowsMessage" hidden>Start watching to build your list. Progress saves automatically on this device.</p>
