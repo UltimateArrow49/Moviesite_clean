@@ -6,7 +6,6 @@ import {
   getRecentlyWatchedByMode,
   onRecentlyChange,
 } from "./recently_watched.js";
-import { initDiscoveryBrowser } from "./discovery_browser.js";
 
 const continueSection = document.getElementById("continueMovies");
 const continueList = document.getElementById("continueMoviesList");
@@ -14,11 +13,6 @@ const continueMessage = document.getElementById("continueMoviesMessage");
 const carouselList = document.getElementById("carouselList");
 const searchForm = document.getElementById("searchForm");
 const searchInput = document.getElementById("search");
-const discoveryInput = document.getElementById("movieDiscoverySearch");
-const discoveryStatus = document.getElementById("movieDiscoveryStatus");
-const discoveryResults = document.getElementById("movieDiscoveryResults");
-const movieGenreChips = document.getElementById("movieGenreChips");
-const movieYearChips = document.getElementById("movieYearChips");
 const recentlySection = document.getElementById("recentlyMovies");
 const recentlyList = document.getElementById("recentlyMoviesList");
 const recentlyMessage = document.getElementById("recentlyMoviesMessage");
@@ -32,9 +26,6 @@ if (continueList) {
 }
 if (recentlyList) {
   setupPreviewForGrid(recentlyList, { mode: "movie" });
-}
-if (discoveryResults) {
-  setupPreviewForGrid(discoveryResults, { mode: "movie" });
 }
 
 const CAROUSELS = [
@@ -708,18 +699,6 @@ function init() {
   });
   initCarousels();
   initSearchRedirect();
-  if (discoveryResults) {
-    initDiscoveryBrowser({
-      mode: "movie",
-      searchInput: discoveryInput,
-      statusElement: discoveryStatus,
-      resultsElement: discoveryResults,
-      genreContainer: movieGenreChips,
-      yearContainer: movieYearChips,
-      createCard,
-      limit: 24,
-    });
-  }
 }
 
 document.addEventListener("DOMContentLoaded", init);
