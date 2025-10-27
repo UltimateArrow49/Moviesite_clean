@@ -263,10 +263,11 @@
     const MIN_PROGRESS_TO_STORE = 10;
     document.title = `${explicitTitle} · theblackbox (Info relay)`;
     titleEl.textContent = explicitTitle;
+    let downloadRequestId = 0;
     updateDownloadButton();
 
     function getDownloadLink() {
-      if (!tmdb || !mode) return "";
+      if (!tmdb || !mode) return Promise.resolve("");
       if (mode === "movie") {
         return movieDownload(tmdb);
       }
@@ -275,16 +276,50 @@
         const episode = episodeNumber || 1;
         return tvDownload(tmdb, season, episode);
       }
-      return "";
+      return Promise.resolve("");
     }
 
-    function updateDownloadButton() {
+    function beginDownloadResolve() {
       if (!downloadButton) return;
-      const href = getDownloadLink();
+      downloadButton.hidden = false;
+      downloadButton.removeAttribute("aria-hidden");
+      downloadButton.removeAttribute("href");
+      downloadButton.setAttribute("aria-busy", "true");
+      downloadButton.setAttribute("aria-disabled", "true");
+      if (downloadLabel) {
+        downloadLabel.textContent = "Preparing download...";
+      }
+    }
+
+    function hideDownloadButton(message) {
+      if (!downloadButton) return;
+      downloadButton.hidden = true;
+      downloadButton.setAttribute("aria-hidden", "true");
+      downloadButton.removeAttribute("aria-busy");
+      downloadButton.removeAttribute("aria-disabled");
+      downloadButton.removeAttribute("href");
+      if (downloadLabel && message) {
+        downloadLabel.textContent = message;
+      }
+    }
+
+    async function updateDownloadButton() {
+      if (!downloadButton) return;
+      const requestId = ++downloadRequestId;
+      beginDownloadResolve();
+      let href = "";
+      try {
+        href = await getDownloadLink();
+      } catch (error) {
+        console.error("Failed to resolve Vidking download link:", error);
+      }
+      if (requestId !== downloadRequestId) {
+        return;
+      }
       if (href) {
+        downloadButton.removeAttribute("aria-busy");
+        downloadButton.removeAttribute("aria-disabled");
         downloadButton.href = href;
-        downloadButton.hidden = false;
-        downloadButton.removeAttribute("aria-hidden");
         downloadButton.setAttribute("title", "Download via Vidking");
         if (downloadLabel) {
           downloadLabel.textContent = mode === "tv" ? "Download episode" : "Download movie";
@@ -295,8 +330,7 @@
             : `Download ${explicitTitle}`;
         downloadButton.setAttribute("aria-label", ariaLabel);
       } else {
-        downloadButton.hidden = true;
-        downloadButton.setAttribute("aria-hidden", "true");
+        hideDownloadButton("Download unavailable");
       }
     }
 
