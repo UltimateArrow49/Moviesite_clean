@@ -14,7 +14,6 @@ const continueMessage = document.getElementById("continueShowsMessage");
 const carouselList = document.getElementById("carouselList");
 const searchForm = document.getElementById("searchForm");
 const searchInput = document.getElementById("search");
-const discoveryInput = document.getElementById("seriesDiscoverySearch");
 const discoveryStatus = document.getElementById("seriesDiscoveryStatus");
 const discoveryResults = document.getElementById("seriesDiscoveryResults");
 const seriesGenreChips = document.getElementById("seriesGenreChips");
@@ -718,7 +717,6 @@ function init() {
   if (discoveryResults) {
     initDiscoveryBrowser({
       mode: "tv",
-      searchInput: discoveryInput,
       statusElement: discoveryStatus,
       resultsElement: discoveryResults,
       genreContainer: seriesGenreChips,
