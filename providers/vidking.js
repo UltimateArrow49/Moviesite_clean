@@ -85,3 +85,17 @@ export function tvEmbed(tmdbId, season, episode, options = {}) {
   const url = new URL(base);
   return applyOptions(url, options);
 }
+
+export function movieDownload(tmdbId) {
+  if (!tmdbId) return "";
+  return `${VIDKING_ORIGIN}/download/movie/${encodeURIComponent(tmdbId)}`;
+}
+
+export function tvDownload(tmdbId, season, episode) {
+  if (!tmdbId) return "";
+  const seasonSegment = season == null ? "1" : String(season);
+  const episodeSegment = episode == null ? "1" : String(episode);
+  return `${VIDKING_ORIGIN}/download/tv/${encodeURIComponent(tmdbId)}/${encodeURIComponent(
+    seasonSegment,
+  )}/${encodeURIComponent(episodeSegment)}`;
+}

@@ -1866,6 +1866,13 @@ body.is-mobile .player-layout {
   align-items: center;
   justify-content: space-between;
 }
+
+.player-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
 .player-heading {
   display: flex;
   align-items: center;

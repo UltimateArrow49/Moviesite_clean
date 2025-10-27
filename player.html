@@ -106,10 +106,28 @@
 </article>
 </div>
 </section>
-<main class="player-layout">
-<div class="player-header">
-<h1 class="player-title" id="title">Loading…</h1>
-</div>
+  <main class="player-layout">
+    <div class="player-header">
+      <h1 class="player-title" id="title">Loading…</h1>
+      <div class="player-actions">
+        <a
+          class="btn btn--ghost btn--download"
+          href="#"
+          hidden
+          id="downloadButton"
+          rel="noopener noreferrer"
+          target="_blank"
+          aria-hidden="true"
+        >
+          <svg aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
+            <path
+              d="M12 3a1 1 0 0 1 1 1v9.585l2.293-2.292a1 1 0 1 1 1.414 1.414l-4.001 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 1.414-1.414L11 13.586V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v1.5A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5V18a1 1 0 0 1 1-1Z"
+            />
+          </svg>
+          <span id="downloadLabel">Download</span>
+        </a>
+      </div>
+    </div>
 <div class="player-status" role="status">
 <div aria-hidden="true" class="loading-indicator" hidden="" id="loadingIndicator">
 <span aria-hidden="true" class="loading-box"></span>
@@ -134,7 +152,7 @@
 <footer class="site-footer">Independent node · sandboxed embeds · Info relay keeps playback steady.</footer>
 <script type="module">
     import detection from "./device.js";
-    import { movieEmbed, tvEmbed } from "./providers/vidking.js";
+    import { movieEmbed, tvEmbed, movieDownload, tvDownload } from "./providers/vidking.js";
     import { historyId, removeEntry, upsertEntry } from "./continue_watching.js";
     import { recordRecentlyWatched } from "./recently_watched.js";
     import {
@@ -147,6 +165,8 @@
     const overviewEl = document.getElementById("overview");
     const factsEl = document.getElementById("facts");
     const deviceSummaryEl = document.getElementById("deviceSummary");
+    const downloadButton = document.getElementById("downloadButton");
+    const downloadLabel = document.getElementById("downloadLabel");
 
     const formatLabel = (value) => {
       if (typeof value !== "string" || !value) return "";
@@ -243,6 +263,42 @@
     const MIN_PROGRESS_TO_STORE = 10;
     document.title = `${explicitTitle} · theblackbox (Info relay)`;
     titleEl.textContent = explicitTitle;
+    updateDownloadButton();
+
+    function getDownloadLink() {
+      if (!tmdb || !mode) return "";
+      if (mode === "movie") {
+        return movieDownload(tmdb);
+      }
+      if (mode === "tv") {
+        const season = seasonNumber || 1;
+        const episode = episodeNumber || 1;
+        return tvDownload(tmdb, season, episode);
+      }
+      return "";
+    }
+
+    function updateDownloadButton() {
+      if (!downloadButton) return;
+      const href = getDownloadLink();
+      if (href) {
+        downloadButton.href = href;
+        downloadButton.hidden = false;
+        downloadButton.removeAttribute("aria-hidden");
+        downloadButton.setAttribute("title", "Download via Vidking");
+        if (downloadLabel) {
+          downloadLabel.textContent = mode === "tv" ? "Download episode" : "Download movie";
+        }
+        const ariaLabel =
+          mode === "tv"
+            ? `Download this episode of ${explicitTitle}`
+            : `Download ${explicitTitle}`;
+        downloadButton.setAttribute("aria-label", ariaLabel);
+      } else {
+        downloadButton.hidden = true;
+        downloadButton.setAttribute("aria-hidden", "true");
+      }
+    }
 
     function shouldStoreProgress(progress) {
       return Number.isFinite(progress) && progress >= MIN_PROGRESS_TO_STORE;
