@@ -6,12 +6,13 @@ const CRYPTO_JS_URL = "https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/cr
 const HASHIDS_URL = "https://cdnjs.cloudflare.com/ajax/libs/hashids/2.2.10/hashids.min.js";
 const HASHIDS_MASK = "8c465aa8af6cbfd4c1f91bf0c8d678ba";
 const KEY_SUFFIX = "d486ae1ce6fdbe63b60bd1704541fcf0";
+const CINEBY_DOWNLOAD_ENDPOINT = "https://www.cineby.gd/api/download";
 
 const SERVER_DEFINITIONS = [
-  { name: "Oxygen", endpoint: "myflixerzupcloud/sources-with-title", isActive: true },
-  { name: "Hydrogen", endpoint: "cdn/sources-with-title", isActive: true },
-  { name: "Lithium", endpoint: "moviebox/sources-with-title", isActive: true },
-  { name: "Helium", endpoint: "1movies/sources-with-title", isActive: true },
+  { name: "Aurora", endpoint: "myflixerzupcloud/sources-with-title", isActive: true },
+  { name: "Nebula", endpoint: "cdn/sources-with-title", isActive: true },
+  { name: "Quasar", endpoint: "moviebox/sources-with-title", isActive: true },
+  { name: "Pulsar", endpoint: "1movies/sources-with-title", isActive: true },
 ];
 
 const SERVER_ORDER = SERVER_DEFINITIONS.map((definition) => definition.name);
@@ -328,6 +329,45 @@ async function fetchMetadata(mediaType, tmdbId) {
   return metadataCache.get(cacheKey);
 }
 
+async function fetchCinebyDownloadLink({ mediaType, tmdbId, season, episode, metadata }) {
+  try {
+    const payload = {
+      type: mediaType,
+      tmdbId,
+      imdbId: metadata?.imdbId,
+      title: metadata?.title,
+      year: metadata?.year,
+    };
+    if (mediaType === "tv") {
+      payload.season = season ?? 1;
+      payload.episode = episode ?? 1;
+    }
+    const body = JSON.stringify(
+      Object.fromEntries(
+        Object.entries(payload).filter(([, value]) => value !== undefined && value !== null && value !== ""),
+      ),
+    );
+    const response = await fetch(CINEBY_DOWNLOAD_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body,
+    });
+    if (!response.ok) {
+      throw new Error(`Cineby download request failed: ${response.status}`);
+    }
+    const data = await response.json();
+    const url = data?.url || data?.link || data?.downloadUrl;
+    if (typeof url === "string" && url.trim()) {
+      return url.trim();
+    }
+  } catch (error) {
+    console.warn("[vidking] Cineby download request failed:", error);
+  }
+  return "";
+}
+
 function resolveServerDefinition(name) {
   return SERVER_DEFINITIONS.find((definition) => definition.name.toLowerCase() === name.toLowerCase());
 }
@@ -424,6 +464,16 @@ async function fetchDownloadFromServer({
 async function resolveDirectDownloadLink({ mediaType, tmdbId, season, episode }) {
   const metadata = await fetchMetadata(mediaType, tmdbId);
   const timestamp = Date.now().toString();
+  const cinebyLink = await fetchCinebyDownloadLink({
+    mediaType,
+    tmdbId,
+    season,
+    episode,
+    metadata,
+  });
+  if (cinebyLink) {
+    return cinebyLink;
+  }
   for (const serverName of SERVER_ORDER) {
     try {
       const sources = await fetchDownloadFromServer({
