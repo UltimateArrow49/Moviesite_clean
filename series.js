@@ -1,26 +1,12 @@
 import { getEntriesByMode, onHistoryChange } from "./continue_watching.js";
 import { setupPreviewForGrid } from "./preview_manager.js";
 import { IMG_BASE, requestTmdb } from "./tmdb_client.js";
-import {
-  formatRelativeTime,
-  getRecentlyWatchedByMode,
-  onRecentlyChange,
-} from "./recently_watched.js";
-import { initDiscoveryBrowser } from "./discovery_browser.js";
-
 const continueSection = document.getElementById("continueShows");
 const continueList = document.getElementById("continueShowsList");
 const continueMessage = document.getElementById("continueShowsMessage");
 const carouselList = document.getElementById("carouselList");
 const searchForm = document.getElementById("searchForm");
 const searchInput = document.getElementById("search");
-const discoveryStatus = document.getElementById("seriesDiscoveryStatus");
-const discoveryResults = document.getElementById("seriesDiscoveryResults");
-const seriesGenreChips = document.getElementById("seriesGenreChips");
-const seriesYearChips = document.getElementById("seriesYearChips");
-const recentlySection = document.getElementById("recentlyShows");
-const recentlyList = document.getElementById("recentlyShowsList");
-const recentlyMessage = document.getElementById("recentlyShowsMessage");
 
 const usedSeriesIds = new Set();
 const ROW_TARGET = 18;
@@ -28,12 +14,6 @@ const MAX_FETCH_PAGES = 4;
 
 if (continueList) {
   setupPreviewForGrid(continueList, { mode: "tv" });
-}
-if (recentlyList) {
-  setupPreviewForGrid(recentlyList, { mode: "tv" });
-}
-if (discoveryResults) {
-  setupPreviewForGrid(discoveryResults, { mode: "tv" });
 }
 
 const CAROUSELS = [
@@ -246,109 +226,6 @@ function createContinueCard(entry) {
 
   card.appendChild(meta);
   return card;
-}
-
-function createRecentShowCard(entry) {
-  if (!entry || !entry.tmdb) return null;
-  const resumePayload = {
-    mode: "tv",
-    tmdb: entry.tmdb,
-    title: entry.title || "Untitled",
-    poster: entry.poster || null,
-    backdrop: entry.backdrop || null,
-    href: entry.href || null,
-    progress: entry.progress || 0,
-    runtime: entry.runtime || null,
-    season: entry.season || null,
-    episode: entry.episode || null,
-  };
-  const card = document.createElement("a");
-  card.className = "card card--recent";
-  card.href = buildResumeUrl(resumePayload);
-  card.dataset.tmdbId = entry.tmdb;
-  card.dataset.mode = "tv";
-  card.dataset.season = entry.season || "1";
-  card.dataset.episode = entry.episode || "1";
-  card.setAttribute("aria-label", `Resume ${entry.title || "show"} via the Info relay`);
-
-  const thumb = document.createElement("div");
-  thumb.className = "thumb";
-  if (entry.poster) {
-    const img = document.createElement("img");
-    img.src = entry.poster;
-    img.alt = `${entry.title || "Show"} artwork`;
-    thumb.appendChild(img);
-  } else {
-    const fallback = document.createElement("div");
-    fallback.className = "placeholder";
-    fallback.textContent = "No artwork";
-    thumb.appendChild(fallback);
-  }
-
-  const meta = document.createElement("div");
-  meta.className = "meta";
-
-  const title = document.createElement("p");
-  title.className = "title";
-  title.textContent = entry.title || "Untitled";
-  meta.appendChild(title);
-
-  const episodeLine = document.createElement("p");
-  episodeLine.className = "sub";
-  episodeLine.textContent = entry.season
-    ? formatEpisodeLabel({ season: entry.season, episode: entry.episode })
-    : "Series overview";
-  meta.appendChild(episodeLine);
-
-  const progressLine = document.createElement("p");
-  progressLine.className = "sub";
-  if (entry.progress && entry.progress > 0) {
-    progressLine.textContent = `Resume from ${formatTime(entry.progress)}`;
-  } else {
-    progressLine.textContent = "Play from the beginning";
-  }
-  meta.appendChild(progressLine);
-
-  const timeLine = document.createElement("p");
-  timeLine.className = "recently__time";
-  timeLine.textContent = formatRelativeTime(entry.lastPlayedAt);
-  meta.appendChild(timeLine);
-
-  const actions = document.createElement("div");
-  actions.className = "actions";
-  actions.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16v2H4zm0 14h16v2H4zm0-7h16v2H4z"/></svg><span>Resume episode</span>';
-  meta.appendChild(actions);
-
-  card.appendChild(thumb);
-  card.appendChild(meta);
-  return card;
-}
-
-function renderRecentlyWatched(entries = null) {
-  if (!recentlySection || !recentlyList) return;
-  const source = Array.isArray(entries)
-    ? entries.filter((item) => item && item.mode === "tv")
-    : getRecentlyWatchedByMode("tv");
-  const items = source.slice(0, 12).filter((item) => item && item.tmdb);
-  recentlyList.innerHTML = "";
-  if (!items.length) {
-    recentlySection.hidden = true;
-    if (recentlyMessage) {
-      recentlyMessage.hidden = false;
-    }
-    return;
-  }
-  recentlySection.hidden = false;
-  if (recentlyMessage) {
-    recentlyMessage.hidden = true;
-  }
-  const fragment = document.createDocumentFragment();
-  for (const item of items) {
-    const card = createRecentShowCard(item);
-    if (card) fragment.appendChild(card);
-  }
-  recentlyList.appendChild(fragment);
 }
 
 function renderContinueWatching() {
@@ -700,9 +577,6 @@ function initSearchRedirect() {
 }
 
 function init() {
-  onRecentlyChange((entries) => {
-    renderRecentlyWatched(entries);
-  });
   renderContinueWatching();
   onHistoryChange(() => {
     renderContinueWatching();
@@ -714,17 +588,6 @@ function init() {
   });
   initCarousels();
   initSearchRedirect();
-  if (discoveryResults) {
-    initDiscoveryBrowser({
-      mode: "tv",
-      statusElement: discoveryStatus,
-      resultsElement: discoveryResults,
-      genreContainer: seriesGenreChips,
-      yearContainer: seriesYearChips,
-      createCard,
-      limit: 24,
-    });
-  }
 }
 
 document.addEventListener("DOMContentLoaded", init);
