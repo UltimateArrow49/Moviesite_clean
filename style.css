@@ -933,6 +933,15 @@ body.is-mobile .content {
   color: var(--ink-strong);
 }
 
+.select-control--server {
+  min-width: 200px;
+}
+
+.select-control--server select {
+  min-width: 200px;
+  max-width: 260px;
+}
+
 .select-control select option[disabled] {
   color: rgba(var(--ink-strong-rgb), 0.45);
   background-color: rgba(245, 248, 255, 0.95);
@@ -1576,6 +1585,13 @@ body.is-mobile .player-layout {
 
 .player-status p {
   margin: 0;
+}
+
+.server-status {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: rgba(var(--ink-strong-rgb), 0.65);
+  text-transform: none;
 }
 
 .player-status.is-loading {
