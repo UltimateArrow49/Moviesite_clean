@@ -84,17 +84,17 @@
 </header>
 <section class="hero hero--banner hero--info">
 <div class="hero-text">
-<p class="hero-kicker">Info relay</p>
+<p class="hero-kicker">Stream relay</p>
 <h1>Launch streams without the clutter.</h1>
 <p class="hero-subtitle">Send a title from Movies, Shows, or Live to keep playback steady while Continue Watching tracks your progress automatically.</p>
 <p class="hero-subtitle" id="deviceSummary"></p>
 </div>
 </section>
-<section class="info-guides" aria-label="How the Info relay works">
+<section class="info-guides" aria-label="How the Stream relay works">
 <div class="info-grid">
 <article class="info-card">
 <h2>1. Send a title</h2>
-<p>Open any movie, episode, or channel and choose <strong>Play</strong> to route it through the Info relay.</p>
+<p>Open any movie, episode, or channel and choose <strong>Play</strong> to route it through the Stream relay.</p>
 </article>
 <article class="info-card">
 <h2>2. Stay synced</h2>
@@ -110,33 +110,22 @@
     <div class="player-header">
       <h1 class="player-title" id="title">Loading…</h1>
       <div class="player-actions">
-        <a
-          class="btn btn--ghost btn--download"
-          href="#"
-          hidden
-          id="downloadButton"
-          rel="noopener noreferrer"
-          target="_blank"
-          aria-hidden="true"
-        >
-          <svg aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
-            <path
-              d="M12 3a1 1 0 0 1 1 1v9.585l2.293-2.292a1 1 0 1 1 1.414 1.414l-4.001 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 1.414-1.414L11 13.586V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v1.5A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5V18a1 1 0 0 1 1-1Z"
-            />
-          </svg>
-          <span id="downloadLabel">Download</span>
-        </a>
+        <div class="select-control select-control--server">
+          <span>Stream source</span>
+          <select id="serverSelect" aria-label="Select a stream source"></select>
+        </div>
       </div>
     </div>
 <div class="player-status" role="status">
 <div aria-hidden="true" class="loading-indicator" hidden="" id="loadingIndicator">
 <span aria-hidden="true" class="loading-box"></span>
-<span class="loading-text" id="loadingText">Buffering via the Info relay…</span>
+<span class="loading-text" id="loadingText">Buffering stream…</span>
 </div>
-<p id="playerStatus">Preparing playback through the Info relay…</p>
+<p id="playerStatus">Preparing multi-source playback…</p>
+<p class="server-status" id="serverStatus" hidden></p>
 </div>
 <div class="player-frame" hidden="" id="embedWrap">
-<iframe allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen="" id="embedFrame" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation" src="" title="Info relay player"></iframe>
+<iframe allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen="" id="embedFrame" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation" src="" title="Stream relay player"></iframe>
 </div>
 <section class="player-details">
 <div class="detail-card">
@@ -149,10 +138,10 @@
 </div>
 </section>
 </main>
-<footer class="site-footer">Independent node · sandboxed embeds · Info relay keeps playback steady.</footer>
+<footer class="site-footer">Independent node · sandboxed embeds · Stream relay keeps playback steady.</footer>
 <script type="module">
     import detection from "./device.js";
-    import { movieEmbed, tvEmbed, movieDownload, tvDownload } from "./providers/vidking.js";
+    import { movieServers, tvServers } from "./providers/vidking.js";
     import { historyId, removeEntry, upsertEntry } from "./continue_watching.js";
     import { recordRecentlyWatched } from "./recently_watched.js";
     import {
@@ -165,8 +154,8 @@
     const overviewEl = document.getElementById("overview");
     const factsEl = document.getElementById("facts");
     const deviceSummaryEl = document.getElementById("deviceSummary");
-    const downloadButton = document.getElementById("downloadButton");
-    const downloadLabel = document.getElementById("downloadLabel");
+    const serverSelect = document.getElementById("serverSelect");
+    const serverStatusEl = document.getElementById("serverStatus");
 
     const formatLabel = (value) => {
       if (typeof value !== "string" || !value) return "";
@@ -261,77 +250,193 @@
     let lastHistoryWrite = 0;
     const HISTORY_WRITE_INTERVAL = 4000;
     const MIN_PROGRESS_TO_STORE = 10;
-    document.title = `${explicitTitle} · theblackbox (Info relay)`;
+    document.title = `${explicitTitle} · theblackbox (Stream relay)`;
     titleEl.textContent = explicitTitle;
-    let downloadRequestId = 0;
-    updateDownloadButton();
+    const servers = [];
+    const failedServers = new Set();
+    let activeServerIndex = -1;
+    let pendingLoadTimeout = null;
+    let embedReady = false;
+    let manualPauseUntil = 0;
 
-    function getDownloadLink() {
-      if (!tmdb || !mode) return Promise.resolve("");
-      if (mode === "movie") {
-        return movieDownload(tmdb);
-      }
-      if (mode === "tv") {
-        const season = seasonNumber || 1;
-        const episode = episodeNumber || 1;
-        return tvDownload(tmdb, season, episode);
-      }
-      return Promise.resolve("");
-    }
-
-    function beginDownloadResolve() {
-      if (!downloadButton) return;
-      downloadButton.hidden = false;
-      downloadButton.removeAttribute("aria-hidden");
-      downloadButton.removeAttribute("href");
-      downloadButton.setAttribute("aria-busy", "true");
-      downloadButton.setAttribute("aria-disabled", "true");
-      if (downloadLabel) {
-        downloadLabel.textContent = "Preparing download...";
+    function clearPendingLoadTimeout() {
+      if (pendingLoadTimeout != null) {
+        window.clearTimeout(pendingLoadTimeout);
+        pendingLoadTimeout = null;
       }
     }
 
-    function hideDownloadButton(message) {
-      if (!downloadButton) return;
-      downloadButton.hidden = true;
-      downloadButton.setAttribute("aria-hidden", "true");
-      downloadButton.removeAttribute("aria-busy");
-      downloadButton.removeAttribute("aria-disabled");
-      downloadButton.removeAttribute("href");
-      if (downloadLabel && message) {
-        downloadLabel.textContent = message;
+    function currentServer() {
+      if (activeServerIndex < 0) return null;
+      return servers[activeServerIndex] || null;
+    }
+
+    function describeServer(server) {
+      return server && server.label ? server.label : "the selected server";
+    }
+
+    function updateServerStatus(text) {
+      if (!serverStatusEl) return;
+      if (text) {
+        serverStatusEl.hidden = false;
+        serverStatusEl.textContent = text;
+      } else {
+        serverStatusEl.hidden = true;
+        serverStatusEl.textContent = "";
       }
     }
 
-    async function updateDownloadButton() {
-      if (!downloadButton) return;
-      const requestId = ++downloadRequestId;
-      beginDownloadResolve();
-      let href = "";
-      try {
-        href = await getDownloadLink();
-      } catch (error) {
-        console.error("Failed to resolve Cineby download link:", error);
-      }
-      if (requestId !== downloadRequestId) {
+    function renderServerOptions() {
+      if (!serverSelect) return;
+      serverSelect.innerHTML = "";
+      if (!servers.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No servers available";
+        option.disabled = true;
+        option.selected = true;
+        serverSelect.appendChild(option);
+        serverSelect.disabled = true;
         return;
       }
-      if (href) {
-        downloadButton.removeAttribute("aria-busy");
-        downloadButton.removeAttribute("aria-disabled");
-        downloadButton.href = href;
-        downloadButton.setAttribute("title", "Download via Cineby");
-        if (downloadLabel) {
-          downloadLabel.textContent = mode === "tv" ? "Download episode" : "Download movie";
+      servers.forEach((server, index) => {
+        if (!server || !server.src) return;
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = failedServers.has(index) ? `${server.label} (auto-skipped)` : server.label;
+        if (index === activeServerIndex) {
+          option.selected = true;
         }
-        const ariaLabel =
-          mode === "tv"
-            ? `Download this episode of ${explicitTitle}`
-            : `Download ${explicitTitle}`;
-        downloadButton.setAttribute("aria-label", ariaLabel);
-      } else {
-        hideDownloadButton("Download unavailable");
+        serverSelect.appendChild(option);
+      });
+      serverSelect.disabled = false;
+    }
+
+    function recordServerFailure(index) {
+      if (index == null || index < 0) return;
+      failedServers.add(index);
+      renderServerOptions();
+    }
+
+    function clearServerFailure(index) {
+      if (index == null || index < 0) return;
+      if (failedServers.delete(index)) {
+        renderServerOptions();
       }
+    }
+
+    function findNextServer(startIndex = -1) {
+      for (let i = startIndex + 1; i < servers.length; i += 1) {
+        if (!failedServers.has(i)) {
+          const server = servers[i];
+          if (server && server.src) {
+            return i;
+          }
+        }
+      }
+      return null;
+    }
+
+    function setServerList(list = []) {
+      servers.length = 0;
+      failedServers.clear();
+      if (Array.isArray(list)) {
+        for (const candidate of list) {
+          if (!candidate || !candidate.src) continue;
+          const label = candidate.label || candidate.name || candidate.id || "Stream server";
+          servers.push({
+            id: candidate.id || label,
+            label,
+            src: candidate.src,
+            origin: candidate.origin || null,
+          });
+        }
+      }
+      activeServerIndex = -1;
+      renderServerOptions();
+      updateServerSelectValue(-1);
+      if (!servers.length) {
+        updateServerStatus("No stream servers available");
+      } else {
+        updateServerStatus("");
+      }
+    }
+
+    function updateServerSelectValue(index) {
+      if (!serverSelect) return;
+      const value = index != null && index >= 0 ? String(index) : "";
+      if (serverSelect.value !== value) {
+        serverSelect.value = value;
+      }
+    }
+
+    function handleExhaustedServers() {
+      setLoading(false);
+      updateServerStatus("All servers unavailable");
+      if (embedFrame) {
+        embedFrame.removeAttribute("src");
+      }
+      if (embedWrap) {
+        embedWrap.hidden = true;
+      }
+      updateServerSelectValue(-1);
+      setStatus("All stream servers are currently unavailable. Please try again later.");
+    }
+
+    function activateServer(index, { userInitiated = false } = {}) {
+      if (index == null || index < 0 || index >= servers.length) {
+        handleExhaustedServers();
+        return;
+      }
+      const server = servers[index];
+      if (!server || !server.src) {
+        recordServerFailure(index);
+        const nextIndex = findNextServer(index);
+        if (nextIndex != null) {
+          activateServer(nextIndex, { userInitiated });
+        } else {
+          handleExhaustedServers();
+        }
+        return;
+      }
+      activeServerIndex = index;
+      embedReady = false;
+      clearPendingLoadTimeout();
+      clearAutoResume();
+      manualPauseUntil = 0;
+      updateServerSelectValue(index);
+      updateServerStatus(`Current server: ${server.label}`);
+      if (!embedWrap || !embedFrame) return;
+      embedWrap.hidden = false;
+      embedFrame.removeAttribute("src");
+      window.requestAnimationFrame(() => {
+        embedFrame.src = server.src;
+      });
+      const contactLabel = `Contacting ${server.label}…`;
+      setStatus(userInitiated ? `Switching to ${server.label}…` : `Connecting to ${server.label}…`);
+      setLoading(true, contactLabel);
+      pendingLoadTimeout = window.setTimeout(() => {
+        if (!embedReady && activeServerIndex === index) {
+          recordServerFailure(index);
+          const nextIndex = findNextServer(index);
+          if (nextIndex != null) {
+            setStatus(`${server.label} did not respond. Trying ${servers[nextIndex].label}…`);
+            activateServer(nextIndex);
+          } else {
+            handleExhaustedServers();
+          }
+        }
+      }, 15000);
+    }
+
+    if (serverSelect) {
+      serverSelect.addEventListener("change", (event) => {
+        const value = Number(event.target.value);
+        if (Number.isFinite(value) && value >= 0 && value < servers.length) {
+          clearServerFailure(value);
+          activateServer(value, { userInitiated: true });
+        }
+      });
     }
 
     function shouldStoreProgress(progress) {
@@ -454,7 +559,7 @@
       }
     }
 
-    const DEFAULT_LOADING_LABEL = "Buffering via the Info relay…";
+    const DEFAULT_LOADING_LABEL = "Buffering stream…";
 
     function setStatus(message) {
       if (!statusEl) return;
@@ -508,7 +613,7 @@
       return Boolean(value);
     }
 
-    function normalizeVidkingPayload(raw) {
+    function normalizeEmbedPayload(raw) {
       if (raw == null) return null;
 
       let payload = raw;
@@ -516,7 +621,7 @@
         try {
           payload = JSON.parse(raw);
         } catch (error) {
-          console.warn("Ignored non-JSON message from the Info relay", error);
+          console.warn("Ignored non-JSON message from the Stream relay", error);
           return null;
         }
       }
@@ -615,7 +720,7 @@
       };
     }
 
-    function postVidkingMessages(payloads = []) {
+    function postEmbedMessages(payloads = []) {
       if (!Array.isArray(payloads) || !payloads.length) return;
       if (!embedFrame || !embedFrame.contentWindow) return;
       const target = embedFrame.contentWindow;
@@ -625,7 +730,7 @@
           try {
             target.postMessage(payload, "*");
           } catch (error) {
-            console.warn("Unable to post message to Info relay", error);
+            console.warn("Unable to post message to the Stream relay", error);
           }
           continue;
         }
@@ -635,13 +740,13 @@
           try {
             serialized = JSON.stringify(payload);
           } catch (error) {
-            console.warn("Unable to serialize Info relay command", error);
+            console.warn("Unable to serialize Stream relay command", error);
             continue;
           }
           try {
             target.postMessage(serialized, "*");
           } catch (error) {
-            console.warn("Unable to post serialized message to Info relay", error);
+            console.warn("Unable to post serialized message to the Stream relay", error);
           }
           continue;
         }
@@ -649,18 +754,17 @@
         try {
           target.postMessage(String(payload), "*");
         } catch (error) {
-          console.warn("Unable to post coerced message to Info relay", error);
+          console.warn("Unable to post coerced message to the Stream relay", error);
         }
       }
     }
 
-    function sendVidkingPlay() {
-      postVidkingMessages([{ type: "PLAYER_COMMAND", command: "play" }]);
+    function sendEmbedPlay() {
+      postEmbedMessages([{ type: "PLAYER_COMMAND", command: "play" }]);
     }
 
     const AUTO_RESUME_DELAY = 1200;
     let autoResumeTimer = null;
-    let manualPauseUntil = 0;
 
     function clearAutoResume() {
       if (autoResumeTimer) {
@@ -677,7 +781,7 @@
       clearAutoResume();
       autoResumeTimer = window.setTimeout(() => {
         autoResumeTimer = null;
-        sendVidkingPlay();
+        sendEmbedPlay();
       }, AUTO_RESUME_DELAY);
     }
 
@@ -748,7 +852,7 @@
 
     function toggleMuteShortcut() {
       if (!embedFrame) return;
-      postVidkingMessages([{ type: "PLAYER_COMMAND", command: "toggle_mute" }]);
+      postEmbedMessages([{ type: "PLAYER_COMMAND", command: "toggle_mute" }]);
       setStatus("Toggled mute via keyboard shortcut.");
     }
 
@@ -787,40 +891,37 @@
       return false;
     }
 
-    function loadVidkingEmbed(src) {
-      if (!embedFrame || !embedWrap) return;
-      clearAutoResume();
-      manualPauseUntil = 0;
-      if (!src) {
-        embedFrame.removeAttribute("src");
-        embedWrap.hidden = true;
-        setStatus("Unable to prepare playback through the Info relay. Check the launch parameters.");
-        setLoading(false);
-        return;
-      }
-
-      embedWrap.hidden = false;
-      embedFrame.removeAttribute("src");
-      window.requestAnimationFrame(() => {
-        embedFrame.src = src;
-      });
-      setStatus("Connecting to the Info relay…");
-      setLoading(true, "Contacting Info relay…");
-    }
-
     if (embedFrame) {
       embedFrame.addEventListener("load", () => {
-        setStatus("Info relay loaded. Waiting for playback…");
+        clearPendingLoadTimeout();
+        const server = currentServer();
+        if (server) {
+          setStatus(`${describeServer(server)} loaded. Waiting for playback…`);
+          clearServerFailure(activeServerIndex);
+        } else {
+          setStatus("Stream relay loaded. Waiting for playback…");
+        }
       });
       embedFrame.addEventListener("error", () => {
-        setLoading(false);
-        setStatus("Info relay embed failed to load. Please refresh or try again later.");
+        clearPendingLoadTimeout();
+        const failedIndex = activeServerIndex;
+        const server = currentServer();
+        if (failedIndex >= 0) {
+          recordServerFailure(failedIndex);
+          const nextIndex = findNextServer(failedIndex);
+          if (nextIndex != null) {
+            setStatus(`${describeServer(server)} failed to load. Trying ${describeServer(servers[nextIndex])}…`);
+            activateServer(nextIndex);
+            return;
+          }
+        }
+        handleExhaustedServers();
       });
     }
 
     function openMovie() {
       if (!tmdb) {
-        setStatus("Missing TMDB identifier for Info relay playback.");
+        setStatus("Missing TMDB identifier for Stream relay playback.");
         setLoading(false);
         return;
       }
@@ -828,18 +929,23 @@
         color,
         autoplay: autoPlay,
         autoPlay,
-        idleCheck: 0,
       };
       if (resumeProgress > 0) {
         embedOptions.progress = resumeProgress;
       }
-      const src = movieEmbed(tmdb, embedOptions);
-      loadVidkingEmbed(src);
+      const list = movieServers(tmdb, embedOptions);
+      setServerList(list);
+      const nextIndex = findNextServer(-1);
+      if (nextIndex != null) {
+        activateServer(nextIndex);
+      } else {
+        handleExhaustedServers();
+      }
     }
 
     function openSeries() {
       if (!tmdb) {
-        setStatus("Missing TMDB identifier for Info relay playback.");
+        setStatus("Missing TMDB identifier for Stream relay playback.");
         setLoading(false);
         return;
       }
@@ -851,51 +957,64 @@
         autoPlay,
         nextEpisode,
         episodeSelector,
-        idleCheck: 0,
       };
       if (resumeProgress > 0) {
         embedOptions.progress = resumeProgress;
       }
-      const src = tvEmbed(tmdb, season, episode, embedOptions);
-      loadVidkingEmbed(src);
+      const list = tvServers(tmdb, season, episode, embedOptions);
+      setServerList(list);
+      const nextIndex = findNextServer(-1);
+      if (nextIndex != null) {
+        activateServer(nextIndex);
+      } else {
+        handleExhaustedServers();
+      }
     }
 
     function handlePlayerEvent(data = {}) {
       const eventName = data.event;
       if (!eventName) return;
       const currentTime = toFiniteNumber(data.currentTime);
+      const server = currentServer();
+      const serverLabel = describeServer(server);
 
       if (eventName === "ready") {
+        embedReady = true;
+        clearPendingLoadTimeout();
         setLoading(false);
-        setStatus("Info relay ready. Preparing playback…");
+        setStatus(`${serverLabel} ready. Preparing playback…`);
         if (autoPlay) {
-          sendVidkingPlay();
+          sendEmbedPlay();
         }
         return;
       }
 
       if (eventName === "buffering") {
-        setLoading(true, "Buffering via the Info relay…");
-        setStatus("Info relay is buffering…");
+        setLoading(true, `Buffering on ${serverLabel}…`);
+        setStatus(`${serverLabel} is buffering…`);
         scheduleAutoResume();
         return;
       }
 
       if (eventName === "play") {
+        embedReady = true;
         clearAutoResume();
         manualPauseUntil = 0;
+        clearPendingLoadTimeout();
         setLoading(false);
         if (Number.isFinite(currentTime)) {
           persistHistory(currentTime, { immediate: true });
         }
         storeRecently(Number.isFinite(currentTime) ? currentTime : 0, { completed: false });
         if (Number.isFinite(currentTime) && currentTime > 0) {
-          setStatus(`Playback started at ${formatTime(currentTime)} via the Info relay.`);
+          setStatus(`Playback started at ${formatTime(currentTime)} on ${serverLabel}.`);
         } else {
-          setStatus("Playback started via the Info relay.");
+          setStatus(`Playback started on ${serverLabel}.`);
         }
       } else if (eventName === "timeupdate") {
+        embedReady = true;
         clearAutoResume();
+        clearPendingLoadTimeout();
         setLoading(false);
         if (Number.isFinite(currentTime)) {
           persistHistory(currentTime);
@@ -914,7 +1033,7 @@
           scheduleAutoResume();
         }
         if (Number.isFinite(currentTime) && currentTime > 0) {
-          setStatus(`Paused at ${formatTime(currentTime)}.`);
+          setStatus(`Paused at ${formatTime(currentTime)} on ${serverLabel}.`);
           persistHistory(currentTime, { immediate: true });
         }
       } else if (eventName === "ended") {
@@ -926,22 +1045,26 @@
         if (data.nextEpisode) {
           setStatus("Episode complete. Awaiting the next installment…");
         } else {
-          setStatus("Playback finished. Thanks for watching with theblackbox + Info relay.");
+          setStatus(`Playback finished on ${serverLabel}. Thanks for watching with theblackbox Stream relay.`);
         }
       } else if (eventName === "error") {
         clearAutoResume();
         setLoading(false);
-        if (data.message) {
-          setStatus(`Info relay error: ${data.message}`);
+        const message = data.message ? String(data.message) : "An unexpected error occurred.";
+        recordServerFailure(activeServerIndex);
+        const nextIndex = findNextServer(activeServerIndex);
+        if (nextIndex != null) {
+          setStatus(`${serverLabel} error: ${message}. Switching to ${describeServer(servers[nextIndex])}…`);
+          activateServer(nextIndex);
         } else {
-          setStatus("Info relay reported an unexpected error.");
+          setStatus(`${serverLabel} error: ${message}`);
         }
       }
     }
 
     function handlePlayerMessage(event) {
       if (!event) return;
-      const payload = normalizeVidkingPayload(event.data);
+      const payload = normalizeEmbedPayload(event.data);
       if (!payload) return;
       if (tmdb && payload.id && String(payload.id) !== String(tmdb)) return;
       if (mode === "movie" && payload.mediaType && payload.mediaType !== "movie") return;
@@ -971,14 +1094,14 @@
       persistHistory(lastProgress, { immediate: true, force: true });
     });
 
-    setLoading(true, "Contacting Info relay…");
+    setLoading(true, "Contacting stream relay…");
 
     if (mode === "movie") {
       openMovie();
     } else if (mode === "tv") {
       openSeries();
     } else {
-      setStatus("Provide a valid Info relay mode (movie or tv) with a TMDB id to begin playback.");
+      setStatus("Provide a valid stream relay mode (movie or tv) with a TMDB id to begin playback.");
       setLoading(false);
       if (embedWrap) embedWrap.hidden = true;
     }
