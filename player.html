@@ -311,7 +311,7 @@
       try {
         href = await getDownloadLink();
       } catch (error) {
-        console.error("Failed to resolve Vidking download link:", error);
+        console.error("Failed to resolve Cineby download link:", error);
       }
       if (requestId !== downloadRequestId) {
         return;
@@ -320,7 +320,7 @@
         downloadButton.removeAttribute("aria-busy");
         downloadButton.removeAttribute("aria-disabled");
         downloadButton.href = href;
-        downloadButton.setAttribute("title", "Download via Vidking");
+        downloadButton.setAttribute("title", "Download via Cineby");
         if (downloadLabel) {
           downloadLabel.textContent = mode === "tv" ? "Download episode" : "Download movie";
         }

@@ -1,21 +1,12 @@
 import { getEntriesByMode, onHistoryChange } from "./continue_watching.js";
 import { setupPreviewForGrid } from "./preview_manager.js";
 import { BACKDROP_BASE, IMG_BASE, requestTmdb } from "./tmdb_client.js";
-import {
-  formatRelativeTime,
-  getRecentlyWatchedByMode,
-  onRecentlyChange,
-} from "./recently_watched.js";
-
 const continueSection = document.getElementById("continueMovies");
 const continueList = document.getElementById("continueMoviesList");
 const continueMessage = document.getElementById("continueMoviesMessage");
 const carouselList = document.getElementById("carouselList");
 const searchForm = document.getElementById("searchForm");
 const searchInput = document.getElementById("search");
-const recentlySection = document.getElementById("recentlyMovies");
-const recentlyList = document.getElementById("recentlyMoviesList");
-const recentlyMessage = document.getElementById("recentlyMoviesMessage");
 
 const usedMovieIds = new Set();
 const ROW_TARGET = 18;
@@ -23,9 +14,6 @@ const MAX_FETCH_PAGES = 4;
 
 if (continueList) {
   setupPreviewForGrid(continueList, { mode: "movie" });
-}
-if (recentlyList) {
-  setupPreviewForGrid(recentlyList, { mode: "movie" });
 }
 
 const CAROUSELS = [
@@ -242,98 +230,6 @@ function createContinueCard(entry) {
 
   card.appendChild(meta);
   return card;
-}
-
-function createRecentMovieCard(entry) {
-  if (!entry || !entry.tmdb) return null;
-  const resumePayload = {
-    mode: "movie",
-    tmdb: entry.tmdb,
-    title: entry.title || "Untitled",
-    poster: entry.poster || null,
-    backdrop: entry.backdrop || null,
-    href: entry.href || null,
-    progress: entry.progress || 0,
-    runtime: entry.runtime || null,
-  };
-  const card = document.createElement("a");
-  card.className = "card card--recent";
-  card.href = buildResumeUrl(resumePayload);
-  card.dataset.tmdbId = entry.tmdb;
-  card.dataset.mode = "movie";
-  card.setAttribute("aria-label", `Open ${entry.title || "movie"} via the Info relay`);
-
-  const thumb = document.createElement("div");
-  thumb.className = "thumb";
-  if (entry.poster) {
-    const img = document.createElement("img");
-    img.src = entry.poster;
-    img.alt = `${entry.title || "Movie"} poster`;
-    thumb.appendChild(img);
-  } else {
-    const fallback = document.createElement("div");
-    fallback.className = "placeholder";
-    fallback.textContent = "No artwork";
-    thumb.appendChild(fallback);
-  }
-
-  const meta = document.createElement("div");
-  meta.className = "meta";
-
-  const title = document.createElement("p");
-  title.className = "title";
-  title.textContent = entry.title || "Untitled";
-  meta.appendChild(title);
-
-  const progressLine = document.createElement("p");
-  progressLine.className = "sub";
-  if (entry.progress && entry.progress > 0) {
-    progressLine.textContent = `Resume from ${formatTime(entry.progress)}`;
-  } else {
-    progressLine.textContent = "Play from the beginning";
-  }
-  meta.appendChild(progressLine);
-
-  const timeLine = document.createElement("p");
-  timeLine.className = "recently__time";
-  timeLine.textContent = formatRelativeTime(entry.lastPlayedAt);
-  meta.appendChild(timeLine);
-
-  const actions = document.createElement("div");
-  actions.className = "actions";
-  actions.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>Launch now</span>';
-  meta.appendChild(actions);
-
-  card.appendChild(thumb);
-  card.appendChild(meta);
-  return card;
-}
-
-function renderRecentlyWatched(entries = null) {
-  if (!recentlySection || !recentlyList) return;
-  const source = Array.isArray(entries)
-    ? entries.filter((item) => item && item.mode === "movie")
-    : getRecentlyWatchedByMode("movie");
-  const items = source.slice(0, 12).filter((item) => item && item.tmdb);
-  recentlyList.innerHTML = "";
-  if (!items.length) {
-    recentlySection.hidden = true;
-    if (recentlyMessage) {
-      recentlyMessage.hidden = false;
-    }
-    return;
-  }
-  recentlySection.hidden = false;
-  if (recentlyMessage) {
-    recentlyMessage.hidden = true;
-  }
-  const fragment = document.createDocumentFragment();
-  for (const item of items) {
-    const card = createRecentMovieCard(item);
-    if (card) fragment.appendChild(card);
-  }
-  recentlyList.appendChild(fragment);
 }
 
 function renderContinueWatching() {
@@ -685,9 +581,6 @@ function initSearchRedirect() {
 }
 
 function init() {
-  onRecentlyChange((entries) => {
-    renderRecentlyWatched(entries);
-  });
   renderContinueWatching();
   onHistoryChange(() => {
     renderContinueWatching();
