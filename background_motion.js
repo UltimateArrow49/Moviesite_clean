@@ -1,7 +1,12 @@
-import { initDockNavigation, initMagicBento } from "./ui_effects.js";
+import {
+  initDockNavigation,
+  initMagicBento,
+  initClickSpark,
+} from "./ui_effects.js";
 
 initDockNavigation();
 initMagicBento();
+initClickSpark();
 
 const doc = document.documentElement;
 if (doc) {
