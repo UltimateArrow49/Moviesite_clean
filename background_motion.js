@@ -1,3 +1,8 @@
+import { initDockNavigation, initMagicBento } from "./ui_effects.js";
+
+initDockNavigation();
+initMagicBento();
+
 const doc = document.documentElement;
 if (doc) {
   const state = { raf: null };
