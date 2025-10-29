@@ -1,5 +1,29 @@
 const VIDKING_ORIGIN = "https://www.vidking.net";
 const VIDEASY_ORIGIN = "https://player.videasy.net";
+const BASE_ALLOW = "autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write";
+const DEFAULT_SANDBOX_TOKENS = Object.freeze([
+  "allow-scripts",
+  "allow-same-origin",
+  "allow-forms",
+  "allow-pointer-lock",
+  "allow-orientation-lock",
+  "allow-top-navigation-by-user-activation",
+]);
+const VIDKING_POLICIES = Object.freeze({
+  allow: BASE_ALLOW,
+  referrerPolicy: "no-referrer",
+  sandbox: DEFAULT_SANDBOX_TOKENS,
+});
+const VIDSRC_POLICIES = Object.freeze({
+  allow: `${BASE_ALLOW}; accelerometer; gyroscope`,
+  referrerPolicy: "origin-when-cross-origin",
+  sandbox: false,
+});
+const VIDEASY_POLICIES = Object.freeze({
+  allow: `${BASE_ALLOW}; accelerometer; gyroscope`,
+  referrerPolicy: "strict-origin-when-cross-origin",
+  sandbox: false,
+});
 
 const VIDSRC_EMBED_HOSTS = [
   "https://vidsrc-embed.ru",
@@ -9,6 +33,12 @@ const VIDSRC_EMBED_HOSTS = [
   "https://vidsrc-me.ru",
   "https://vidsrc-me.su",
   "https://vsrc.su",
+  "https://vidsrc.rip",
+  "https://vidsrc.to",
+  "https://vidsrc.vip",
+  "https://vidsrc.xyz",
+  "https://vidsrc.ws",
+  "https://vidsrc.stream",
 ].map((origin) => {
   try {
     const url = new URL(origin);
@@ -190,6 +220,27 @@ function buildVideasyTv(tmdbId, season, episode, options) {
   }
 }
 
+function clonePolicies(policies) {
+  if (!policies || typeof policies !== "object") return null;
+  const clone = {};
+  if (typeof policies.allow === "string") {
+    clone.allow = policies.allow;
+  }
+  if (policies.referrerPolicy === null) {
+    clone.referrerPolicy = null;
+  } else if (typeof policies.referrerPolicy === "string") {
+    clone.referrerPolicy = policies.referrerPolicy;
+  }
+  if (policies.sandbox === null || policies.sandbox === false) {
+    clone.sandbox = [];
+  } else if (Array.isArray(policies.sandbox)) {
+    clone.sandbox = policies.sandbox.map((token) => String(token).trim()).filter(Boolean);
+  } else if (typeof policies.sandbox === "string") {
+    clone.sandbox = policies.sandbox;
+  }
+  return Object.keys(clone).length ? clone : null;
+}
+
 function ensureServerObjects(candidates = []) {
   return candidates
     .filter((server) => server && server.src)
@@ -198,6 +249,7 @@ function ensureServerObjects(candidates = []) {
       label: server.label || "Stream server",
       origin: server.origin || null,
       src: server.src,
+      policies: clonePolicies(server.policies),
     }));
 }
 
@@ -214,6 +266,7 @@ export function movieServers(tmdbId, options = {}) {
       label: "VidKing · Primary",
       origin: VIDKING_ORIGIN,
       src: vidkingUrl,
+      policies: VIDKING_POLICIES,
     });
   }
 
@@ -225,6 +278,7 @@ export function movieServers(tmdbId, options = {}) {
         label: host.label,
         origin: host.origin,
         src: url,
+        policies: VIDSRC_POLICIES,
       });
     }
   }
@@ -236,6 +290,7 @@ export function movieServers(tmdbId, options = {}) {
       label: "Videasy · Player",
       origin: VIDEASY_ORIGIN,
       src: videasyUrl,
+      policies: VIDEASY_POLICIES,
     });
   }
 
@@ -255,6 +310,7 @@ export function tvServers(tmdbId, season, episode, options = {}) {
       label: "VidKing · Primary",
       origin: VIDKING_ORIGIN,
       src: vidkingUrl,
+      policies: VIDKING_POLICIES,
     });
   }
 
@@ -266,6 +322,7 @@ export function tvServers(tmdbId, season, episode, options = {}) {
         label: host.label,
         origin: host.origin,
         src: url,
+        policies: VIDSRC_POLICIES,
       });
     }
   }
@@ -277,6 +334,7 @@ export function tvServers(tmdbId, season, episode, options = {}) {
       label: "Videasy · Player",
       origin: VIDEASY_ORIGIN,
       src: videasyUrl,
+      policies: VIDEASY_POLICIES,
     });
   }
 
