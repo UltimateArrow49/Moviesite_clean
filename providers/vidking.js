@@ -25,38 +25,167 @@ const VIDEASY_POLICIES = Object.freeze({
   sandbox: false,
 });
 
-const VIDSRC_EMBED_HOSTS = [
-  "https://vidsrc-embed.ru",
-  "https://vidsrc-embed.su",
-  "https://vidsrcme.ru",
-  "https://vidsrcme.su",
-  "https://vidsrc-me.ru",
-  "https://vidsrc-me.su",
-  "https://vsrc.su",
-  "https://vidsrc.rip",
-  "https://vidsrc.to",
-  "https://vidsrc.vip",
-  "https://vidsrc.xyz",
-  "https://vidsrc.ws",
-  "https://vidsrc.stream",
-].map((origin) => {
-  try {
-    const url = new URL(origin);
-    const host = url.hostname;
-    const slug = host.replace(/[^a-z0-9]+/gi, "-");
-    return {
-      origin,
-      label: `VidSrc · ${host}`,
-      id: `vidsrc-${slug}`,
-    };
-  } catch (error) {
-    return {
-      origin,
-      label: "VidSrc",
-      id: `vidsrc-${origin.replace(/[^a-z0-9]+/gi, "-")}`,
-    };
-  }
+const VIDKING_LOCATION = Object.freeze({
+  region: "NA",
+  country: "US",
+  city: "Dallas",
+  latitude: 32.7767,
+  longitude: -96.797,
 });
+
+const VIDEASY_LOCATION = Object.freeze({
+  region: "NA",
+  country: "US",
+  city: "Los Angeles",
+  latitude: 34.0522,
+  longitude: -118.2437,
+});
+
+const VIDSRC_EMBED_MIRRORS = Object.freeze([
+  {
+    origin: "https://vidsrc-embed.ru",
+    id: "vidsrc-europe-1",
+    label: "VidSrc Mirror · Europe #1",
+    city: "Berlin",
+    country: "DE",
+    region: "EU",
+    latitude: 52.52,
+    longitude: 13.405,
+    priority: 14,
+  },
+  {
+    origin: "https://vidsrc-embed.su",
+    id: "vidsrc-europe-2",
+    label: "VidSrc Mirror · Europe #2",
+    city: "Prague",
+    country: "CZ",
+    region: "EU",
+    latitude: 50.0755,
+    longitude: 14.4378,
+    priority: 14,
+  },
+  {
+    origin: "https://vidsrcme.ru",
+    id: "vidsrc-europe-3",
+    label: "VidSrc Mirror · Europe #3",
+    city: "Vienna",
+    country: "AT",
+    region: "EU",
+    latitude: 48.2082,
+    longitude: 16.3738,
+    priority: 14,
+  },
+  {
+    origin: "https://vidsrcme.su",
+    id: "vidsrc-europe-4",
+    label: "VidSrc Mirror · Europe #4",
+    city: "Warsaw",
+    country: "PL",
+    region: "EU",
+    latitude: 52.2297,
+    longitude: 21.0122,
+    priority: 14,
+  },
+  {
+    origin: "https://vidsrc-me.ru",
+    id: "vidsrc-europe-5",
+    label: "VidSrc Mirror · Europe #5",
+    city: "Riga",
+    country: "LV",
+    region: "EU",
+    latitude: 56.9496,
+    longitude: 24.1052,
+    priority: 14,
+  },
+  {
+    origin: "https://vidsrc-me.su",
+    id: "vidsrc-europe-6",
+    label: "VidSrc Mirror · Europe #6",
+    city: "Helsinki",
+    country: "FI",
+    region: "EU",
+    latitude: 60.1699,
+    longitude: 24.9384,
+    priority: 14,
+  },
+  {
+    origin: "https://vsrc.su",
+    id: "vidsrc-europe-7",
+    label: "VidSrc Mirror · Europe #7",
+    city: "Bucharest",
+    country: "RO",
+    region: "EU",
+    latitude: 44.4268,
+    longitude: 26.1025,
+    priority: 14,
+  },
+  {
+    origin: "https://vidsrc.rip",
+    id: "vidsrc-western-europe",
+    label: "VidSrc Mirror · Western Europe",
+    city: "Amsterdam",
+    country: "NL",
+    region: "EU",
+    latitude: 52.3676,
+    longitude: 4.9041,
+    priority: 13,
+  },
+  {
+    origin: "https://vidsrc.to",
+    id: "vidsrc-global-1",
+    label: "VidSrc Mirror · Global #1",
+    city: "Singapore",
+    country: "SG",
+    region: "APAC",
+    latitude: 1.3521,
+    longitude: 103.8198,
+    priority: 18,
+  },
+  {
+    origin: "https://vidsrc.vip",
+    id: "vidsrc-north-america",
+    label: "VidSrc Mirror · North America",
+    city: "New York",
+    country: "US",
+    region: "NA",
+    latitude: 40.7128,
+    longitude: -74.006,
+    priority: 12,
+  },
+  {
+    origin: "https://vidsrc.xyz",
+    id: "vidsrc-us-east",
+    label: "VidSrc Mirror · US East",
+    city: "Atlanta",
+    country: "US",
+    region: "NA",
+    latitude: 33.749,
+    longitude: -84.388,
+    priority: 11,
+  },
+  {
+    origin: "https://vidsrc.ws",
+    id: "vidsrc-oceania",
+    label: "VidSrc Mirror · Oceania",
+    city: "Sydney",
+    country: "AU",
+    region: "OC",
+    latitude: -33.8688,
+    longitude: 151.2093,
+    priority: 18,
+  },
+  {
+    origin: "https://vidsrc.stream",
+    id: "vidsrc-us-west",
+    label: "VidSrc Mirror · US West",
+    city: "Los Angeles",
+    country: "US",
+    region: "NA",
+    latitude: 34.0522,
+    longitude: -118.2437,
+    priority: 11,
+  },
+]);
 
 function coerceBoolean(value) {
   if (value === undefined || value === null) return undefined;
@@ -250,6 +379,12 @@ function ensureServerObjects(candidates = []) {
       origin: server.origin || null,
       src: server.src,
       policies: clonePolicies(server.policies),
+      region: typeof server.region === "string" ? server.region : null,
+      country: typeof server.country === "string" ? server.country : null,
+      city: typeof server.city === "string" ? server.city : null,
+      latitude: Number.isFinite(server.latitude) ? Number(server.latitude) : null,
+      longitude: Number.isFinite(server.longitude) ? Number(server.longitude) : null,
+      priority: Number.isFinite(server.priority) ? Number(server.priority) : null,
     }));
 }
 
@@ -267,18 +402,30 @@ export function movieServers(tmdbId, options = {}) {
       origin: VIDKING_ORIGIN,
       src: vidkingUrl,
       policies: VIDKING_POLICIES,
+      region: VIDKING_LOCATION.region,
+      country: VIDKING_LOCATION.country,
+      city: VIDKING_LOCATION.city,
+      latitude: VIDKING_LOCATION.latitude,
+      longitude: VIDKING_LOCATION.longitude,
+      priority: 10,
     });
   }
 
-  for (const host of VIDSRC_EMBED_HOSTS) {
-    const url = buildVidsrcMovie(host.origin, normalizedId, options);
+  for (const mirror of VIDSRC_EMBED_MIRRORS) {
+    const url = buildVidsrcMovie(mirror.origin, normalizedId, options);
     if (url) {
       servers.push({
-        id: host.id,
-        label: host.label,
-        origin: host.origin,
+        id: mirror.id,
+        label: mirror.label,
+        origin: mirror.origin,
         src: url,
         policies: VIDSRC_POLICIES,
+        region: mirror.region,
+        country: mirror.country,
+        city: mirror.city,
+        latitude: mirror.latitude,
+        longitude: mirror.longitude,
+        priority: mirror.priority,
       });
     }
   }
@@ -291,6 +438,12 @@ export function movieServers(tmdbId, options = {}) {
       origin: VIDEASY_ORIGIN,
       src: videasyUrl,
       policies: VIDEASY_POLICIES,
+      region: VIDEASY_LOCATION.region,
+      country: VIDEASY_LOCATION.country,
+      city: VIDEASY_LOCATION.city,
+      latitude: VIDEASY_LOCATION.latitude,
+      longitude: VIDEASY_LOCATION.longitude,
+      priority: 25,
     });
   }
 
@@ -311,18 +464,30 @@ export function tvServers(tmdbId, season, episode, options = {}) {
       origin: VIDKING_ORIGIN,
       src: vidkingUrl,
       policies: VIDKING_POLICIES,
+      region: VIDKING_LOCATION.region,
+      country: VIDKING_LOCATION.country,
+      city: VIDKING_LOCATION.city,
+      latitude: VIDKING_LOCATION.latitude,
+      longitude: VIDKING_LOCATION.longitude,
+      priority: 10,
     });
   }
 
-  for (const host of VIDSRC_EMBED_HOSTS) {
-    const url = buildVidsrcTv(host.origin, normalizedId, season, episode, options);
+  for (const mirror of VIDSRC_EMBED_MIRRORS) {
+    const url = buildVidsrcTv(mirror.origin, normalizedId, season, episode, options);
     if (url) {
       servers.push({
-        id: `${host.id}-tv`,
-        label: host.label,
-        origin: host.origin,
+        id: `${mirror.id}-tv`,
+        label: mirror.label,
+        origin: mirror.origin,
         src: url,
         policies: VIDSRC_POLICIES,
+        region: mirror.region,
+        country: mirror.country,
+        city: mirror.city,
+        latitude: mirror.latitude,
+        longitude: mirror.longitude,
+        priority: mirror.priority,
       });
     }
   }
@@ -335,6 +500,12 @@ export function tvServers(tmdbId, season, episode, options = {}) {
       origin: VIDEASY_ORIGIN,
       src: videasyUrl,
       policies: VIDEASY_POLICIES,
+      region: VIDEASY_LOCATION.region,
+      country: VIDEASY_LOCATION.country,
+      city: VIDEASY_LOCATION.city,
+      latitude: VIDEASY_LOCATION.latitude,
+      longitude: VIDEASY_LOCATION.longitude,
+      priority: 25,
     });
   }
 
