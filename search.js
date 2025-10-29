@@ -1,4 +1,5 @@
 import { setupPreviewForGrid } from "./preview_manager.js";
+import { setupAnimatedList } from "./ui_effects.js";
 import { BACKDROP_BASE, IMG_BASE, requestTmdb } from "./tmdb_client.js";
 
 const searchForm = document.getElementById("searchForm");
@@ -13,9 +14,11 @@ const showEmpty = document.getElementById("showEmpty");
 
 if (movieList) {
   setupPreviewForGrid(movieList, { mode: "movie" });
+  setupAnimatedList(movieList, { axis: "y" });
 }
 if (showList) {
   setupPreviewForGrid(showList, { mode: "tv" });
+  setupAnimatedList(showList, { axis: "y" });
 }
 
 let activeController = null;
