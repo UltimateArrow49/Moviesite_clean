@@ -348,6 +348,204 @@
     let pendingLoadTimeout = null;
     let embedReady = false;
     let manualPauseUntil = 0;
+    let userSelectedServer = false;
+    let userLocation = null;
+
+    const LOCATION_ENDPOINT = "https://ipapi.co/json/";
+    const LOCATION_REQUEST_TIMEOUT = 3000;
+    const LOCATION_WAIT_WINDOW = 900;
+
+    function normalizeCode(value) {
+      return typeof value === "string" && value.trim() ? value.trim().toLowerCase() : "";
+    }
+
+    function parseCoordinate(value) {
+      const number = Number(value);
+      return Number.isFinite(number) ? number : null;
+    }
+
+    function parseLocationResponse(data) {
+      if (!data || typeof data !== "object") return null;
+      const latitude =
+        parseCoordinate(data.latitude ?? data.lat ?? data.latitud ?? data.latitude_deg) ?? null;
+      const longitude =
+        parseCoordinate(data.longitude ?? data.lon ?? data.lng ?? data.longitude_deg) ?? null;
+      if (latitude == null || longitude == null) return null;
+      const countryRaw =
+        data.country_code ??
+        data.countryCode ??
+        (typeof data.country === "string" && data.country.length <= 3 ? data.country : null);
+      const regionRaw = data.continent_code ?? data.region_code ?? data.region ?? data.continent;
+      const city = typeof data.city === "string" ? data.city : null;
+      const normalizedCountry = normalizeCode(countryRaw);
+      const normalizedRegion = normalizeCode(regionRaw);
+      const country = normalizedCountry ? normalizedCountry.toUpperCase() : null;
+      const region = normalizedRegion ? normalizedRegion.toUpperCase() : null;
+      return {
+        latitude,
+        longitude,
+        country,
+        region,
+        city,
+      };
+    }
+
+    function toRadians(degrees) {
+      return (degrees * Math.PI) / 180;
+    }
+
+    function computeDistanceKm(pointA, pointB) {
+      if (!pointA || !pointB) return null;
+      const lat1 = parseCoordinate(pointA.latitude);
+      const lon1 = parseCoordinate(pointA.longitude);
+      const lat2 = parseCoordinate(pointB.latitude);
+      const lon2 = parseCoordinate(pointB.longitude);
+      if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
+      const earthRadiusKm = 6371;
+      const dLat = toRadians(lat2 - lat1);
+      const dLon = toRadians(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(lat1)) *
+          Math.cos(toRadians(lat2)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return earthRadiusKm * c;
+    }
+
+    function computeServerScore(server, location) {
+      if (!server || !server.src || !location) {
+        return Number.POSITIVE_INFINITY;
+      }
+      let score = 0;
+      const distance = computeDistanceKm(server, location);
+      if (Number.isFinite(distance)) {
+        score += distance;
+      } else {
+        score += 5000;
+      }
+      const serverCountry = normalizeCode(server.country);
+      const locationCountry = normalizeCode(location.country);
+      const serverRegion = normalizeCode(server.region);
+      const locationRegion = normalizeCode(location.region);
+      if (serverCountry && locationCountry && serverCountry === locationCountry) {
+        score -= 800;
+      } else if (serverRegion && locationRegion && serverRegion === locationRegion) {
+        score -= 400;
+      }
+      if (Number.isFinite(server.priority)) {
+        score += Number(server.priority);
+      }
+      return score;
+    }
+
+    function findBestServerIndexForLocation(location) {
+      if (!location) return null;
+      let bestIndex = null;
+      let bestScore = Number.POSITIVE_INFINITY;
+      for (let index = 0; index < servers.length; index += 1) {
+        const server = servers[index];
+        if (!server || !server.src) continue;
+        const score = computeServerScore(server, location);
+        if (score < bestScore) {
+          bestScore = score;
+          bestIndex = index;
+        }
+      }
+      return bestIndex;
+    }
+
+    function maybeActivatePreferredServer() {
+      if (!userLocation || !servers.length || userSelectedServer) {
+        return null;
+      }
+      const preferred = findBestServerIndexForLocation(userLocation);
+      if (
+        preferred == null ||
+        preferred === activeServerIndex ||
+        preferred < 0 ||
+        preferred >= servers.length ||
+        failedServers.has(preferred)
+      ) {
+        return null;
+      }
+      activateServer(preferred);
+      return preferred;
+    }
+
+    async function determineInitialServerIndex() {
+      if (!servers.length) return null;
+      if (activeServerIndex >= 0 && servers[activeServerIndex]) {
+        return activeServerIndex;
+      }
+      try {
+        const locationWaiters = [];
+        if (userLocationPromise && typeof userLocationPromise.then === "function") {
+          locationWaiters.push(userLocationPromise.catch(() => null));
+        }
+        locationWaiters.push(
+          new Promise((resolve) => window.setTimeout(resolve, LOCATION_WAIT_WINDOW)),
+        );
+        await Promise.race(locationWaiters);
+      } catch (error) {
+        console.warn("Location wait interrupted", error);
+      }
+      if (userLocation) {
+        const preferred = findBestServerIndexForLocation(userLocation);
+        if (preferred != null) {
+          return preferred;
+        }
+      }
+      return findNextServer(-1);
+    }
+
+    async function detectUserLocation() {
+      if (!window.fetch) return null;
+      try {
+        const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+        const timeoutId = controller
+          ? window.setTimeout(() => {
+              try {
+                controller.abort();
+              } catch (error) {
+                console.warn("Failed to abort geo lookup", error);
+              }
+            }, LOCATION_REQUEST_TIMEOUT)
+          : null;
+        const response = await fetch(LOCATION_ENDPOINT, {
+          method: "GET",
+          cache: "no-store",
+          signal: controller ? controller.signal : undefined,
+        });
+        if (timeoutId != null) {
+          window.clearTimeout(timeoutId);
+        }
+        if (!response.ok) {
+          throw new Error(`Geo lookup failed with status ${response.status}`);
+        }
+        const data = await response.json();
+        const location = parseLocationResponse(data);
+        if (location) {
+          userLocation = location;
+          return location;
+        }
+        throw new Error("Geo lookup response missing coordinates");
+      } catch (error) {
+        console.warn("Unable to determine viewer location", error);
+        return null;
+      }
+    }
+
+    const userLocationPromise = detectUserLocation();
+
+    if (userLocationPromise && typeof userLocationPromise.then === "function") {
+      userLocationPromise
+        .then(() => {
+          maybeActivatePreferredServer();
+        })
+        .catch(() => {});
+    }
 
     function clearPendingLoadTimeout() {
       if (pendingLoadTimeout != null) {
@@ -361,8 +559,25 @@
       return servers[activeServerIndex] || null;
     }
 
+    function describeServerLocation(server) {
+      if (!server) return "";
+      const parts = [];
+      if (server.city) {
+        parts.push(server.city);
+      }
+      if (server.country) {
+        const countryCode = String(server.country).trim().toUpperCase();
+        if (countryCode && (!parts.length || parts[parts.length - 1] !== countryCode)) {
+          parts.push(countryCode);
+        }
+      }
+      return parts.join(", ");
+    }
+
     function describeServer(server) {
-      return server && server.label ? server.label : "the selected server";
+      if (!server || !server.label) return "the selected server";
+      const location = describeServerLocation(server);
+      return location ? `${server.label} (${location})` : server.label;
     }
 
     function updateServerStatus(text) {
@@ -394,6 +609,10 @@
         const option = document.createElement("option");
         option.value = String(index);
         option.textContent = failedServers.has(index) ? `${server.label} (auto-skipped)` : server.label;
+        const descriptor = describeServer(server);
+        if (descriptor && descriptor !== option.textContent) {
+          option.title = descriptor;
+        }
         if (index === activeServerIndex) {
           option.selected = true;
         }
@@ -440,6 +659,31 @@
             src: candidate.src,
             origin: candidate.origin || null,
             policies: clonePolicies(candidate.policies),
+            region:
+              typeof candidate.region === "string" && candidate.region
+                ? candidate.region
+                : null,
+            country:
+              typeof candidate.country === "string" && candidate.country
+                ? candidate.country
+                : null,
+            city:
+              typeof candidate.city === "string" && candidate.city ? candidate.city : null,
+            latitude:
+              Number.isFinite(candidate.latitude) ||
+              (typeof candidate.latitude === "string" && candidate.latitude)
+                ? Number(candidate.latitude)
+                : null,
+            longitude:
+              Number.isFinite(candidate.longitude) ||
+              (typeof candidate.longitude === "string" && candidate.longitude)
+                ? Number(candidate.longitude)
+                : null,
+            priority:
+              Number.isFinite(candidate.priority) ||
+              (typeof candidate.priority === "string" && candidate.priority)
+                ? Number(candidate.priority)
+                : null,
           });
         }
       }
@@ -450,6 +694,7 @@
         updateServerStatus("No stream servers available");
       } else {
         updateServerStatus("");
+        maybeActivatePreferredServer();
       }
     }
 
@@ -491,13 +736,17 @@
         }
         return;
       }
+      if (userInitiated) {
+        userSelectedServer = true;
+      }
       activeServerIndex = index;
       embedReady = false;
       clearPendingLoadTimeout();
       clearAutoResume();
       manualPauseUntil = 0;
       updateServerSelectValue(index);
-      updateServerStatus(`Current server: ${server.label}`);
+      const serverDescription = describeServer(server);
+      updateServerStatus(`Current server: ${serverDescription}`);
       if (!embedWrap || !embedFrame) return;
       embedWrap.hidden = false;
       embedFrame.removeAttribute("src");
@@ -505,15 +754,20 @@
       window.requestAnimationFrame(() => {
         embedFrame.src = server.src;
       });
-      const contactLabel = `Contacting ${server.label}…`;
-      setStatus(userInitiated ? `Switching to ${server.label}…` : `Connecting to ${server.label}…`);
+      const contactLabel = `Contacting ${serverDescription}…`;
+      setStatus(
+        userInitiated
+          ? `Switching to ${serverDescription}…`
+          : `Connecting to ${serverDescription}…`,
+      );
       setLoading(true, contactLabel);
       pendingLoadTimeout = window.setTimeout(() => {
         if (!embedReady && activeServerIndex === index) {
           recordServerFailure(index);
           const nextIndex = findNextServer(index);
           if (nextIndex != null) {
-            setStatus(`${server.label} did not respond. Trying ${servers[nextIndex].label}…`);
+            const nextServerDescription = describeServer(servers[nextIndex]);
+            setStatus(`${serverDescription} did not respond. Trying ${nextServerDescription}…`);
             activateServer(nextIndex);
           } else {
             handleExhaustedServers();
@@ -1012,7 +1266,7 @@
       });
     }
 
-    function openMovie() {
+    async function openMovie() {
       if (!tmdb) {
         setStatus("Missing TMDB identifier for Stream relay playback.");
         setLoading(false);
@@ -1026,17 +1280,24 @@
       if (resumeProgress > 0) {
         embedOptions.progress = resumeProgress;
       }
-      const list = movieServers(tmdb, embedOptions);
-      setServerList(list);
-      const nextIndex = findNextServer(-1);
-      if (nextIndex != null) {
-        activateServer(nextIndex);
-      } else {
+      try {
+        const list = movieServers(tmdb, embedOptions);
+        setServerList(list);
+        const initialIndex = await determineInitialServerIndex();
+        if (initialIndex != null) {
+          if (initialIndex !== activeServerIndex) {
+            activateServer(initialIndex);
+          }
+        } else {
+          handleExhaustedServers();
+        }
+      } catch (error) {
+        console.error("Failed to open movie stream list", error);
         handleExhaustedServers();
       }
     }
 
-    function openSeries() {
+    async function openSeries() {
       if (!tmdb) {
         setStatus("Missing TMDB identifier for Stream relay playback.");
         setLoading(false);
@@ -1054,12 +1315,19 @@
       if (resumeProgress > 0) {
         embedOptions.progress = resumeProgress;
       }
-      const list = tvServers(tmdb, season, episode, embedOptions);
-      setServerList(list);
-      const nextIndex = findNextServer(-1);
-      if (nextIndex != null) {
-        activateServer(nextIndex);
-      } else {
+      try {
+        const list = tvServers(tmdb, season, episode, embedOptions);
+        setServerList(list);
+        const initialIndex = await determineInitialServerIndex();
+        if (initialIndex != null) {
+          if (initialIndex !== activeServerIndex) {
+            activateServer(initialIndex);
+          }
+        } else {
+          handleExhaustedServers();
+        }
+      } catch (error) {
+        console.error("Failed to open series stream list", error);
         handleExhaustedServers();
       }
     }
