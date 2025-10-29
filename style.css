@@ -787,8 +787,8 @@ body.is-mobile .content {
 
 .magic-bento__indicator {
   position: absolute;
-  top: calc(clamp(0.75rem, 3vw, 1.25rem) + var(--magic-y, 0px));
-  left: calc(clamp(0.75rem, 3vw, 1.25rem) + var(--magic-x, 0px));
+  top: var(--magic-y, clamp(0.75rem, 3vw, 1.25rem));
+  left: var(--magic-x, clamp(0.75rem, 3vw, 1.25rem));
   width: var(--magic-width, 0px);
   height: var(--magic-height, 0px);
   border-radius: calc(var(--radius-lg) * 0.95);
