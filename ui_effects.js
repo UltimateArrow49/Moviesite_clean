@@ -173,8 +173,11 @@ export function initDockNavigation() {
       const navRect = nav.getBoundingClientRect();
       const itemRect = item.getBoundingClientRect();
       const x = itemRect.left - navRect.left + nav.scrollLeft;
+      const y = itemRect.top - navRect.top + nav.scrollTop;
       indicator.style.setProperty("--dock-width", `${itemRect.width}px`);
+      indicator.style.setProperty("--dock-height", `${itemRect.height}px`);
       indicator.style.setProperty("--dock-x", `${x}px`);
+      indicator.style.setProperty("--dock-y", `${y}px`);
       indicator.style.setProperty("--dock-opacity", "1");
       if (immediate) {
         transitionInstantly(indicator);
@@ -206,6 +209,14 @@ export function initDockNavigation() {
 
     nav.addEventListener("scroll", handleResize);
     window.addEventListener("resize", handleResize, { passive: true });
+
+    const handleNavLeave = () => moveIndicator(activeItem);
+
+    if (supportsPointerEvents) {
+      nav.addEventListener("pointerleave", handleNavLeave);
+    } else {
+      nav.addEventListener("mouseleave", handleNavLeave);
+    }
 
     items.forEach((item) => {
       const hoverHandler = () => moveIndicator(item);
@@ -250,7 +261,10 @@ export function initMagicBento() {
 
     items.forEach((item) => item.classList.add("magic-bento__item"));
 
-    let activeItem = items[0];
+    let activeItem = null;
+    const ensureActiveItem = (item) => {
+      activeItem = item;
+    };
 
     const moveIndicator = (item, immediate = false) => {
       if (!indicator) return;
@@ -272,7 +286,7 @@ export function initMagicBento() {
       }
     };
 
-    moveIndicator(activeItem, true);
+    indicator.style.setProperty("--magic-opacity", "0");
 
     const handlePointer = (event, item) => {
       const rect = item.getBoundingClientRect();
@@ -284,7 +298,7 @@ export function initMagicBento() {
 
     items.forEach((item) => {
       const enter = (event) => {
-        activeItem = item;
+        ensureActiveItem(item);
         moveIndicator(item);
         handlePointer(event, item);
       };
@@ -302,7 +316,7 @@ export function initMagicBento() {
         item.addEventListener("mouseleave", leave);
       }
       item.addEventListener("focus", (event) => {
-        activeItem = item;
+        ensureActiveItem(item);
         moveIndicator(item);
         if (supportsPointerEvents && event instanceof PointerEvent) {
           handlePointer(event, item);
@@ -311,22 +325,102 @@ export function initMagicBento() {
           grid.style.setProperty("--magic-tilt-y", "0deg");
         }
       });
+      item.addEventListener("blur", () => {
+        requestAnimationFrame(() => {
+          if (!grid.contains(document.activeElement)) {
+            indicator.style.setProperty("--magic-opacity", "0");
+          }
+        });
+      });
     });
 
     const handleGridReset = () => {
-      moveIndicator(activeItem, true);
+      if (activeItem) {
+        moveIndicator(activeItem, true);
+      } else {
+        indicator.style.setProperty("--magic-opacity", "0");
+      }
       grid.style.setProperty("--magic-tilt-x", "0deg");
       grid.style.setProperty("--magic-tilt-y", "0deg");
     };
 
     if (supportsPointerEvents) {
-      grid.addEventListener("pointerleave", handleGridReset);
+      grid.addEventListener("pointerleave", () => {
+        handleGridReset();
+        if (!grid.contains(document.activeElement)) {
+          indicator.style.setProperty("--magic-opacity", "0");
+        }
+      });
+      grid.addEventListener("pointerenter", () => {
+        if (activeItem) {
+          indicator.style.setProperty("--magic-opacity", "1");
+        }
+      });
     } else {
-      grid.addEventListener("mouseleave", handleGridReset);
+      grid.addEventListener("mouseleave", () => {
+        handleGridReset();
+        if (!grid.contains(document.activeElement)) {
+          indicator.style.setProperty("--magic-opacity", "0");
+        }
+      });
+      grid.addEventListener("mouseenter", () => {
+        if (activeItem) {
+          indicator.style.setProperty("--magic-opacity", "1");
+        }
+      });
     }
     window.addEventListener("resize", () => moveIndicator(activeItem, true), {
       passive: true,
     });
     window.addEventListener("orientationchange", () => moveIndicator(activeItem, true));
   });
+}
+
+export function initClickSpark() {
+  if (!supportsPointerEvents || prefersReducedMotion()) return;
+  const body = document.body;
+  if (!body || body.dataset.sparkReady === "true") return;
+  body.dataset.sparkReady = "true";
+
+  const particleCount = 8;
+
+  const spawnSpark = (event) => {
+    if (prefersReducedMotion()) return;
+    if (event.button != null && event.button !== 0) return;
+    const spark = document.createElement("span");
+    spark.className = "click-spark";
+    spark.style.left = `${event.clientX}px`;
+    spark.style.top = `${event.clientY}px`;
+
+    for (let index = 0; index < particleCount; index += 1) {
+      const particle = document.createElement("span");
+      particle.className = "click-spark__particle";
+      const angle = (360 / particleCount) * index;
+      particle.style.setProperty("--spark-angle", `${angle}deg`);
+      particle.style.setProperty(
+        "--spark-travel",
+        `${18 + Math.random() * 16}px`,
+      );
+      particle.style.setProperty(
+        "--spark-scale",
+        (0.65 + Math.random() * 0.35).toFixed(2),
+      );
+      spark.appendChild(particle);
+    }
+
+    const glow = document.createElement("span");
+    glow.className = "click-spark__glow";
+    spark.appendChild(glow);
+
+    body.appendChild(spark);
+    spark.addEventListener(
+      "animationend",
+      () => {
+        spark.remove();
+      },
+      { once: true },
+    );
+  };
+
+  body.addEventListener("pointerdown", spawnSpark);
 }
