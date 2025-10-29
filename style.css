@@ -194,7 +194,7 @@ body.is-mobile .topbar nav a.btn {
   left: 0;
   width: var(--dock-width, 0px);
   height: var(--dock-height, calc(100% - 12px));
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background:
     radial-gradient(120% 140% at 50% 16%, rgba(var(--accent-rgb), 0.36) 0%, rgba(var(--accent-rgb), 0.14) 52%, rgba(8, 14, 28, 0) 100%),
     linear-gradient(135deg, rgba(20, 255, 159, 0.28), rgba(20, 255, 159, 0.06));
