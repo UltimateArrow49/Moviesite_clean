@@ -1,4 +1,5 @@
 import { createChannelLogoElement } from "./logo-placeholder.js";
+import { setupAnimatedList } from "./ui_effects.js";
 
 const API_BASE = "https://iptv-org.github.io/api";
 const CHANNELS_URL = `${API_BASE}/channels.json`;
@@ -23,6 +24,9 @@ const STREAM_STATUS_MAX_CONCURRENT = 4;
 const STREAM_STATUS_CACHE_TTL = 60 * 1000;
 
 const grid = document.getElementById("grid");
+if (grid) {
+  setupAnimatedList(grid, { axis: "y" });
+}
 const filtersEl = document.getElementById("filters");
 const searchInput = document.getElementById("search");
 const statusLine = document.getElementById("statusLine");

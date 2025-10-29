@@ -1,5 +1,6 @@
 import { getEntriesByMode, onHistoryChange } from "./continue_watching.js";
 import { setupPreviewForGrid } from "./preview_manager.js";
+import { setupAnimatedList } from "./ui_effects.js";
 import { BACKDROP_BASE, IMG_BASE, requestTmdb } from "./tmdb_client.js";
 const continueSection = document.getElementById("continueMovies");
 const continueList = document.getElementById("continueMoviesList");
@@ -14,6 +15,7 @@ const MAX_FETCH_PAGES = 4;
 
 if (continueList) {
   setupPreviewForGrid(continueList, { mode: "movie" });
+  setupAnimatedList(continueList, { axis: "x" });
 }
 
 const CAROUSELS = [
@@ -347,6 +349,7 @@ function createCarouselSection(definition) {
   window.addEventListener("resize", () => updateArrows(), { passive: true });
 
   setupPreviewForGrid(scroller, { mode: "movie" });
+  setupAnimatedList(scroller, { axis: "x" });
 
   const enhancedState = { ...state, updateArrows };
   carouselStates.set(definition.id, enhancedState);

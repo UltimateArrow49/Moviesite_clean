@@ -173,6 +173,93 @@ body.is-mobile .topbar nav a.btn {
   scroll-snap-align: start;
 }
 
+.dock-nav {
+  --dock-transition: 320ms;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: calc(var(--radius-lg) + 6px);
+  background: linear-gradient(135deg, rgba(14, 22, 38, 0.82), rgba(7, 12, 26, 0.74));
+  border: 1px solid rgba(148, 163, 209, 0.22);
+  box-shadow: 0 28px 60px rgba(3, 9, 24, 0.55);
+  backdrop-filter: blur(14px);
+  isolation: isolate;
+}
+
+.dock-nav__indicator {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: var(--dock-width, 0px);
+  height: calc(100% - 12px);
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(120% 140% at 50% 16%, rgba(var(--accent-rgb), 0.36) 0%, rgba(var(--accent-rgb), 0.14) 52%, rgba(8, 14, 28, 0) 100%),
+    linear-gradient(135deg, rgba(20, 255, 159, 0.28), rgba(20, 255, 159, 0.06));
+  box-shadow: 0 24px 64px rgba(var(--accent-rgb), 0.28);
+  opacity: var(--dock-opacity, 0);
+  transform: translate3d(var(--dock-x, 0px), 0, 0);
+  transition:
+    transform var(--dock-transition) cubic-bezier(0.22, 1, 0.36, 1),
+    width var(--dock-transition) cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dock-nav__indicator.is-instant {
+  transition-duration: 0ms !important;
+}
+
+.dock-nav__item {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.95rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(var(--ink-rgb), 0.72);
+  text-decoration: none;
+  transition: color 0.28s ease, transform 0.28s ease;
+}
+
+.dock-nav .btn,
+.dock-nav a.btn {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0.45rem 0.95rem;
+  transform: none;
+}
+
+.dock-nav .btn:hover,
+.dock-nav .btn:focus-visible,
+.dock-nav .btn--primary,
+.dock-nav .btn--ghost {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  transform: none;
+}
+
+.dock-nav__item:hover,
+.dock-nav__item:focus-visible,
+.dock-nav__item.is-active {
+  color: var(--ink);
+  transform: translateY(-2px);
+}
+
+.dock-nav__item:focus-visible {
+  outline: none;
+  text-shadow: 0 0 14px rgba(var(--accent-rgb), 0.35);
+}
+
 .topbar__actions {
   display: flex;
   align-items: center;
@@ -573,6 +660,79 @@ body.is-mobile .content {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: clamp(1rem, 4vw, 1.5rem);
   align-items: stretch;
+}
+
+.magic-bento {
+  --magic-transition: 380ms;
+  position: relative;
+  display: grid;
+  grid-template-columns: inherit;
+  gap: clamp(1rem, 4vw, 1.6rem);
+  padding: clamp(0.75rem, 3vw, 1.25rem);
+  border-radius: calc(var(--radius-lg) + 12px);
+  background: linear-gradient(135deg, rgba(14, 22, 38, 0.85), rgba(6, 12, 24, 0.72));
+  border: 1px solid rgba(148, 163, 209, 0.26);
+  box-shadow: 0 40px 88px rgba(3, 8, 24, 0.6);
+  isolation: isolate;
+  transform: perspective(1200px) rotateX(var(--magic-tilt-y, 0deg))
+    rotateY(var(--magic-tilt-x, 0deg));
+  transition: transform var(--magic-transition) ease, box-shadow var(--magic-transition) ease;
+}
+
+.magic-bento__indicator {
+  position: absolute;
+  top: calc(clamp(0.75rem, 3vw, 1.25rem) + var(--magic-y, 0px));
+  left: calc(clamp(0.75rem, 3vw, 1.25rem) + var(--magic-x, 0px));
+  width: var(--magic-width, 0px);
+  height: var(--magic-height, 0px);
+  border-radius: calc(var(--radius-lg) * 0.95);
+  background:
+    radial-gradient(140% 160% at 50% 24%, rgba(var(--accent-rgb), 0.28) 0%, rgba(var(--accent-rgb), 0.1) 55%, rgba(8, 16, 30, 0) 100%),
+    linear-gradient(150deg, rgba(20, 255, 159, 0.22), rgba(20, 255, 159, 0.05));
+  box-shadow: 0 36px 84px rgba(var(--accent-rgb), 0.28);
+  opacity: var(--magic-opacity, 0);
+  transition:
+    transform var(--magic-transition) cubic-bezier(0.23, 1, 0.32, 1),
+    width var(--magic-transition) cubic-bezier(0.23, 1, 0.32, 1),
+    height var(--magic-transition) cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 220ms ease;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.magic-bento__indicator.is-instant {
+  transition-duration: 0ms !important;
+}
+
+.magic-bento .landing-tile {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.42s cubic-bezier(0.23, 1, 0.32, 1), color 0.28s ease;
+}
+
+.magic-bento .landing-tile:hover,
+.magic-bento .landing-tile:focus-visible {
+  transform: translateY(-6px) scale(1.02);
+  background: transparent;
+  box-shadow: none;
+}
+
+.magic-bento .landing-tile:focus-visible {
+  outline: none;
+  text-shadow: 0 0 18px rgba(var(--accent-rgb), 0.35);
+}
+
+.magic-bento .landing-tile__label {
+  font-size: 1.1rem;
+  letter-spacing: 0.14em;
+}
+
+.magic-bento .landing-tile__hint {
+  color: rgba(var(--ink-rgb), 0.74);
 }
 
 .landing-download {
@@ -1201,6 +1361,36 @@ body.is-searching .search-status {
   color: rgba(var(--ink-rgb), 0.82);
 }
 
+.animated-list {
+  --animate-distance: 28px;
+  position: relative;
+}
+
+.animated-list--horizontal {
+  --animate-distance: 32px;
+}
+
+.animated-list__item {
+  opacity: 0;
+  transform: translate3d(0, var(--animate-distance), 0) scale(0.96);
+  transition:
+    opacity 0.62s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.62s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.62s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--animate-index, 0) * 45ms);
+  filter: saturate(0.88);
+  will-change: opacity, transform;
+}
+
+.animated-list--horizontal .animated-list__item {
+  transform: translate3d(var(--animate-distance), 0, 0) scale(0.96);
+}
+
+.animated-list__item.is-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  filter: saturate(1);
+}
 
 .card {
   position: relative;
@@ -2322,4 +2512,22 @@ footer.site-footer {
 .install-toast--hide {
   opacity: 0;
   transform: translate(-50%, 16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animated-list__item {
+    transition-duration: 0ms !important;
+    transition-delay: 0ms !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .dock-nav__indicator,
+  .magic-bento__indicator {
+    transition-duration: 0ms !important;
+  }
+  .dock-nav__item,
+  .magic-bento .landing-tile {
+    transition-duration: 0ms !important;
+    transform: none !important;
+  }
 }
