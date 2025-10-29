@@ -112,7 +112,9 @@
       <div class="player-actions">
         <div class="select-control select-control--server">
           <span>Stream source</span>
-          <select id="serverSelect" aria-label="Select a stream source"></select>
+          <div class="select-shell">
+            <select id="serverSelect" aria-label="Select a stream source"></select>
+          </div>
         </div>
       </div>
     </div>
@@ -125,7 +127,7 @@
 <p class="server-status" id="serverStatus" hidden></p>
 </div>
 <div class="player-frame" hidden="" id="embedWrap">
-<iframe allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen="" id="embedFrame" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation" src="" title="Stream relay player"></iframe>
+<iframe allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen="" id="embedFrame" loading="lazy" referrerpolicy="origin-when-cross-origin" src="" title="Stream relay player"></iframe>
 </div>
 <section class="player-details">
 <div class="detail-card">
@@ -156,6 +158,18 @@
     const deviceSummaryEl = document.getElementById("deviceSummary");
     const serverSelect = document.getElementById("serverSelect");
     const serverStatusEl = document.getElementById("serverStatus");
+    const DEFAULT_EMBED_POLICIES = Object.freeze({
+      allow: "autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write",
+      referrerPolicy: "origin-when-cross-origin",
+      sandbox: Object.freeze([
+        "allow-scripts",
+        "allow-same-origin",
+        "allow-forms",
+        "allow-pointer-lock",
+        "allow-orientation-lock",
+        "allow-top-navigation-by-user-activation",
+      ]),
+    });
 
     const formatLabel = (value) => {
       if (typeof value !== "string" || !value) return "";
@@ -205,6 +219,82 @@
     const statusWrap = document.querySelector(".player-status");
     const loadingIndicator = document.getElementById("loadingIndicator");
     const loadingText = document.getElementById("loadingText");
+
+    if (embedFrame) {
+      applyEmbedPolicies(null);
+    }
+
+    function clonePolicies(policies) {
+      if (!policies || typeof policies !== "object") return null;
+      const cloned = {};
+      if (typeof policies.allow === "string") {
+        cloned.allow = policies.allow;
+      }
+      if (policies.referrerPolicy === null) {
+        cloned.referrerPolicy = null;
+      } else if (typeof policies.referrerPolicy === "string") {
+        cloned.referrerPolicy = policies.referrerPolicy;
+      }
+      if (policies.sandbox === null || policies.sandbox === false) {
+        cloned.sandbox = [];
+      } else if (Array.isArray(policies.sandbox)) {
+        cloned.sandbox = policies.sandbox.map((token) => String(token).trim()).filter(Boolean);
+      } else if (typeof policies.sandbox === "string") {
+        cloned.sandbox = policies.sandbox
+          .split(/\s+/)
+          .map((token) => token.trim())
+          .filter(Boolean);
+      }
+      return Object.keys(cloned).length ? cloned : null;
+    }
+
+    function resolveSandboxTokens(policies) {
+      if (!policies) return DEFAULT_EMBED_POLICIES.sandbox;
+      if (Array.isArray(policies.sandbox)) {
+        return policies.sandbox.length ? policies.sandbox : [];
+      }
+      return DEFAULT_EMBED_POLICIES.sandbox;
+    }
+
+    function applyEmbedPolicies(server) {
+      if (!embedFrame) return;
+      const policies = server && typeof server === "object" ? server.policies || null : null;
+      const allowValue =
+        policies && typeof policies.allow === "string" && policies.allow.trim()
+          ? policies.allow.trim()
+          : DEFAULT_EMBED_POLICIES.allow;
+      if (allowValue) {
+        embedFrame.setAttribute("allow", allowValue);
+      } else {
+        embedFrame.removeAttribute("allow");
+      }
+
+      let referrerValue;
+      if (policies) {
+        if (policies.referrerPolicy === null) {
+          referrerValue = null;
+        } else if (typeof policies.referrerPolicy === "string") {
+          referrerValue = policies.referrerPolicy.trim();
+        }
+      }
+      if (referrerValue === undefined) {
+        referrerValue = DEFAULT_EMBED_POLICIES.referrerPolicy;
+      }
+      if (referrerValue) {
+        embedFrame.setAttribute("referrerpolicy", referrerValue);
+      } else {
+        embedFrame.removeAttribute("referrerpolicy");
+      }
+
+      const sandboxTokens = resolveSandboxTokens(policies);
+      if (sandboxTokens && sandboxTokens.length) {
+        embedFrame.setAttribute("sandbox", sandboxTokens.join(" "));
+      } else {
+        embedFrame.removeAttribute("sandbox");
+      }
+
+      embedFrame.setAttribute("allowfullscreen", "true");
+    }
 
     const url = new URL(window.location.href);
     const params = url.searchParams;
@@ -349,6 +439,7 @@
             label,
             src: candidate.src,
             origin: candidate.origin || null,
+            policies: clonePolicies(candidate.policies),
           });
         }
       }
@@ -375,6 +466,7 @@
       updateServerStatus("All servers unavailable");
       if (embedFrame) {
         embedFrame.removeAttribute("src");
+        applyEmbedPolicies(null);
       }
       if (embedWrap) {
         embedWrap.hidden = true;
@@ -409,6 +501,7 @@
       if (!embedWrap || !embedFrame) return;
       embedWrap.hidden = false;
       embedFrame.removeAttribute("src");
+      applyEmbedPolicies(server);
       window.requestAnimationFrame(() => {
         embedFrame.src = server.src;
       });
