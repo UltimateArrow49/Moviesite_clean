@@ -266,21 +266,51 @@ export function initMagicBento() {
       activeItem = item;
     };
 
+    const syncIndicatorTransform = (item) => {
+      if (!indicator) return;
+      if (!item) {
+        indicator.style.setProperty("--magic-tilt-x", "0deg");
+        indicator.style.setProperty("--magic-tilt-y", "0deg");
+        indicator.style.setProperty("--magic-raise", "0px");
+        indicator.style.setProperty("--magic-scale", "1");
+        return;
+      }
+      const styles = window.getComputedStyle(item);
+      indicator.style.setProperty(
+        "--magic-tilt-x",
+        styles.getPropertyValue("--tile-tilt-x") || "0deg",
+      );
+      indicator.style.setProperty(
+        "--magic-tilt-y",
+        styles.getPropertyValue("--tile-tilt-y") || "0deg",
+      );
+      indicator.style.setProperty(
+        "--magic-raise",
+        styles.getPropertyValue("--tile-raise") || "0px",
+      );
+      indicator.style.setProperty(
+        "--magic-scale",
+        styles.getPropertyValue("--tile-scale") || "1",
+      );
+    };
+
     const moveIndicator = (item, immediate = false) => {
       if (!indicator) return;
       if (!item) {
         indicator.style.setProperty("--magic-opacity", "0");
+        indicator.style.setProperty("--magic-x", "0px");
+        indicator.style.setProperty("--magic-y", "0px");
+        syncIndicatorTransform(null);
         return;
       }
-      const gridRect = grid.getBoundingClientRect();
-      const itemRect = item.getBoundingClientRect();
-      const x = itemRect.left - gridRect.left;
-      const y = itemRect.top - gridRect.top;
-      indicator.style.setProperty("--magic-width", `${itemRect.width}px`);
-      indicator.style.setProperty("--magic-height", `${itemRect.height}px`);
+      const x = item.offsetLeft - grid.scrollLeft;
+      const y = item.offsetTop - grid.scrollTop;
+      indicator.style.setProperty("--magic-width", `${item.offsetWidth}px`);
+      indicator.style.setProperty("--magic-height", `${item.offsetHeight}px`);
       indicator.style.setProperty("--magic-x", `${x}px`);
       indicator.style.setProperty("--magic-y", `${y}px`);
       indicator.style.setProperty("--magic-opacity", "1");
+      syncIndicatorTransform(item);
       if (immediate) {
         transitionInstantly(indicator);
       }
@@ -292,8 +322,16 @@ export function initMagicBento() {
       const rect = item.getBoundingClientRect();
       const offsetX = ((event.clientX - rect.left) / rect.width - 0.5) * 12;
       const offsetY = ((event.clientY - rect.top) / rect.height - 0.5) * 12;
-      grid.style.setProperty("--magic-tilt-x", `${offsetX}deg`);
-      grid.style.setProperty("--magic-tilt-y", `${-offsetY}deg`);
+      item.style.setProperty("--tile-tilt-x", `${offsetX}deg`);
+      item.style.setProperty("--tile-tilt-y", `${-offsetY}deg`);
+      syncIndicatorTransform(item);
+    };
+
+    const resetTileTilt = (item) => {
+      if (!item) return;
+      item.style.setProperty("--tile-tilt-x", "0deg");
+      item.style.setProperty("--tile-tilt-y", "0deg");
+      syncIndicatorTransform(item);
     };
 
     items.forEach((item) => {
@@ -303,8 +341,7 @@ export function initMagicBento() {
         handlePointer(event, item);
       };
       const leave = () => {
-        grid.style.setProperty("--magic-tilt-x", "0deg");
-        grid.style.setProperty("--magic-tilt-y", "0deg");
+        resetTileTilt(item);
       };
       if (supportsPointerEvents) {
         item.addEventListener("pointerenter", enter);
@@ -321,8 +358,7 @@ export function initMagicBento() {
         if (supportsPointerEvents && event instanceof PointerEvent) {
           handlePointer(event, item);
         } else {
-          grid.style.setProperty("--magic-tilt-x", "0deg");
-          grid.style.setProperty("--magic-tilt-y", "0deg");
+          resetTileTilt(item);
         }
       });
       item.addEventListener("blur", () => {
@@ -340,8 +376,7 @@ export function initMagicBento() {
       } else {
         indicator.style.setProperty("--magic-opacity", "0");
       }
-      grid.style.setProperty("--magic-tilt-x", "0deg");
-      grid.style.setProperty("--magic-tilt-y", "0deg");
+      syncIndicatorTransform(activeItem);
     };
 
     if (supportsPointerEvents) {
