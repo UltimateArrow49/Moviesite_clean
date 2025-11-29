@@ -747,15 +747,15 @@ body.is-mobile .content {
   border: 1px solid rgba(148, 163, 209, 0.26);
   box-shadow: 0 40px 88px rgba(3, 8, 24, 0.6);
   isolation: isolate;
-  transform: perspective(1200px) rotateX(var(--magic-tilt-y, 0deg))
-    rotateY(var(--magic-tilt-x, 0deg));
-  transition: transform var(--magic-transition) ease, box-shadow var(--magic-transition) ease;
+  perspective: 1200px;
+  transform-style: preserve-3d;
+  transition: box-shadow var(--magic-transition) ease;
 }
 
 .magic-bento__indicator {
   position: absolute;
-  top: var(--magic-y, clamp(0.75rem, 3vw, 1.25rem));
-  left: var(--magic-x, clamp(0.75rem, 3vw, 1.25rem));
+  top: 0;
+  left: 0;
   width: var(--magic-width, 0px);
   height: var(--magic-height, 0px);
   border-radius: calc(var(--radius-lg) * 0.95);
@@ -769,7 +769,11 @@ body.is-mobile .content {
     width var(--magic-transition) cubic-bezier(0.23, 1, 0.32, 1),
     height var(--magic-transition) cubic-bezier(0.23, 1, 0.32, 1),
     opacity 220ms ease;
-  transform: translate3d(0, 0, 0);
+  transform: translate3d(var(--magic-x, 0px), var(--magic-y, 0px), 0)
+    translateY(var(--magic-raise, 0px)) scale(var(--magic-scale, 1))
+    rotateX(var(--magic-tilt-y, 0deg)) rotateY(var(--magic-tilt-x, 0deg));
+  transform-origin: center;
+  transform-style: preserve-3d;
   pointer-events: none;
   z-index: 0;
 }
@@ -779,17 +783,25 @@ body.is-mobile .content {
 }
 
 .magic-bento .landing-tile {
+  --tile-tilt-x: 0deg;
+  --tile-tilt-y: 0deg;
+  --tile-raise: 0px;
+  --tile-scale: 1;
   background: transparent;
   border-color: transparent;
   box-shadow: none;
   position: relative;
   z-index: 1;
   transition: transform 0.42s cubic-bezier(0.23, 1, 0.32, 1), color 0.28s ease;
+  transform: translateY(var(--tile-raise)) scale(var(--tile-scale))
+    rotateX(var(--tile-tilt-y)) rotateY(var(--tile-tilt-x));
+  transform-style: preserve-3d;
 }
 
 .magic-bento .landing-tile:hover,
 .magic-bento .landing-tile:focus-visible {
-  transform: translateY(-6px) scale(1.02);
+  --tile-raise: -6px;
+  --tile-scale: 1.02;
   background: transparent;
   box-shadow: none;
 }
