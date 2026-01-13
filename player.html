@@ -120,6 +120,9 @@
 </div>
 <div class="player-frame" hidden="" id="embedWrap">
 <iframe allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen="" id="embedFrame" loading="lazy" referrerpolicy="origin-when-cross-origin" src="" title="Stream relay player"></iframe>
+<div class="player-overlay" hidden="" id="playerOverlay" role="status" aria-live="polite">
+Not Available
+</div>
 </div>
 <section class="player-details">
 <div class="detail-card">
@@ -207,6 +210,7 @@
     const backButton = document.getElementById("backButton");
     const embedWrap = document.getElementById("embedWrap");
     const embedFrame = document.getElementById("embedFrame");
+    const playerOverlay = document.getElementById("playerOverlay");
     const statusEl = document.getElementById("playerStatus");
     const statusWrap = document.querySelector(".player-status");
     const loadingIndicator = document.getElementById("loadingIndicator");
@@ -803,6 +807,19 @@
       }
     }
 
+    function showOverlay(message = "Not Available") {
+      if (!playerOverlay) return;
+      playerOverlay.textContent = message;
+      playerOverlay.hidden = false;
+      playerOverlay.classList.add("player-overlay--visible");
+    }
+
+    function hideOverlay() {
+      if (!playerOverlay) return;
+      playerOverlay.hidden = true;
+      playerOverlay.classList.remove("player-overlay--visible");
+    }
+
     function handleExhaustedServers() {
       setLoading(false);
       updateServerStatus("All servers unavailable");
@@ -811,8 +828,9 @@
         applyEmbedPolicies(null);
       }
       if (embedWrap) {
-        embedWrap.hidden = true;
+        embedWrap.hidden = false;
       }
+      showOverlay("Not Available");
       updateServerSelectValue(-1);
       setStatus("All stream servers are currently unavailable. Please try again later.");
     }
@@ -841,6 +859,7 @@
       clearPendingLoadTimeout();
       clearAutoResume();
       manualPauseUntil = 0;
+      hideOverlay();
       updateServerSelectValue(index);
       const serverDescription = describeServer(server);
       updateServerStatus(`Current server: ${serverDescription}`);
@@ -1338,6 +1357,7 @@
     if (embedFrame) {
       embedFrame.addEventListener("load", () => {
         clearPendingLoadTimeout();
+        hideOverlay();
         const server = currentServer();
         if (server) {
           setStatus(`${describeServer(server)} loaded. Waiting for playback…`);
@@ -1441,6 +1461,7 @@
       if (eventName === "ready") {
         embedReady = true;
         clearPendingLoadTimeout();
+        hideOverlay();
         setLoading(false);
         setStatus(`${serverLabel} ready. Preparing playback…`);
         if (autoPlay) {
@@ -1461,6 +1482,7 @@
         clearAutoResume();
         manualPauseUntil = 0;
         clearPendingLoadTimeout();
+        hideOverlay();
         setLoading(false);
         if (Number.isFinite(currentTime)) {
           persistHistory(currentTime, { immediate: true });
@@ -1475,6 +1497,7 @@
         embedReady = true;
         clearAutoResume();
         clearPendingLoadTimeout();
+        hideOverlay();
         setLoading(false);
         if (Number.isFinite(currentTime)) {
           persistHistory(currentTime);
