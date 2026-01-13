@@ -440,6 +440,13 @@ Not Available
 
     function resolveHealthCheckUrl(server) {
       if (!server) return null;
+      if (typeof server.healthCheckUrl === "string" && server.healthCheckUrl) {
+        try {
+          return new URL(server.healthCheckUrl, server.origin || window.location.href).toString();
+        } catch (error) {
+          return server.healthCheckUrl;
+        }
+      }
       if (typeof server.healthUrl === "string" && server.healthUrl) {
         return server.healthUrl;
       }
@@ -923,16 +930,6 @@ Not Available
     }
 
     const pendingHealthChecks = new Map();
-
-    function resolveHealthCheckUrl(server) {
-      if (!server || !server.healthCheckUrl) return null;
-      try {
-        return new URL(server.healthCheckUrl, server.origin || window.location.href).toString();
-      } catch (error) {
-        console.warn("Invalid health check URL", error);
-        return null;
-      }
-    }
 
     function parseHealthCheckBody(body) {
       if (typeof body !== "string") return false;
