@@ -247,9 +247,8 @@ body.is-mobile .topbar nav a.btn {
 }
 
 .dock-nav__item.is-active::after {
-  opacity: 0;
-  transform: translate(-50%, 2px) scale(0.5);
-  display: none;
+  opacity: 0.95;
+  transform: translate(-50%, 0) scale(1);
 }
 
 .dock-nav__item:hover::after,

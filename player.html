@@ -120,9 +120,6 @@
 </div>
 <div class="player-frame" hidden="" id="embedWrap">
 <iframe allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen="" id="embedFrame" loading="lazy" referrerpolicy="origin-when-cross-origin" src="" title="Stream relay player"></iframe>
-<div class="player-overlay" hidden="" id="playerOverlay" role="status" aria-live="polite">
-Not Available
-</div>
 </div>
 <section class="player-details">
 <div class="detail-card">
@@ -210,7 +207,6 @@ Not Available
     const backButton = document.getElementById("backButton");
     const embedWrap = document.getElementById("embedWrap");
     const embedFrame = document.getElementById("embedFrame");
-    const playerOverlay = document.getElementById("playerOverlay");
     const statusEl = document.getElementById("playerStatus");
     const statusWrap = document.querySelector(".player-status");
     const loadingIndicator = document.getElementById("loadingIndicator");
@@ -343,7 +339,6 @@ Not Available
     let activeServerIndex = -1;
     let pendingLoadTimeout = null;
     let embedReady = false;
-    let embedValidated = false;
     let manualPauseUntil = 0;
     let userSelectedServer = false;
     let userLocation = null;
@@ -351,10 +346,6 @@ Not Available
     const LOCATION_ENDPOINT = "https://ipapi.co/json/";
     const LOCATION_REQUEST_TIMEOUT = 3000;
     const LOCATION_WAIT_WINDOW = 900;
-    const HEALTHCHECK_TIMEOUT = 2500;
-    const HEALTH_CHECK_TIMEOUT = HEALTHCHECK_TIMEOUT;
-    const EMBED_VALIDATION_EVENT = "PLAYER_READY";
-    const EMBED_VALIDATION_TIMEOUT = 5000;
 
     function normalizeCode(value) {
       return typeof value === "string" && value.trim() ? value.trim().toLowerCase() : "";
@@ -439,109 +430,6 @@ Not Available
         score += Number(server.priority);
       }
       return score;
-    }
-
-    function resolveHealthCheckUrl(server) {
-      if (!server) return null;
-      if (typeof server.healthCheckUrl === "string" && server.healthCheckUrl) {
-        try {
-          return new URL(server.healthCheckUrl, server.origin || window.location.href).toString();
-        } catch (error) {
-          return server.healthCheckUrl;
-        }
-      }
-      if (typeof server.healthUrl === "string" && server.healthUrl) {
-        return server.healthUrl;
-      }
-      if (typeof server.healthPath === "string" && server.healthPath) {
-        try {
-          const base = new URL(server.origin || server.src || window.location.href);
-          return new URL(server.healthPath, base).toString();
-        } catch (error) {
-          return server.healthPath;
-        }
-      }
-      if (typeof server.origin === "string" && server.origin) {
-        try {
-          const originUrl = new URL(server.origin);
-          if (originUrl.pathname && originUrl.pathname !== "/") {
-            return originUrl.toString();
-          }
-          return new URL("/health", originUrl).toString();
-        } catch (error) {
-          return server.origin;
-        }
-      }
-      if (typeof server.src === "string" && server.src) {
-        return server.src;
-      }
-      return null;
-    }
-
-    async function pingServer(server) {
-      const url = resolveHealthCheckUrl(server);
-      if (!url || !window.fetch || !window.performance) {
-        return { responsive: false, latencyMs: null };
-      }
-      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const timeoutId = controller
-        ? window.setTimeout(() => {
-            controller.abort();
-          }, HEALTHCHECK_TIMEOUT)
-        : null;
-      const startedAt = performance.now();
-      try {
-        await fetch(url, {
-          method: "HEAD",
-          mode: "no-cors",
-          cache: "no-store",
-          credentials: "omit",
-          signal: controller ? controller.signal : undefined,
-        });
-        const latencyMs = Math.max(0, performance.now() - startedAt);
-        return { responsive: true, latencyMs };
-      } catch (error) {
-        return { responsive: false, latencyMs: null };
-      } finally {
-        if (timeoutId) {
-          window.clearTimeout(timeoutId);
-        }
-      }
-    }
-
-    async function runHealthCheckSort(list) {
-      if (!Array.isArray(list) || list.length === 0) {
-        return Array.isArray(list) ? list : [];
-      }
-      if (!window.fetch || !window.performance) {
-        return list.slice();
-      }
-      const healthResults = await Promise.all(list.map((server) => pingServer(server)));
-      const enriched = list.map((server, index) => {
-        const health = healthResults[index] || { responsive: false, latencyMs: null };
-        return {
-          ...server,
-          health,
-        };
-      });
-      const location = userLocation;
-      return enriched.slice().sort((a, b) => {
-        const aLatency = Number.isFinite(a.health?.latencyMs)
-          ? a.health.latencyMs
-          : Number.POSITIVE_INFINITY;
-        const bLatency = Number.isFinite(b.health?.latencyMs)
-          ? b.health.latencyMs
-          : Number.POSITIVE_INFINITY;
-        if (aLatency !== bLatency) {
-          return aLatency - bLatency;
-        }
-        const scoreA = computeServerScore(a, location);
-        const scoreB = computeServerScore(b, location);
-        if (scoreA !== scoreB) {
-          return scoreA - scoreB;
-        }
-        return 0;
-      });
     }
 
     function findBestServerIndexForLocation(location) {
@@ -658,15 +546,6 @@ Not Available
       }
     }
 
-    let pendingValidation = null;
-
-    function clearPendingValidation() {
-      if (pendingValidation && pendingValidation.timeoutId != null) {
-        window.clearTimeout(pendingValidation.timeoutId);
-      }
-      pendingValidation = null;
-    }
-
     function currentServer() {
       if (activeServerIndex < 0) return null;
       return servers[activeServerIndex] || null;
@@ -721,14 +600,7 @@ Not Available
         if (!server || !server.src) return;
         const option = document.createElement("option");
         option.value = String(index);
-        let label = server.label;
-        if (server.health && server.health.responsive === false) {
-          label = `${label} (no response)`;
-        }
-        if (failedServers.has(index)) {
-          label = `${label} (auto-skipped)`;
-        }
-        option.textContent = label;
+        option.textContent = failedServers.has(index) ? `${server.label} (auto-skipped)` : server.label;
         const descriptor = describeServer(server);
         if (descriptor && descriptor !== option.textContent) {
           option.title = descriptor;
@@ -778,8 +650,6 @@ Not Available
             label,
             src: candidate.src,
             origin: candidate.origin || null,
-            healthCheckUrl:
-              candidate.healthCheckUrl || candidate.healthCheck || candidate.probeUrl || null,
             policies: clonePolicies(candidate.policies),
             region:
               typeof candidate.region === "string" && candidate.region
@@ -806,7 +676,6 @@ Not Available
               (typeof candidate.priority === "string" && candidate.priority)
                 ? Number(candidate.priority)
                 : null,
-            health: candidate.health || null,
           });
         }
       }
@@ -821,195 +690,6 @@ Not Available
       }
     }
 
-    function normalizeOriginValue(value) {
-      if (typeof value !== "string") return "";
-      try {
-        return new URL(value, window.location.href).origin;
-      } catch (error) {
-        return value.trim();
-      }
-    }
-
-    function isMessageFromActiveServer(event) {
-      if (!event) return false;
-      const server = currentServer();
-      if (!server) return false;
-      if (!server.origin) return true;
-      const expected = normalizeOriginValue(server.origin);
-      const actual = normalizeOriginValue(event.origin);
-      return !expected || expected === actual;
-    }
-
-    function parsePlayerReadyPayload(raw) {
-      if (raw == null) return null;
-      if (typeof raw === "string") {
-        const trimmed = raw.trim();
-        if (trimmed.toUpperCase() === EMBED_VALIDATION_EVENT) {
-          return { type: EMBED_VALIDATION_EVENT };
-        }
-        try {
-          return parsePlayerReadyPayload(JSON.parse(trimmed));
-        } catch (error) {
-          return null;
-        }
-      }
-      if (typeof raw !== "object") return null;
-      const type = typeof raw.type === "string" ? raw.type.toUpperCase() : "";
-      const event = typeof raw.event === "string" ? raw.event.toUpperCase() : "";
-      const status = typeof raw.status === "string" ? raw.status.toUpperCase() : "";
-      if (type === EMBED_VALIDATION_EVENT || event === EMBED_VALIDATION_EVENT || status === EMBED_VALIDATION_EVENT) {
-        return raw;
-      }
-      if (raw.playerReady === true || raw.ready === true) {
-        return raw;
-      }
-      return null;
-    }
-
-    function markEmbedValidated(server) {
-      if (embedValidated) return;
-      embedValidated = true;
-      clearPendingValidation();
-      if (server) {
-        setStatus(`${describeServer(server)} acknowledged the relay. Preparing playback…`);
-      }
-    }
-
-    function handleEmbedValidationMessage(event) {
-      if (!pendingValidation || !event) return false;
-      const server = servers[pendingValidation.index];
-      if (!server) return false;
-      if (server.origin) {
-        const expected = normalizeOriginValue(server.origin);
-        const actual = normalizeOriginValue(event.origin);
-        if (expected && actual && expected !== actual) return false;
-      }
-      const readyPayload = parsePlayerReadyPayload(event.data);
-      if (!readyPayload) return false;
-      if (
-        pendingValidation.requestId &&
-        readyPayload.requestId &&
-        String(readyPayload.requestId) !== String(pendingValidation.requestId)
-      ) {
-        return false;
-      }
-      markEmbedValidated(server);
-      return true;
-    }
-
-    function scheduleEmbedValidation(index, server) {
-      if (!server || !embedFrame) return;
-      clearPendingValidation();
-      const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      pendingValidation = {
-        index,
-        requestId,
-        timeoutId: window.setTimeout(() => {
-          if (!pendingValidation || pendingValidation.index !== index || embedValidated) {
-            return;
-          }
-          recordServerFailure(index);
-          const nextIndex = findNextServer(index);
-          if (nextIndex != null) {
-            setStatus(
-              `${describeServer(server)} did not respond to the relay check. Trying ${describeServer(
-                servers[nextIndex],
-              )}…`,
-            );
-            activateServer(nextIndex);
-          } else {
-            handleExhaustedServers();
-          }
-        }, EMBED_VALIDATION_TIMEOUT),
-      };
-      postEmbedMessages([
-        {
-          type: "PLAYER_PING",
-          event: "PLAYER_READY",
-          requestId,
-          timestamp: Date.now(),
-        },
-      ]);
-    }
-
-    const pendingHealthChecks = new Map();
-
-    function parseHealthCheckBody(body) {
-      if (typeof body !== "string") return false;
-      if (body.includes(EMBED_VALIDATION_EVENT)) return true;
-      const trimmed = body.trim();
-      if (!trimmed) return false;
-      if (trimmed[0] !== "{" && trimmed[0] !== "[") return false;
-      try {
-        const data = JSON.parse(trimmed);
-        const status = data.status || data.state || data.result;
-        if (typeof status === "string") {
-          const normalized = status.toLowerCase();
-          if (["ok", "ready", "player_ready"].includes(normalized)) return true;
-        }
-        if (data.ready === true || data.playerReady === true) return true;
-      } catch (error) {
-        return false;
-      }
-      return false;
-    }
-
-    function startServerHealthCheck(index, server) {
-      if (!server || pendingHealthChecks.has(index)) return;
-      const healthCheckUrl = resolveHealthCheckUrl(server);
-      if (!healthCheckUrl || !window.fetch) return;
-      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const timeoutId = controller
-        ? window.setTimeout(() => {
-            try {
-              controller.abort();
-            } catch (error) {
-              console.warn("Failed to abort health check", error);
-            }
-          }, HEALTH_CHECK_TIMEOUT)
-        : null;
-      const probePromise = fetch(healthCheckUrl, {
-        method: "GET",
-        cache: "no-store",
-        credentials: "omit",
-        signal: controller ? controller.signal : undefined,
-      })
-        .then(async (response) => {
-          if (timeoutId != null) {
-            window.clearTimeout(timeoutId);
-          }
-          if (!response.ok) return false;
-          const body = await response.text();
-          return parseHealthCheckBody(body);
-        })
-        .catch((error) => {
-          if (timeoutId != null) {
-            window.clearTimeout(timeoutId);
-          }
-          console.warn("Health check failed", error);
-          return false;
-        })
-        .then((isHealthy) => {
-          pendingHealthChecks.delete(index);
-          if (isHealthy) return;
-          recordServerFailure(index);
-          if (activeServerIndex === index) {
-            const nextIndex = findNextServer(index);
-            if (nextIndex != null) {
-              setStatus(
-                `${describeServer(server)} failed the relay health check. Trying ${describeServer(
-                  servers[nextIndex],
-                )}…`,
-              );
-              activateServer(nextIndex);
-            } else {
-              handleExhaustedServers();
-            }
-          }
-        });
-      pendingHealthChecks.set(index, probePromise);
-    }
-
     function updateServerSelectValue(index) {
       if (!serverSelect) return;
       const value = index != null && index >= 0 ? String(index) : "";
@@ -1018,31 +698,16 @@ Not Available
       }
     }
 
-    function showOverlay(message = "Not Available") {
-      if (!playerOverlay) return;
-      playerOverlay.textContent = message;
-      playerOverlay.hidden = false;
-      playerOverlay.classList.add("player-overlay--visible");
-    }
-
-    function hideOverlay() {
-      if (!playerOverlay) return;
-      playerOverlay.hidden = true;
-      playerOverlay.classList.remove("player-overlay--visible");
-    }
-
     function handleExhaustedServers() {
       setLoading(false);
       updateServerStatus("All servers unavailable");
-      clearPendingValidation();
       if (embedFrame) {
         embedFrame.removeAttribute("src");
         applyEmbedPolicies(null);
       }
       if (embedWrap) {
-        embedWrap.hidden = false;
+        embedWrap.hidden = true;
       }
-      showOverlay("Not Available");
       updateServerSelectValue(-1);
       setStatus("All stream servers are currently unavailable. Please try again later.");
     }
@@ -1068,12 +733,9 @@ Not Available
       }
       activeServerIndex = index;
       embedReady = false;
-      embedValidated = false;
       clearPendingLoadTimeout();
-      clearPendingValidation();
       clearAutoResume();
       manualPauseUntil = 0;
-      hideOverlay();
       updateServerSelectValue(index);
       const serverDescription = describeServer(server);
       updateServerStatus(`Current server: ${serverDescription}`);
@@ -1081,7 +743,6 @@ Not Available
       embedWrap.hidden = false;
       embedFrame.removeAttribute("src");
       applyEmbedPolicies(server);
-      startServerHealthCheck(index, server);
       window.requestAnimationFrame(() => {
         embedFrame.src = server.src;
       });
@@ -1572,19 +1233,16 @@ Not Available
     if (embedFrame) {
       embedFrame.addEventListener("load", () => {
         clearPendingLoadTimeout();
-        hideOverlay();
         const server = currentServer();
         if (server) {
           setStatus(`${describeServer(server)} loaded. Waiting for playback…`);
           clearServerFailure(activeServerIndex);
-          scheduleEmbedValidation(activeServerIndex, server);
         } else {
           setStatus("Stream relay loaded. Waiting for playback…");
         }
       });
       embedFrame.addEventListener("error", () => {
         clearPendingLoadTimeout();
-        clearPendingValidation();
         const failedIndex = activeServerIndex;
         const server = currentServer();
         if (failedIndex >= 0) {
@@ -1616,8 +1274,7 @@ Not Available
       }
       try {
         const list = movieServers(tmdb, embedOptions);
-        const rankedList = await runHealthCheckSort(list);
-        setServerList(rankedList);
+        setServerList(list);
         const initialIndex = await determineInitialServerIndex();
         if (initialIndex != null) {
           if (initialIndex !== activeServerIndex) {
@@ -1652,8 +1309,7 @@ Not Available
       }
       try {
         const list = tvServers(tmdb, season, episode, embedOptions);
-        const rankedList = await runHealthCheckSort(list);
-        setServerList(rankedList);
+        setServerList(list);
         const initialIndex = await determineInitialServerIndex();
         if (initialIndex != null) {
           if (initialIndex !== activeServerIndex) {
@@ -1678,7 +1334,6 @@ Not Available
       if (eventName === "ready") {
         embedReady = true;
         clearPendingLoadTimeout();
-        hideOverlay();
         setLoading(false);
         setStatus(`${serverLabel} ready. Preparing playback…`);
         if (autoPlay) {
@@ -1699,7 +1354,6 @@ Not Available
         clearAutoResume();
         manualPauseUntil = 0;
         clearPendingLoadTimeout();
-        hideOverlay();
         setLoading(false);
         if (Number.isFinite(currentTime)) {
           persistHistory(currentTime, { immediate: true });
@@ -1714,7 +1368,6 @@ Not Available
         embedReady = true;
         clearAutoResume();
         clearPendingLoadTimeout();
-        hideOverlay();
         setLoading(false);
         if (Number.isFinite(currentTime)) {
           persistHistory(currentTime);
@@ -1764,7 +1417,6 @@ Not Available
 
     function handlePlayerMessage(event) {
       if (!event) return;
-      const validationHandled = handleEmbedValidationMessage(event);
       const payload = normalizeEmbedPayload(event.data);
       if (!payload) return;
       if (tmdb && payload.id && String(payload.id) !== String(tmdb)) return;
@@ -1785,9 +1437,6 @@ Not Available
         ) {
           return;
         }
-      }
-      if (!validationHandled && isMessageFromActiveServer(event)) {
-        markEmbedValidated(currentServer());
       }
       handlePlayerEvent(payload);
     }
