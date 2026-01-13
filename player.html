@@ -120,6 +120,9 @@
 </div>
 <div class="player-frame" hidden="" id="embedWrap">
 <iframe allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen="" id="embedFrame" loading="lazy" referrerpolicy="origin-when-cross-origin" src="" title="Stream relay player"></iframe>
+<div class="player-overlay" hidden="" id="playerOverlay" role="status" aria-live="polite">
+Not Available
+</div>
 </div>
 <section class="player-details">
 <div class="detail-card">
@@ -207,6 +210,7 @@
     const backButton = document.getElementById("backButton");
     const embedWrap = document.getElementById("embedWrap");
     const embedFrame = document.getElementById("embedFrame");
+    const playerOverlay = document.getElementById("playerOverlay");
     const statusEl = document.getElementById("playerStatus");
     const statusWrap = document.querySelector(".player-status");
     const loadingIndicator = document.getElementById("loadingIndicator");
@@ -347,9 +351,7 @@
     const LOCATION_ENDPOINT = "https://ipapi.co/json/";
     const LOCATION_REQUEST_TIMEOUT = 3000;
     const LOCATION_WAIT_WINDOW = 900;
-    const EMBED_VALIDATION_TIMEOUT = 3500;
-    const EMBED_VALIDATION_EVENT = "PLAYER_READY";
-    const HEALTH_CHECK_TIMEOUT = 2500;
+    const HEALTHCHECK_TIMEOUT = 2500;
 
     function normalizeCode(value) {
       return typeof value === "string" && value.trim() ? value.trim().toLowerCase() : "";
@@ -434,6 +436,102 @@
         score += Number(server.priority);
       }
       return score;
+    }
+
+    function resolveHealthCheckUrl(server) {
+      if (!server) return null;
+      if (typeof server.healthUrl === "string" && server.healthUrl) {
+        return server.healthUrl;
+      }
+      if (typeof server.healthPath === "string" && server.healthPath) {
+        try {
+          const base = new URL(server.origin || server.src || window.location.href);
+          return new URL(server.healthPath, base).toString();
+        } catch (error) {
+          return server.healthPath;
+        }
+      }
+      if (typeof server.origin === "string" && server.origin) {
+        try {
+          const originUrl = new URL(server.origin);
+          if (originUrl.pathname && originUrl.pathname !== "/") {
+            return originUrl.toString();
+          }
+          return new URL("/health", originUrl).toString();
+        } catch (error) {
+          return server.origin;
+        }
+      }
+      if (typeof server.src === "string" && server.src) {
+        return server.src;
+      }
+      return null;
+    }
+
+    async function pingServer(server) {
+      const url = resolveHealthCheckUrl(server);
+      if (!url || !window.fetch || !window.performance) {
+        return { responsive: false, latencyMs: null };
+      }
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timeoutId = controller
+        ? window.setTimeout(() => {
+            controller.abort();
+          }, HEALTHCHECK_TIMEOUT)
+        : null;
+      const startedAt = performance.now();
+      try {
+        await fetch(url, {
+          method: "HEAD",
+          mode: "no-cors",
+          cache: "no-store",
+          credentials: "omit",
+          signal: controller ? controller.signal : undefined,
+        });
+        const latencyMs = Math.max(0, performance.now() - startedAt);
+        return { responsive: true, latencyMs };
+      } catch (error) {
+        return { responsive: false, latencyMs: null };
+      } finally {
+        if (timeoutId) {
+          window.clearTimeout(timeoutId);
+        }
+      }
+    }
+
+    async function runHealthCheckSort(list) {
+      if (!Array.isArray(list) || list.length === 0) {
+        return Array.isArray(list) ? list : [];
+      }
+      if (!window.fetch || !window.performance) {
+        return list.slice();
+      }
+      const healthResults = await Promise.all(list.map((server) => pingServer(server)));
+      const enriched = list.map((server, index) => {
+        const health = healthResults[index] || { responsive: false, latencyMs: null };
+        return {
+          ...server,
+          health,
+        };
+      });
+      const location = userLocation;
+      return enriched.slice().sort((a, b) => {
+        const aLatency = Number.isFinite(a.health?.latencyMs)
+          ? a.health.latencyMs
+          : Number.POSITIVE_INFINITY;
+        const bLatency = Number.isFinite(b.health?.latencyMs)
+          ? b.health.latencyMs
+          : Number.POSITIVE_INFINITY;
+        if (aLatency !== bLatency) {
+          return aLatency - bLatency;
+        }
+        const scoreA = computeServerScore(a, location);
+        const scoreB = computeServerScore(b, location);
+        if (scoreA !== scoreB) {
+          return scoreA - scoreB;
+        }
+        return 0;
+      });
     }
 
     function findBestServerIndexForLocation(location) {
@@ -613,7 +711,14 @@
         if (!server || !server.src) return;
         const option = document.createElement("option");
         option.value = String(index);
-        option.textContent = failedServers.has(index) ? `${server.label} (auto-skipped)` : server.label;
+        let label = server.label;
+        if (server.health && server.health.responsive === false) {
+          label = `${label} (no response)`;
+        }
+        if (failedServers.has(index)) {
+          label = `${label} (auto-skipped)`;
+        }
+        option.textContent = label;
         const descriptor = describeServer(server);
         if (descriptor && descriptor !== option.textContent) {
           option.title = descriptor;
@@ -691,6 +796,7 @@
               (typeof candidate.priority === "string" && candidate.priority)
                 ? Number(candidate.priority)
                 : null,
+            health: candidate.health || null,
           });
         }
       }
@@ -912,6 +1018,19 @@
       }
     }
 
+    function showOverlay(message = "Not Available") {
+      if (!playerOverlay) return;
+      playerOverlay.textContent = message;
+      playerOverlay.hidden = false;
+      playerOverlay.classList.add("player-overlay--visible");
+    }
+
+    function hideOverlay() {
+      if (!playerOverlay) return;
+      playerOverlay.hidden = true;
+      playerOverlay.classList.remove("player-overlay--visible");
+    }
+
     function handleExhaustedServers() {
       setLoading(false);
       updateServerStatus("All servers unavailable");
@@ -921,8 +1040,9 @@
         applyEmbedPolicies(null);
       }
       if (embedWrap) {
-        embedWrap.hidden = true;
+        embedWrap.hidden = false;
       }
+      showOverlay("Not Available");
       updateServerSelectValue(-1);
       setStatus("All stream servers are currently unavailable. Please try again later.");
     }
@@ -953,6 +1073,7 @@
       clearPendingValidation();
       clearAutoResume();
       manualPauseUntil = 0;
+      hideOverlay();
       updateServerSelectValue(index);
       const serverDescription = describeServer(server);
       updateServerStatus(`Current server: ${serverDescription}`);
@@ -1451,6 +1572,7 @@
     if (embedFrame) {
       embedFrame.addEventListener("load", () => {
         clearPendingLoadTimeout();
+        hideOverlay();
         const server = currentServer();
         if (server) {
           setStatus(`${describeServer(server)} loaded. Waiting for playback…`);
@@ -1494,7 +1616,8 @@
       }
       try {
         const list = movieServers(tmdb, embedOptions);
-        setServerList(list);
+        const rankedList = await runHealthCheckSort(list);
+        setServerList(rankedList);
         const initialIndex = await determineInitialServerIndex();
         if (initialIndex != null) {
           if (initialIndex !== activeServerIndex) {
@@ -1529,7 +1652,8 @@
       }
       try {
         const list = tvServers(tmdb, season, episode, embedOptions);
-        setServerList(list);
+        const rankedList = await runHealthCheckSort(list);
+        setServerList(rankedList);
         const initialIndex = await determineInitialServerIndex();
         if (initialIndex != null) {
           if (initialIndex !== activeServerIndex) {
@@ -1554,6 +1678,7 @@
       if (eventName === "ready") {
         embedReady = true;
         clearPendingLoadTimeout();
+        hideOverlay();
         setLoading(false);
         setStatus(`${serverLabel} ready. Preparing playback…`);
         if (autoPlay) {
@@ -1574,6 +1699,7 @@
         clearAutoResume();
         manualPauseUntil = 0;
         clearPendingLoadTimeout();
+        hideOverlay();
         setLoading(false);
         if (Number.isFinite(currentTime)) {
           persistHistory(currentTime, { immediate: true });
@@ -1588,6 +1714,7 @@
         embedReady = true;
         clearAutoResume();
         clearPendingLoadTimeout();
+        hideOverlay();
         setLoading(false);
         if (Number.isFinite(currentTime)) {
           persistHistory(currentTime);
