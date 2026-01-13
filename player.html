@@ -978,34 +978,20 @@ Not Available
           if (timeoutId != null) {
             window.clearTimeout(timeoutId);
           }
-          if (!response.ok) return false;
+          if (!response.ok) return null;
           const body = await response.text();
-          return parseHealthCheckBody(body);
+          return parseHealthCheckBody(body) ? true : null;
         })
         .catch((error) => {
           if (timeoutId != null) {
             window.clearTimeout(timeoutId);
           }
           console.warn("Health check failed", error);
-          return false;
+          return null;
         })
         .then((isHealthy) => {
           pendingHealthChecks.delete(index);
           if (isHealthy) return;
-          recordServerFailure(index);
-          if (activeServerIndex === index) {
-            const nextIndex = findNextServer(index);
-            if (nextIndex != null) {
-              setStatus(
-                `${describeServer(server)} failed the relay health check. Trying ${describeServer(
-                  servers[nextIndex],
-                )}…`,
-              );
-              activateServer(nextIndex);
-            } else {
-              handleExhaustedServers();
-            }
-          }
         });
       pendingHealthChecks.set(index, probePromise);
     }
