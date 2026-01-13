@@ -339,6 +339,7 @@
     let activeServerIndex = -1;
     let pendingLoadTimeout = null;
     let embedReady = false;
+    let embedValidated = false;
     let manualPauseUntil = 0;
     let userSelectedServer = false;
     let userLocation = null;
@@ -346,6 +347,9 @@
     const LOCATION_ENDPOINT = "https://ipapi.co/json/";
     const LOCATION_REQUEST_TIMEOUT = 3000;
     const LOCATION_WAIT_WINDOW = 900;
+    const EMBED_VALIDATION_TIMEOUT = 3500;
+    const EMBED_VALIDATION_EVENT = "PLAYER_READY";
+    const HEALTH_CHECK_TIMEOUT = 2500;
 
     function normalizeCode(value) {
       return typeof value === "string" && value.trim() ? value.trim().toLowerCase() : "";
@@ -546,6 +550,15 @@
       }
     }
 
+    let pendingValidation = null;
+
+    function clearPendingValidation() {
+      if (pendingValidation && pendingValidation.timeoutId != null) {
+        window.clearTimeout(pendingValidation.timeoutId);
+      }
+      pendingValidation = null;
+    }
+
     function currentServer() {
       if (activeServerIndex < 0) return null;
       return servers[activeServerIndex] || null;
@@ -650,6 +663,8 @@
             label,
             src: candidate.src,
             origin: candidate.origin || null,
+            healthCheckUrl:
+              candidate.healthCheckUrl || candidate.healthCheck || candidate.probeUrl || null,
             policies: clonePolicies(candidate.policies),
             region:
               typeof candidate.region === "string" && candidate.region
@@ -690,6 +705,205 @@
       }
     }
 
+    function normalizeOriginValue(value) {
+      if (typeof value !== "string") return "";
+      try {
+        return new URL(value, window.location.href).origin;
+      } catch (error) {
+        return value.trim();
+      }
+    }
+
+    function isMessageFromActiveServer(event) {
+      if (!event) return false;
+      const server = currentServer();
+      if (!server) return false;
+      if (!server.origin) return true;
+      const expected = normalizeOriginValue(server.origin);
+      const actual = normalizeOriginValue(event.origin);
+      return !expected || expected === actual;
+    }
+
+    function parsePlayerReadyPayload(raw) {
+      if (raw == null) return null;
+      if (typeof raw === "string") {
+        const trimmed = raw.trim();
+        if (trimmed.toUpperCase() === EMBED_VALIDATION_EVENT) {
+          return { type: EMBED_VALIDATION_EVENT };
+        }
+        try {
+          return parsePlayerReadyPayload(JSON.parse(trimmed));
+        } catch (error) {
+          return null;
+        }
+      }
+      if (typeof raw !== "object") return null;
+      const type = typeof raw.type === "string" ? raw.type.toUpperCase() : "";
+      const event = typeof raw.event === "string" ? raw.event.toUpperCase() : "";
+      const status = typeof raw.status === "string" ? raw.status.toUpperCase() : "";
+      if (type === EMBED_VALIDATION_EVENT || event === EMBED_VALIDATION_EVENT || status === EMBED_VALIDATION_EVENT) {
+        return raw;
+      }
+      if (raw.playerReady === true || raw.ready === true) {
+        return raw;
+      }
+      return null;
+    }
+
+    function markEmbedValidated(server) {
+      if (embedValidated) return;
+      embedValidated = true;
+      clearPendingValidation();
+      if (server) {
+        setStatus(`${describeServer(server)} acknowledged the relay. Preparing playback…`);
+      }
+    }
+
+    function handleEmbedValidationMessage(event) {
+      if (!pendingValidation || !event) return false;
+      const server = servers[pendingValidation.index];
+      if (!server) return false;
+      if (server.origin) {
+        const expected = normalizeOriginValue(server.origin);
+        const actual = normalizeOriginValue(event.origin);
+        if (expected && actual && expected !== actual) return false;
+      }
+      const readyPayload = parsePlayerReadyPayload(event.data);
+      if (!readyPayload) return false;
+      if (
+        pendingValidation.requestId &&
+        readyPayload.requestId &&
+        String(readyPayload.requestId) !== String(pendingValidation.requestId)
+      ) {
+        return false;
+      }
+      markEmbedValidated(server);
+      return true;
+    }
+
+    function scheduleEmbedValidation(index, server) {
+      if (!server || !embedFrame) return;
+      clearPendingValidation();
+      const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      pendingValidation = {
+        index,
+        requestId,
+        timeoutId: window.setTimeout(() => {
+          if (!pendingValidation || pendingValidation.index !== index || embedValidated) {
+            return;
+          }
+          recordServerFailure(index);
+          const nextIndex = findNextServer(index);
+          if (nextIndex != null) {
+            setStatus(
+              `${describeServer(server)} did not respond to the relay check. Trying ${describeServer(
+                servers[nextIndex],
+              )}…`,
+            );
+            activateServer(nextIndex);
+          } else {
+            handleExhaustedServers();
+          }
+        }, EMBED_VALIDATION_TIMEOUT),
+      };
+      postEmbedMessages([
+        {
+          type: "PLAYER_PING",
+          event: "PLAYER_READY",
+          requestId,
+          timestamp: Date.now(),
+        },
+      ]);
+    }
+
+    const pendingHealthChecks = new Map();
+
+    function resolveHealthCheckUrl(server) {
+      if (!server || !server.healthCheckUrl) return null;
+      try {
+        return new URL(server.healthCheckUrl, server.origin || window.location.href).toString();
+      } catch (error) {
+        console.warn("Invalid health check URL", error);
+        return null;
+      }
+    }
+
+    function parseHealthCheckBody(body) {
+      if (typeof body !== "string") return false;
+      if (body.includes(EMBED_VALIDATION_EVENT)) return true;
+      const trimmed = body.trim();
+      if (!trimmed) return false;
+      if (trimmed[0] !== "{" && trimmed[0] !== "[") return false;
+      try {
+        const data = JSON.parse(trimmed);
+        const status = data.status || data.state || data.result;
+        if (typeof status === "string") {
+          const normalized = status.toLowerCase();
+          if (["ok", "ready", "player_ready"].includes(normalized)) return true;
+        }
+        if (data.ready === true || data.playerReady === true) return true;
+      } catch (error) {
+        return false;
+      }
+      return false;
+    }
+
+    function startServerHealthCheck(index, server) {
+      if (!server || pendingHealthChecks.has(index)) return;
+      const healthCheckUrl = resolveHealthCheckUrl(server);
+      if (!healthCheckUrl || !window.fetch) return;
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timeoutId = controller
+        ? window.setTimeout(() => {
+            try {
+              controller.abort();
+            } catch (error) {
+              console.warn("Failed to abort health check", error);
+            }
+          }, HEALTH_CHECK_TIMEOUT)
+        : null;
+      const probePromise = fetch(healthCheckUrl, {
+        method: "GET",
+        cache: "no-store",
+        credentials: "omit",
+        signal: controller ? controller.signal : undefined,
+      })
+        .then(async (response) => {
+          if (timeoutId != null) {
+            window.clearTimeout(timeoutId);
+          }
+          if (!response.ok) return false;
+          const body = await response.text();
+          return parseHealthCheckBody(body);
+        })
+        .catch((error) => {
+          if (timeoutId != null) {
+            window.clearTimeout(timeoutId);
+          }
+          console.warn("Health check failed", error);
+          return false;
+        })
+        .then((isHealthy) => {
+          pendingHealthChecks.delete(index);
+          if (isHealthy) return;
+          recordServerFailure(index);
+          if (activeServerIndex === index) {
+            const nextIndex = findNextServer(index);
+            if (nextIndex != null) {
+              setStatus(
+                `${describeServer(server)} failed the relay health check. Trying ${describeServer(
+                  servers[nextIndex],
+                )}…`,
+              );
+              activateServer(nextIndex);
+            } else {
+              handleExhaustedServers();
+            }
+          }
+        });
+      pendingHealthChecks.set(index, probePromise);
+    }
+
     function updateServerSelectValue(index) {
       if (!serverSelect) return;
       const value = index != null && index >= 0 ? String(index) : "";
@@ -701,6 +915,7 @@
     function handleExhaustedServers() {
       setLoading(false);
       updateServerStatus("All servers unavailable");
+      clearPendingValidation();
       if (embedFrame) {
         embedFrame.removeAttribute("src");
         applyEmbedPolicies(null);
@@ -733,7 +948,9 @@
       }
       activeServerIndex = index;
       embedReady = false;
+      embedValidated = false;
       clearPendingLoadTimeout();
+      clearPendingValidation();
       clearAutoResume();
       manualPauseUntil = 0;
       updateServerSelectValue(index);
@@ -743,6 +960,7 @@
       embedWrap.hidden = false;
       embedFrame.removeAttribute("src");
       applyEmbedPolicies(server);
+      startServerHealthCheck(index, server);
       window.requestAnimationFrame(() => {
         embedFrame.src = server.src;
       });
@@ -1237,12 +1455,14 @@
         if (server) {
           setStatus(`${describeServer(server)} loaded. Waiting for playback…`);
           clearServerFailure(activeServerIndex);
+          scheduleEmbedValidation(activeServerIndex, server);
         } else {
           setStatus("Stream relay loaded. Waiting for playback…");
         }
       });
       embedFrame.addEventListener("error", () => {
         clearPendingLoadTimeout();
+        clearPendingValidation();
         const failedIndex = activeServerIndex;
         const server = currentServer();
         if (failedIndex >= 0) {
@@ -1417,6 +1637,7 @@
 
     function handlePlayerMessage(event) {
       if (!event) return;
+      const validationHandled = handleEmbedValidationMessage(event);
       const payload = normalizeEmbedPayload(event.data);
       if (!payload) return;
       if (tmdb && payload.id && String(payload.id) !== String(tmdb)) return;
@@ -1437,6 +1658,9 @@
         ) {
           return;
         }
+      }
+      if (!validationHandled && isMessageFromActiveServer(event)) {
+        markEmbedValidated(currentServer());
       }
       handlePlayerEvent(payload);
     }
