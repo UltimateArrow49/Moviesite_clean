@@ -210,29 +210,41 @@ export function initDockNavigation() {
     nav.addEventListener("scroll", handleResize);
     window.addEventListener("resize", handleResize, { passive: true });
 
-    const handleNavLeave = () => moveIndicator(activeItem);
+    const resetIndicatorToActive = () => {
+      if (activeItem) {
+        moveIndicator(activeItem);
+      } else {
+        moveIndicator(null);
+      }
+    };
+
+    const handleNavMove = (event) => {
+      const target = event.target.closest("a");
+      if (!target || !nav.contains(target)) {
+        resetIndicatorToActive();
+        return;
+      }
+      moveIndicator(target);
+    };
+
+    const handleNavLeave = () => {
+      resetIndicatorToActive();
+    };
 
     if (supportsPointerEvents) {
+      nav.addEventListener("pointermove", handleNavMove);
       nav.addEventListener("pointerleave", handleNavLeave);
     } else {
+      nav.addEventListener("mousemove", handleNavMove);
       nav.addEventListener("mouseleave", handleNavLeave);
     }
 
     items.forEach((item) => {
-      const hoverHandler = () => moveIndicator(item);
-      const leaveHandler = () => moveIndicator(activeItem);
-      if (supportsPointerEvents) {
-        item.addEventListener("pointerenter", hoverHandler);
-        item.addEventListener("pointerleave", leaveHandler);
-      } else {
-        item.addEventListener("mouseenter", hoverHandler);
-        item.addEventListener("mouseleave", leaveHandler);
-      }
       item.addEventListener("focus", () => moveIndicator(item));
       item.addEventListener("blur", () => {
         const nextFocus = document.activeElement;
         if (!nav.contains(nextFocus)) {
-          moveIndicator(activeItem);
+          resetIndicatorToActive();
         }
       });
       item.addEventListener("click", () => {
@@ -334,24 +346,34 @@ export function initMagicBento() {
       syncIndicatorTransform(item);
     };
 
-    items.forEach((item) => {
-      const enter = (event) => {
-        ensureActiveItem(item);
-        moveIndicator(item);
-        handlePointer(event, item);
-      };
-      const leave = () => {
-        resetTileTilt(item);
-      };
-      if (supportsPointerEvents) {
-        item.addEventListener("pointerenter", enter);
-        item.addEventListener("pointermove", (event) => handlePointer(event, item));
-        item.addEventListener("pointerleave", leave);
-      } else {
-        item.addEventListener("mouseenter", enter);
-        item.addEventListener("mousemove", (event) => handlePointer(event, item));
-        item.addEventListener("mouseleave", leave);
+    const clearIndicator = () => {
+      indicator.style.setProperty("--magic-opacity", "0");
+      syncIndicatorTransform(null);
+    };
+
+    const handleGridMove = (event) => {
+      const target = event.target.closest(".landing-tile");
+      if (!target || !grid.contains(target)) {
+        if (activeItem) {
+          resetTileTilt(activeItem);
+        }
+        clearIndicator();
+        return;
       }
+      ensureActiveItem(target);
+      moveIndicator(target);
+      handlePointer(event, target);
+    };
+
+    const handleGridLeave = () => {
+      if (activeItem) {
+        resetTileTilt(activeItem);
+      }
+      activeItem = null;
+      clearIndicator();
+    };
+
+    items.forEach((item) => {
       item.addEventListener("focus", (event) => {
         ensureActiveItem(item);
         moveIndicator(item);
@@ -364,45 +386,18 @@ export function initMagicBento() {
       item.addEventListener("blur", () => {
         requestAnimationFrame(() => {
           if (!grid.contains(document.activeElement)) {
-            indicator.style.setProperty("--magic-opacity", "0");
+            clearIndicator();
           }
         });
       });
     });
 
-    const handleGridReset = () => {
-      if (activeItem) {
-        moveIndicator(activeItem, true);
-      } else {
-        indicator.style.setProperty("--magic-opacity", "0");
-      }
-      syncIndicatorTransform(activeItem);
-    };
-
     if (supportsPointerEvents) {
-      grid.addEventListener("pointerleave", () => {
-        handleGridReset();
-        if (!grid.contains(document.activeElement)) {
-          indicator.style.setProperty("--magic-opacity", "0");
-        }
-      });
-      grid.addEventListener("pointerenter", () => {
-        if (activeItem) {
-          indicator.style.setProperty("--magic-opacity", "1");
-        }
-      });
+      grid.addEventListener("pointermove", handleGridMove);
+      grid.addEventListener("pointerleave", handleGridLeave);
     } else {
-      grid.addEventListener("mouseleave", () => {
-        handleGridReset();
-        if (!grid.contains(document.activeElement)) {
-          indicator.style.setProperty("--magic-opacity", "0");
-        }
-      });
-      grid.addEventListener("mouseenter", () => {
-        if (activeItem) {
-          indicator.style.setProperty("--magic-opacity", "1");
-        }
-      });
+      grid.addEventListener("mousemove", handleGridMove);
+      grid.addEventListener("mouseleave", handleGridLeave);
     }
     window.addEventListener("resize", () => moveIndicator(activeItem, true), {
       passive: true,
