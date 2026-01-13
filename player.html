@@ -352,6 +352,9 @@ Not Available
     const LOCATION_REQUEST_TIMEOUT = 3000;
     const LOCATION_WAIT_WINDOW = 900;
     const HEALTHCHECK_TIMEOUT = 2500;
+    const HEALTH_CHECK_TIMEOUT = HEALTHCHECK_TIMEOUT;
+    const EMBED_VALIDATION_EVENT = "PLAYER_READY";
+    const EMBED_VALIDATION_TIMEOUT = 5000;
 
     function normalizeCode(value) {
       return typeof value === "string" && value.trim() ? value.trim().toLowerCase() : "";
