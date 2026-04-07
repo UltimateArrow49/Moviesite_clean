@@ -128,6 +128,9 @@ function normalizeEntry(entry = {}) {
   if (normalized.runtime && normalized.progress >= normalized.runtime - 15) {
     normalized.progress = 0;
   }
+  if (normalized.progress < 30) {
+    normalized.progress = 0;
+  }
   return normalized;
 }
 
@@ -158,7 +161,7 @@ export function historyId(mode, tmdb, season = null, episode = null) {
 }
 
 export function readHistory() {
-  return sortEntries(loadEntries());
+  return sortEntries(loadEntries()).filter((entry) => Number(entry?.progress) >= 30);
 }
 
 export function getEntriesByMode(mode) {
@@ -236,4 +239,3 @@ export function onHistoryChange(callback) {
 }
 
 export const STORAGE_KEY = STORAGE_ROOT_KEY;
-

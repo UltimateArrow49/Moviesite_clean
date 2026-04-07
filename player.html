@@ -7,13 +7,13 @@
 <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <link href="site.webmanifest" rel="manifest"/>
 <meta content="#14ff9f" name="theme-color"/>
-<link href="style.css?v=5" rel="stylesheet"/>
-<script type="module" src="device.js"></script>
+<link href="style.css?v=16" rel="stylesheet"/>
+<script type="module" src="device.js?v=12"></script>
 <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
         navigator.serviceWorker
-          .register("sw.js")
+          .register("sw.js?v=16")
           .catch(function (error) {
             console.error("Service worker registration failed:", error);
           });
@@ -121,6 +121,9 @@
 <div class="player-frame" hidden="" id="embedWrap">
 <iframe allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen="" id="embedFrame" loading="lazy" referrerpolicy="origin-when-cross-origin" src="" title="Stream relay player"></iframe>
 </div>
+<div class="player-cta-row">
+<button class="btn btn--primary" hidden id="nextEpisodeButton" type="button">Next Episode</button>
+</div>
 <section class="player-details">
 <div class="detail-card">
 <h3>Overview</h3>
@@ -134,10 +137,10 @@
 </main>
 <footer class="site-footer">Independent node · sandboxed embeds · Stream relay keeps playback steady.</footer>
 <script type="module">
-    import detection from "./device.js";
-    import { movieServers, tvServers } from "./providers/vidking.js";
-    import { historyId, removeEntry, upsertEntry } from "./continue_watching.js";
-    import { recordRecentlyWatched } from "./recently_watched.js";
+    import detection from "./device.js?v=12";
+    import { movieServers, tvServers } from "./providers/vidking.js?v=10";
+    import { historyId, removeEntry, upsertEntry } from "./continue_watching.js?v=10";
+    import { recordRecentlyWatched } from "./recently_watched.js?v=10";
     import {
       requestTmdb,
       IMG_BASE as IMG_POSTER_BASE,
@@ -148,6 +151,7 @@
     const overviewEl = document.getElementById("overview");
     const factsEl = document.getElementById("facts");
     const deviceSummaryEl = document.getElementById("deviceSummary");
+    const nextEpisodeButton = document.getElementById("nextEpisodeButton");
     const serverSelect = document.getElementById("serverSelect");
     const serverStatusEl = document.getElementById("serverStatus");
     const DEFAULT_EMBED_POLICIES = Object.freeze({
@@ -292,7 +296,7 @@
     const params = url.searchParams;
     const mode = params.get("mode") || params.get("vk");
     const tmdb = params.get("tmdb");
-    const explicitTitle = params.get("title") || "theblackbox player";
+    let currentTitle = params.get("title") || "theblackbox player";
     const color = (params.get("color") || "14ff9f").replace(/^#/, "");
 
     const autoplayParam = params.has("autoplay") ? params.get("autoplay") : params.get("autoPlay");
@@ -314,26 +318,49 @@
       episodeSelectorParam != null &&
       ["true", "1", "yes"].includes(String(episodeSelectorParam).trim().toLowerCase());
 
-    const seasonNumber = mode === "tv" ? parseInt(params.get("season") || "1", 10) || 1 : null;
-    const episodeNumber = mode === "tv" ? parseInt(params.get("episode") || "1", 10) || 1 : null;
+    const initialSeasonParam = Number(params.get("season"));
+    const initialEpisodeParam = Number(params.get("episode"));
+    let currentSeasonNumber =
+      mode === "tv"
+        ? Number.isFinite(initialSeasonParam) && initialSeasonParam >= 0
+          ? Math.trunc(initialSeasonParam)
+          : 1
+        : null;
+    let currentEpisodeNumber =
+      mode === "tv"
+        ? Number.isFinite(initialEpisodeParam) && initialEpisodeParam >= 0
+          ? Math.trunc(initialEpisodeParam)
+          : 1
+        : null;
     const posterParam = params.get("poster");
     const backdropParam = params.get("backdrop");
     const progressParam = params.get("progress");
     const runtimeParam = params.get("runtime");
     const initialProgress = Number.isFinite(Number(progressParam)) ? Number(progressParam) : 0;
-    const resumeProgress = initialProgress > 0 ? Math.max(0, Math.floor(initialProgress)) : 0;
+    const HISTORY_WRITE_INTERVAL = 4000;
+    const MIN_PROGRESS_TO_STORE = 30;
+    const savedProgress =
+      initialProgress >= MIN_PROGRESS_TO_STORE ? Math.max(0, Math.floor(initialProgress)) : 0;
+    const resumeProgress = 0;
+    const NEXT_EPISODE_WINDOW_SECONDS = 60;
     let posterUrl = posterParam || null;
     let backdropUrl = backdropParam || null;
     let runtimeSeconds = Number.isFinite(Number(runtimeParam))
       ? Math.max(0, Math.floor(Number(runtimeParam)))
       : null;
-    const historyKey = historyId(mode, tmdb, seasonNumber, episodeNumber);
+    let currentHistoryKey = historyId(mode, tmdb, currentSeasonNumber, currentEpisodeNumber);
     let lastProgress = resumeProgress;
+    let pendingResumeProgress = resumeProgress;
     let lastHistoryWrite = 0;
-    const HISTORY_WRITE_INTERVAL = 4000;
-    const MIN_PROGRESS_TO_STORE = 10;
-    document.title = `${explicitTitle} · theblackbox (Stream relay)`;
-    titleEl.textContent = explicitTitle;
+    let allowEpisodeAdvance = false;
+    let showDetails = null;
+    let nextEpisodeInfo = null;
+    let episodeDetailsRequestId = 0;
+    let suppressSeekStatusUntil = savedProgress > 0 ? Date.now() + 12000 : 0;
+    let lastSeekStatusAt = 0;
+    let lastSeekStatusMessage = "";
+    document.title = `${currentTitle} · theblackbox (Stream relay)`;
+    titleEl.textContent = currentTitle;
     const servers = [];
     const failedServers = new Set();
     let activeServerIndex = -1;
@@ -354,6 +381,103 @@
     function parseCoordinate(value) {
       const number = Number(value);
       return Number.isFinite(number) ? number : null;
+    }
+
+    function isValidEpisodeCoordinate(value) {
+      return Number.isFinite(Number(value)) && Number(value) >= 0;
+    }
+
+    function setPlayerTitle(nextTitle) {
+      currentTitle = typeof nextTitle === "string" && nextTitle.trim() ? nextTitle.trim() : currentTitle;
+      document.title = `${currentTitle} · theblackbox (Stream relay)`;
+      titleEl.textContent = currentTitle;
+    }
+
+    function refreshHistoryKey() {
+      currentHistoryKey = historyId(mode, tmdb, currentSeasonNumber, currentEpisodeNumber);
+    }
+
+    function setNextEpisodeButtonVisibility(isVisible, label = "Next Episode") {
+      if (!nextEpisodeButton) return;
+      nextEpisodeButton.hidden = !isVisible;
+      nextEpisodeButton.textContent = label;
+    }
+
+    function consumeResumeProgress(currentTime = 0) {
+      if (!(pendingResumeProgress > 0)) return;
+      const normalized = Number.isFinite(currentTime) ? Math.max(0, Math.floor(currentTime)) : 0;
+      const withinResumeWindow =
+        normalized > 0 &&
+        (Math.abs(normalized - pendingResumeProgress) <= 20 ||
+          normalized >= pendingResumeProgress ||
+          normalized >= 5);
+      if (!withinResumeWindow) return;
+      pendingResumeProgress = 0;
+      suppressSeekStatusUntil = Date.now() + 8000;
+      syncPlayerUrl({ progress: shouldStoreProgress(normalized) ? normalized : 0 });
+    }
+
+    function syncPlayerUrl({ progress = lastProgress } = {}) {
+      const nextUrl = new URL(window.location.href);
+      if (mode === "tv") {
+        nextUrl.searchParams.set("season", String(currentSeasonNumber));
+        nextUrl.searchParams.set("episode", String(currentEpisodeNumber));
+      }
+      nextUrl.searchParams.set("title", currentTitle);
+      if (posterUrl) {
+        nextUrl.searchParams.set("poster", posterUrl);
+      }
+      if (backdropUrl) {
+        nextUrl.searchParams.set("backdrop", backdropUrl);
+      }
+      if (runtimeSeconds) {
+        nextUrl.searchParams.set("runtime", String(runtimeSeconds));
+      }
+      if (Number.isFinite(progress) && progress > 0) {
+        nextUrl.searchParams.set("progress", String(Math.max(0, Math.floor(progress))));
+      } else {
+        nextUrl.searchParams.delete("progress");
+      }
+      window.history.replaceState({}, "", nextUrl);
+    }
+
+    if (savedProgress > 0 && !pendingResumeProgress) {
+      syncPlayerUrl({ progress: 0 });
+    }
+
+    function updateTvEpisodeContext(season, episode, { title = null, progress = 0 } = {}) {
+      if (mode !== "tv") return;
+      if (!isValidEpisodeCoordinate(season) || !isValidEpisodeCoordinate(episode)) return;
+      currentSeasonNumber = Math.trunc(Number(season));
+      currentEpisodeNumber = Math.trunc(Number(episode));
+      if (title) {
+        setPlayerTitle(title);
+      } else {
+        setPlayerTitle(currentTitle);
+      }
+      refreshHistoryKey();
+      lastProgress = Math.max(0, Math.floor(Number(progress) || 0));
+      nextEpisodeInfo = null;
+      setNextEpisodeButtonVisibility(false);
+      syncPlayerUrl({ progress: lastProgress });
+    }
+
+    function resolveShowName() {
+      if (showDetails?.name) return showDetails.name;
+      if (showDetails?.original_name) return showDetails.original_name;
+      const [baseTitle] = String(currentTitle || "").split(" - ");
+      return baseTitle || "Show";
+    }
+
+    function isExpectedNextEpisode(season, episode) {
+      if (mode !== "tv") return false;
+      if (!isValidEpisodeCoordinate(season) || !isValidEpisodeCoordinate(episode)) return false;
+      const normalizedSeason = Math.trunc(Number(season));
+      const normalizedEpisode = Math.trunc(Number(episode));
+      if (normalizedSeason === currentSeasonNumber && normalizedEpisode === currentEpisodeNumber + 1) {
+        return true;
+      }
+      return normalizedSeason === currentSeasonNumber + 1 && normalizedEpisode === 1;
     }
 
     function parseLocationResponse(data) {
@@ -471,24 +595,6 @@
       if (activeServerIndex >= 0 && servers[activeServerIndex]) {
         return activeServerIndex;
       }
-      try {
-        const locationWaiters = [];
-        if (userLocationPromise && typeof userLocationPromise.then === "function") {
-          locationWaiters.push(userLocationPromise.catch(() => null));
-        }
-        locationWaiters.push(
-          new Promise((resolve) => window.setTimeout(resolve, LOCATION_WAIT_WINDOW)),
-        );
-        await Promise.race(locationWaiters);
-      } catch (error) {
-        console.warn("Location wait interrupted", error);
-      }
-      if (userLocation) {
-        const preferred = findBestServerIndexForLocation(userLocation);
-        if (preferred != null) {
-          return preferred;
-        }
-      }
       return findNextServer(-1);
     }
 
@@ -534,7 +640,6 @@
     if (userLocationPromise && typeof userLocationPromise.then === "function") {
       userLocationPromise
         .then(() => {
-          maybeActivatePreferredServer();
         })
         .catch(() => {});
     }
@@ -686,7 +791,6 @@
         updateServerStatus("No stream servers available");
       } else {
         updateServerStatus("");
-        maybeActivatePreferredServer();
       }
     }
 
@@ -778,30 +882,42 @@
       });
     }
 
+    if (nextEpisodeButton) {
+      nextEpisodeButton.addEventListener("click", () => {
+        openNextEpisode().catch((error) => {
+          console.error("Failed to open next episode", error);
+          setStatus("Unable to load the next episode right now.");
+        });
+      });
+    }
+
     function shouldStoreProgress(progress) {
       return Number.isFinite(progress) && progress >= MIN_PROGRESS_TO_STORE;
     }
 
     function persistHistory(progress, { immediate = false, force = false } = {}) {
-      if (!historyKey) return;
+      if (!currentHistoryKey) return;
       const normalized = Number.isFinite(progress) ? Math.max(0, Math.floor(progress)) : 0;
       lastProgress = normalized;
+      consumeResumeProgress(normalized);
       if (!force && !shouldStoreProgress(normalized)) {
+        syncPlayerUrl({ progress: 0 });
         if (normalized === 0) {
           clearHistoryEntry();
         }
         return;
       }
+      syncPlayerUrl({ progress: normalized });
       const now = Date.now();
       if (!immediate && now - lastHistoryWrite < HISTORY_WRITE_INTERVAL) return;
       lastHistoryWrite = now;
       upsertEntry({
-        id: historyKey,
+        id: currentHistoryKey,
         mode,
         tmdb,
-        title: explicitTitle,
-        season: seasonNumber,
-        episode: episodeNumber,
+        title: currentTitle,
+        season: currentSeasonNumber,
+        episode: currentEpisodeNumber,
         poster: posterUrl,
         backdrop: backdropUrl,
         href: window.location.href,
@@ -813,25 +929,28 @@
     }
 
     function clearHistoryEntry() {
-      if (!historyKey) return;
+      if (!currentHistoryKey) return;
       lastProgress = 0;
-      removeEntry(historyKey);
+      syncPlayerUrl({ progress: 0 });
+      removeEntry(currentHistoryKey);
     }
 
     function storeRecently(progress, { completed = false } = {}) {
       if (!tmdb || !mode) return;
-      const normalized = Number.isFinite(progress) ? Math.max(0, Math.floor(progress)) : 0;
+      const rawProgress = Number.isFinite(progress) ? Math.max(0, Math.floor(progress)) : 0;
+      const normalized = completed || !shouldStoreProgress(rawProgress) ? 0 : rawProgress;
       recordRecentlyWatched({
         mode,
         tmdb,
-        title: explicitTitle,
+        title: currentTitle,
         poster: posterUrl,
         backdrop: backdropUrl,
         href: window.location.href,
+        completed,
         progress: completed ? 0 : normalized,
         runtime: runtimeSeconds,
-        season: seasonNumber,
-        episode: episodeNumber,
+        season: currentSeasonNumber,
+        episode: currentEpisodeNumber,
         lastPlayedAt: Date.now(),
       });
     }
@@ -853,12 +972,133 @@
       }
     }
 
+    async function resolveNextEpisodeInfo() {
+      if (mode !== "tv" || !tmdb) return null;
+      const currentSeason = Number(currentSeasonNumber);
+      const currentEpisode = Number(currentEpisodeNumber);
+      if (!Number.isFinite(currentSeason) || !Number.isFinite(currentEpisode)) return null;
+
+      try {
+        const seasonData = await requestTmdb(`tv/${tmdb}/season/${currentSeason}`);
+        const seasonEpisodes = Array.isArray(seasonData?.episodes) ? seasonData.episodes : [];
+        const nextInSeason = seasonEpisodes.find(
+          (episode) => Number(episode?.episode_number) === currentEpisode + 1,
+        );
+        if (nextInSeason) {
+          return {
+            season: currentSeason,
+            episode: Number(nextInSeason.episode_number),
+            name: nextInSeason.name || `Episode ${nextInSeason.episode_number}`,
+            runtimeSeconds: Number.isFinite(Number(nextInSeason.runtime))
+              ? Math.max(0, Math.floor(Number(nextInSeason.runtime)) * 60)
+              : null,
+          };
+        }
+
+        const seasons = Array.isArray(showDetails?.seasons) ? showDetails.seasons : [];
+        const nextSeasonMeta = seasons.find((season) => {
+          const seasonNumber = Number(season?.season_number);
+          const episodeCount = Number(season?.episode_count) || 0;
+          return seasonNumber > currentSeason && episodeCount > 0;
+        });
+        if (!nextSeasonMeta) return null;
+
+        const nextSeasonData = await requestTmdb(`tv/${tmdb}/season/${Number(nextSeasonMeta.season_number)}`);
+        const firstEpisode = Array.isArray(nextSeasonData?.episodes) ? nextSeasonData.episodes[0] : null;
+        if (!firstEpisode || !Number.isFinite(Number(firstEpisode.episode_number))) {
+          return null;
+        }
+        return {
+          season: Number(nextSeasonMeta.season_number),
+          episode: Number(firstEpisode.episode_number),
+          name: firstEpisode.name || `Episode ${firstEpisode.episode_number}`,
+          runtimeSeconds: Number.isFinite(Number(firstEpisode.runtime))
+            ? Math.max(0, Math.floor(Number(firstEpisode.runtime)) * 60)
+            : null,
+        };
+      } catch (error) {
+        console.warn("Unable to resolve next episode info", error);
+        return null;
+      }
+    }
+
+    async function refreshNextEpisodeInfo() {
+      nextEpisodeInfo = await resolveNextEpisodeInfo();
+      setNextEpisodeButtonVisibility(false);
+    }
+
+    async function refreshCurrentEpisodeDetails() {
+      if (mode !== "tv" || !tmdb) return;
+      if (!isValidEpisodeCoordinate(currentSeasonNumber) || !isValidEpisodeCoordinate(currentEpisodeNumber)) return;
+      const requestId = ++episodeDetailsRequestId;
+      try {
+        const data = await requestTmdb(
+          `tv/${tmdb}/season/${currentSeasonNumber}/episode/${currentEpisodeNumber}`,
+        );
+        if (!data || requestId !== episodeDetailsRequestId) return;
+        if (typeof data.name === "string" && data.name.trim()) {
+          setPlayerTitle(`${resolveShowName()} - ${data.name.trim()}`);
+        }
+        if (typeof data.overview === "string" && data.overview.trim()) {
+          overviewEl.textContent = data.overview.trim();
+        }
+        if (Number.isFinite(Number(data.runtime)) && Number(data.runtime) > 0) {
+          runtimeSeconds = Math.max(0, Math.floor(Number(data.runtime))) * 60;
+          syncPlayerUrl({ progress: lastProgress });
+        }
+      } catch (error) {
+        console.warn("Unable to refresh current episode details", error);
+      }
+    }
+
+    async function refreshTvEpisodeMetadata() {
+      if (mode !== "tv") return;
+      await refreshCurrentEpisodeDetails();
+      await refreshNextEpisodeInfo();
+    }
+
+    function updateNextEpisodeCta(currentTime = 0) {
+      if (mode !== "tv" || !nextEpisodeInfo) {
+        setNextEpisodeButtonVisibility(false);
+        return;
+      }
+      const remainingSeconds =
+        Number.isFinite(Number(runtimeSeconds)) && runtimeSeconds > 0
+          ? runtimeSeconds - Number(currentTime || 0)
+          : Number.POSITIVE_INFINITY;
+      const shouldShow =
+        allowEpisodeAdvance ||
+        (Number.isFinite(remainingSeconds) && remainingSeconds <= NEXT_EPISODE_WINDOW_SECONDS);
+      const label = `Next Episode: S${String(nextEpisodeInfo.season).padStart(2, "0")}E${String(
+        nextEpisodeInfo.episode,
+      ).padStart(2, "0")}`;
+      setNextEpisodeButtonVisibility(shouldShow, label);
+    }
+
+    async function openNextEpisode() {
+      if (mode !== "tv" || !nextEpisodeInfo) return;
+      clearHistoryEntry();
+      storeRecently(0, { completed: true });
+      pendingResumeProgress = 0;
+      runtimeSeconds = nextEpisodeInfo.runtimeSeconds || runtimeSeconds;
+      updateTvEpisodeContext(nextEpisodeInfo.season, nextEpisodeInfo.episode, {
+        title: `${showDetails?.name || showDetails?.original_name || "Show"} - ${nextEpisodeInfo.name}`,
+        progress: 0,
+      });
+      allowEpisodeAdvance = false;
+      await refreshTvEpisodeMetadata();
+      openSeries();
+    }
+
     async function populateDetails() {
       if (!tmdb || !mode) return;
       try {
         const endpoint = mode === "tv" ? `tv/${tmdb}` : `movie/${tmdb}`;
         const data = await requestTmdb(endpoint);
         if (!data) return;
+        if (mode === "tv") {
+          showDetails = data;
+        }
         if (!posterUrl && data.poster_path) {
           posterUrl = `${IMG_POSTER_BASE}${data.poster_path}`;
         }
@@ -892,6 +1132,9 @@
         overviewEl.textContent = data.overview || "No synopsis available.";
         persistHistory(lastProgress, { immediate: true, force: resumeProgress > 0 });
         storeRecently(lastProgress, { completed: lastProgress <= 0 });
+        if (mode === "tv") {
+          await refreshTvEpisodeMetadata();
+        }
       } catch (error) {
         overviewEl.textContent = "Unable to load TMDB details right now.";
         buildFacts([]);
@@ -902,7 +1145,15 @@
 
     function setStatus(message) {
       if (!statusEl) return;
-      statusEl.textContent = message;
+      const text = typeof message === "string" ? message : String(message ?? "");
+      if (text.startsWith("Seeking to ")) {
+        const now = Date.now();
+        if (now < suppressSeekStatusUntil) return;
+        if (now - lastSeekStatusAt < 3500 && text === lastSeekStatusMessage) return;
+        lastSeekStatusAt = now;
+        lastSeekStatusMessage = text;
+      }
+      statusEl.textContent = text;
     }
 
     function setLoading(isLoading, label = DEFAULT_LOADING_LABEL) {
@@ -1269,8 +1520,8 @@
         autoplay: autoPlay,
         autoPlay,
       };
-      if (resumeProgress > 0) {
-        embedOptions.progress = resumeProgress;
+      if (pendingResumeProgress > 0) {
+        embedOptions.progress = pendingResumeProgress;
       }
       try {
         const list = movieServers(tmdb, embedOptions);
@@ -1295,17 +1546,15 @@
         setLoading(false);
         return;
       }
-      const season = seasonNumber || 1;
-      const episode = episodeNumber || 1;
+      const season = isValidEpisodeCoordinate(currentSeasonNumber) ? currentSeasonNumber : 1;
+      const episode = isValidEpisodeCoordinate(currentEpisodeNumber) ? currentEpisodeNumber : 1;
       const embedOptions = {
         color,
         autoplay: autoPlay,
         autoPlay,
-        nextEpisode,
-        episodeSelector,
       };
-      if (resumeProgress > 0) {
-        embedOptions.progress = resumeProgress;
+      if (pendingResumeProgress > 0) {
+        embedOptions.progress = pendingResumeProgress;
       }
       try {
         const list = tvServers(tmdb, season, episode, embedOptions);
@@ -1322,6 +1571,39 @@
         console.error("Failed to open series stream list", error);
         handleExhaustedServers();
       }
+    }
+
+    function handleProviderMismatch(message) {
+      const failedIndex = activeServerIndex;
+      recordServerFailure(failedIndex);
+      const nextIndex = findNextServer(failedIndex);
+      if (nextIndex != null) {
+        const nextServer = describeServer(servers[nextIndex]);
+        setStatus(`${message} Switching to ${nextServer}...`);
+        activateServer(nextIndex);
+      } else {
+        setStatus(message);
+        handleExhaustedServers();
+      }
+    }
+
+    function maybeAdoptEpisodeFromPayload(payload) {
+      if (mode !== "tv") return true;
+      if (!isValidEpisodeCoordinate(payload?.season) || !isValidEpisodeCoordinate(payload?.episode)) {
+        return true;
+      }
+      const nextSeason = Math.trunc(Number(payload.season));
+      const nextEpisodeNumber = Math.trunc(Number(payload.episode));
+      if (nextSeason === currentSeasonNumber && nextEpisodeNumber === currentEpisodeNumber) {
+        return true;
+      }
+      if (payload.nextEpisode || allowEpisodeAdvance || isExpectedNextEpisode(nextSeason, nextEpisodeNumber)) {
+        updateTvEpisodeContext(nextSeason, nextEpisodeNumber, { progress: 0 });
+        refreshTvEpisodeMetadata().catch(() => {});
+        allowEpisodeAdvance = false;
+        return true;
+      }
+      return false;
     }
 
     function handlePlayerEvent(data = {}) {
@@ -1351,12 +1633,15 @@
 
       if (eventName === "play") {
         embedReady = true;
+        allowEpisodeAdvance = false;
         clearAutoResume();
         manualPauseUntil = 0;
         clearPendingLoadTimeout();
         setLoading(false);
         if (Number.isFinite(currentTime)) {
+          consumeResumeProgress(currentTime);
           persistHistory(currentTime, { immediate: true });
+          updateNextEpisodeCta(currentTime);
         }
         storeRecently(Number.isFinite(currentTime) ? currentTime : 0, { completed: false });
         if (Number.isFinite(currentTime) && currentTime > 0) {
@@ -1370,12 +1655,16 @@
         clearPendingLoadTimeout();
         setLoading(false);
         if (Number.isFinite(currentTime)) {
+          consumeResumeProgress(currentTime);
           persistHistory(currentTime);
+          updateNextEpisodeCta(currentTime);
         }
       } else if (eventName === "seeked") {
         if (Number.isFinite(currentTime)) {
           setStatus(`Seeking to ${formatTime(currentTime)}…`);
+          consumeResumeProgress(currentTime);
           persistHistory(currentTime, { immediate: true });
+          updateNextEpisodeCta(currentTime);
         }
       } else if (eventName === "pause") {
         const userPaused = isDeliberatePause(data);
@@ -1387,7 +1676,9 @@
         }
         if (Number.isFinite(currentTime) && currentTime > 0) {
           setStatus(`Paused at ${formatTime(currentTime)} on ${serverLabel}.`);
+          consumeResumeProgress(currentTime);
           persistHistory(currentTime, { immediate: true });
+          updateNextEpisodeCta(currentTime);
         }
       } else if (eventName === "ended") {
         clearAutoResume();
@@ -1396,7 +1687,9 @@
         storeRecently(0, { completed: true });
         clearHistoryEntry();
         if (data.nextEpisode) {
-          setStatus("Episode complete. Awaiting the next installment…");
+          allowEpisodeAdvance = true;
+          updateNextEpisodeCta(runtimeSeconds || lastProgress);
+          setStatus("Episode complete. Awaiting the next installment...");
         } else {
           setStatus(`Playback finished on ${serverLabel}. Thanks for watching with theblackbox Stream relay.`);
         }
@@ -1419,22 +1712,28 @@
       if (!event) return;
       const payload = normalizeEmbedPayload(event.data);
       if (!payload) return;
-      if (tmdb && payload.id && String(payload.id) !== String(tmdb)) return;
+      if (
+        tmdb &&
+        payload.id &&
+        /^[0-9]+$/.test(String(payload.id)) &&
+        String(payload.id) !== String(tmdb)
+      ) {
+        handleProviderMismatch("The current provider returned the wrong show.");
+        return;
+      }
       if (mode === "movie" && payload.mediaType && payload.mediaType !== "movie") return;
-      if (mode === "tv" && payload.mediaType && payload.mediaType !== "tv") return;
+      if (mode === "tv" && payload.mediaType && payload.mediaType !== "tv") {
+        handleProviderMismatch("The current provider returned the wrong media type.");
+        return;
+      }
       if (mode === "tv") {
-        if (
-          payload.season != null &&
-          Number.isFinite(Number(payload.season)) &&
-          Number(payload.season) !== seasonNumber
-        ) {
-          return;
-        }
-        if (
-          payload.episode != null &&
-          Number.isFinite(Number(payload.episode)) &&
-          Number(payload.episode) !== episodeNumber
-        ) {
+        if (!maybeAdoptEpisodeFromPayload(payload)) {
+          allowEpisodeAdvance = false;
+          handleProviderMismatch(
+            `The current provider returned S${String(payload.season).padStart(2, "0")}E${String(
+              payload.episode,
+            ).padStart(2, "0")} instead of the requested episode.`,
+          );
           return;
         }
       }
@@ -1471,6 +1770,6 @@
       });
     }
   </script>
-<script defer="" src="install_app.js"></script>
+<script defer="" src="install_app.js?v=12"></script>
 </body>
 </html>

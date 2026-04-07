@@ -226,14 +226,6 @@ function applyVidkingOptions(url, options = {}) {
     params.set("autoplay", value);
     params.set("autoPlay", value);
   }
-  if (coerceBoolean(options.nextEpisode ?? options.nextepisode)) {
-    params.set("nextEpisode", "true");
-    params.set("nextepisode", "true");
-  }
-  if (coerceBoolean(options.episodeSelector ?? options.episodeselector)) {
-    params.set("episodeSelector", "true");
-    params.set("episodeselector", "true");
-  }
   const progress = coercePositiveInteger(options.progress);
   if (progress) {
     params.set("progress", String(progress));

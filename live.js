@@ -1,5 +1,5 @@
 import { createChannelLogoElement } from "./logo-placeholder.js";
-import { setupAnimatedList } from "./ui_effects.js";
+import { setupAnimatedList } from "./ui_effects.js?v=14";
 
 const API_BASE = "https://iptv-org.github.io/api";
 const CHANNELS_URL = `${API_BASE}/channels.json`;

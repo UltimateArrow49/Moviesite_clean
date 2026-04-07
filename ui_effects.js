@@ -3,10 +3,18 @@ const reduceMotionQuery =
   hasWindow && typeof window.matchMedia === "function"
     ? window.matchMedia("(prefers-reduced-motion: reduce)")
     : null;
+const coarsePointerQuery =
+  hasWindow && typeof window.matchMedia === "function"
+    ? window.matchMedia("(pointer: coarse)")
+    : null;
 const supportsPointerEvents = hasWindow && "PointerEvent" in window;
 
 function prefersReducedMotion() {
   return reduceMotionQuery?.matches ?? false;
+}
+
+function hasCoarsePointer() {
+  return coarsePointerQuery?.matches ?? false;
 }
 
 function createIntersectionObserver(callback, options) {
@@ -125,8 +133,11 @@ export function setupAnimatedList(
 function transitionInstantly(element) {
   if (!element) return;
   element.classList.add("is-instant");
+  void element.offsetWidth;
   requestAnimationFrame(() => {
-    element.classList.remove("is-instant");
+    requestAnimationFrame(() => {
+      element.classList.remove("is-instant");
+    });
   });
 }
 
@@ -144,102 +155,7 @@ function resolveActiveItem(items) {
 }
 
 export function initDockNavigation() {
-  const navs = document.querySelectorAll(".topbar nav");
-  navs.forEach((nav) => {
-    if (nav.dataset.dockReady === "true") return;
-    nav.dataset.dockReady = "true";
-    const items = Array.from(nav.querySelectorAll("a"));
-    if (!items.length) return;
-    nav.classList.add("dock-nav");
-    if (prefersReducedMotion()) {
-      nav.style.setProperty("--dock-transition", "0ms");
-    }
-    const indicator = document.createElement("span");
-    indicator.className = "dock-nav__indicator";
-    nav.appendChild(indicator);
-
-    items.forEach((item) => {
-      item.classList.add("dock-nav__item");
-    });
-
-    let activeItem = resolveActiveItem(items);
-
-    const moveIndicator = (item, immediate = false) => {
-      if (!indicator) return;
-      if (!item) {
-        indicator.style.setProperty("--dock-opacity", "0");
-        return;
-      }
-      const navRect = nav.getBoundingClientRect();
-      const itemRect = item.getBoundingClientRect();
-      const x = itemRect.left - navRect.left + nav.scrollLeft;
-      const y = itemRect.top - navRect.top + nav.scrollTop;
-      indicator.style.setProperty("--dock-width", `${itemRect.width}px`);
-      indicator.style.setProperty("--dock-height", `${itemRect.height}px`);
-      indicator.style.setProperty("--dock-x", `${x}px`);
-      indicator.style.setProperty("--dock-y", `${y}px`);
-      indicator.style.setProperty("--dock-opacity", "1");
-      if (immediate) {
-        transitionInstantly(indicator);
-      }
-    };
-
-    const applyActive = (item) => {
-      activeItem = item;
-      items.forEach((entry) => {
-        if (entry === activeItem) {
-          entry.setAttribute("aria-current", "page");
-          entry.classList.add("is-active");
-        } else {
-          entry.removeAttribute("aria-current");
-          entry.classList.remove("is-active");
-        }
-      });
-      moveIndicator(activeItem);
-    };
-
-    applyActive(activeItem);
-    moveIndicator(activeItem, true);
-
-    const handleResize = () => {
-      if (activeItem) {
-        moveIndicator(activeItem, true);
-      }
-    };
-
-    nav.addEventListener("scroll", handleResize);
-    window.addEventListener("resize", handleResize, { passive: true });
-
-    const handleNavLeave = () => moveIndicator(activeItem);
-
-    if (supportsPointerEvents) {
-      nav.addEventListener("pointerleave", handleNavLeave);
-    } else {
-      nav.addEventListener("mouseleave", handleNavLeave);
-    }
-
-    items.forEach((item) => {
-      const hoverHandler = () => moveIndicator(item);
-      const leaveHandler = () => moveIndicator(activeItem);
-      if (supportsPointerEvents) {
-        item.addEventListener("pointerenter", hoverHandler);
-        item.addEventListener("pointerleave", leaveHandler);
-      } else {
-        item.addEventListener("mouseenter", hoverHandler);
-        item.addEventListener("mouseleave", leaveHandler);
-      }
-      item.addEventListener("focus", () => moveIndicator(item));
-      item.addEventListener("blur", () => {
-        const nextFocus = document.activeElement;
-        if (!nav.contains(nextFocus)) {
-          moveIndicator(activeItem);
-        }
-      });
-      item.addEventListener("click", () => {
-        applyActive(item);
-      });
-    });
-  });
+  return;
 }
 
 export function initMagicBento() {
@@ -268,29 +184,16 @@ export function initMagicBento() {
 
     const syncIndicatorTransform = (item) => {
       if (!indicator) return;
-      if (!item) {
-        indicator.style.setProperty("--magic-tilt-x", "0deg");
-        indicator.style.setProperty("--magic-tilt-y", "0deg");
-        indicator.style.setProperty("--magic-raise", "0px");
-        indicator.style.setProperty("--magic-scale", "1");
-        return;
-      }
-      const styles = window.getComputedStyle(item);
-      indicator.style.setProperty(
-        "--magic-tilt-x",
-        styles.getPropertyValue("--tile-tilt-x") || "0deg",
-      );
-      indicator.style.setProperty(
-        "--magic-tilt-y",
-        styles.getPropertyValue("--tile-tilt-y") || "0deg",
-      );
+      const styles = item ? window.getComputedStyle(item) : null;
+      indicator.style.setProperty("--magic-tilt-x", "0deg");
+      indicator.style.setProperty("--magic-tilt-y", "0deg");
       indicator.style.setProperty(
         "--magic-raise",
-        styles.getPropertyValue("--tile-raise") || "0px",
+        styles?.getPropertyValue("--tile-raise") || "0px",
       );
       indicator.style.setProperty(
         "--magic-scale",
-        styles.getPropertyValue("--tile-scale") || "1",
+        styles?.getPropertyValue("--tile-scale") || "1",
       );
     };
 
@@ -318,15 +221,6 @@ export function initMagicBento() {
 
     indicator.style.setProperty("--magic-opacity", "0");
 
-    const handlePointer = (event, item) => {
-      const rect = item.getBoundingClientRect();
-      const offsetX = ((event.clientX - rect.left) / rect.width - 0.5) * 12;
-      const offsetY = ((event.clientY - rect.top) / rect.height - 0.5) * 12;
-      item.style.setProperty("--tile-tilt-x", `${offsetX}deg`);
-      item.style.setProperty("--tile-tilt-y", `${-offsetY}deg`);
-      syncIndicatorTransform(item);
-    };
-
     const resetTileTilt = (item) => {
       if (!item) return;
       item.style.setProperty("--tile-tilt-x", "0deg");
@@ -337,29 +231,23 @@ export function initMagicBento() {
     items.forEach((item) => {
       const enter = (event) => {
         ensureActiveItem(item);
-        moveIndicator(item);
-        handlePointer(event, item);
+        moveIndicator(item, true);
+        resetTileTilt(item);
       };
       const leave = () => {
         resetTileTilt(item);
       };
       if (supportsPointerEvents) {
         item.addEventListener("pointerenter", enter);
-        item.addEventListener("pointermove", (event) => handlePointer(event, item));
         item.addEventListener("pointerleave", leave);
       } else {
         item.addEventListener("mouseenter", enter);
-        item.addEventListener("mousemove", (event) => handlePointer(event, item));
         item.addEventListener("mouseleave", leave);
       }
       item.addEventListener("focus", (event) => {
         ensureActiveItem(item);
-        moveIndicator(item);
-        if (supportsPointerEvents && event instanceof PointerEvent) {
-          handlePointer(event, item);
-        } else {
-          resetTileTilt(item);
-        }
+        moveIndicator(item, true);
+        resetTileTilt(item);
       });
       item.addEventListener("blur", () => {
         requestAnimationFrame(() => {
@@ -426,6 +314,27 @@ export function initClickSpark() {
     spark.className = "click-spark";
     spark.style.left = `${event.clientX}px`;
     spark.style.top = `${event.clientY}px`;
+
+    const width = Math.max(window.innerWidth || 1, 1);
+    const height = Math.max(window.innerHeight || 1, 1);
+    const xRatio = Math.min(Math.max(event.clientX / width, 0), 1);
+    const yRatio = Math.min(Math.max(event.clientY / height, 0), 1);
+    const xNorm = Math.min(Math.max((xRatio - 0.5) * 2, -1), 1);
+    const yNorm = Math.min(Math.max((yRatio - 0.5) * 2, -1), 1);
+
+    window.dispatchEvent(
+      new CustomEvent("blackbox:click-spark", {
+        detail: {
+          x: event.clientX,
+          y: event.clientY,
+          xRatio,
+          yRatio,
+          xNorm,
+          yNorm,
+          intensity: 0.9,
+        },
+      }),
+    );
 
     for (let index = 0; index < particleCount; index += 1) {
       const particle = document.createElement("span");
