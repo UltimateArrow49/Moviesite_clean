@@ -1,6 +1,6 @@
-import { getEntriesByMode, onHistoryChange } from "./continue_watching.js";
+import { getEntriesByMode, onHistoryChange } from "./continue_watching.js?v=9";
 import { setupPreviewForGrid } from "./preview_manager.js";
-import { setupAnimatedList } from "./ui_effects.js";
+import { setupAnimatedList } from "./ui_effects.js?v=14";
 import { BACKDROP_BASE, IMG_BASE, requestTmdb } from "./tmdb_client.js";
 const continueSection = document.getElementById("continueMovies");
 const continueList = document.getElementById("continueMoviesList");
@@ -579,7 +579,7 @@ function initSearchRedirect() {
     }
     event.preventDefault();
     const query = encodeURIComponent(value);
-    window.location.href = `/search.html?q=${query}`;
+    window.location.href = `/search.html?q=${query}&scope=movie`;
   });
 }
 

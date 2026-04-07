@@ -7,13 +7,13 @@
 <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <link href="site.webmanifest" rel="manifest"/>
 <meta content="#14ff9f" name="theme-color"/>
-<link href="style.css?v=5" rel="stylesheet"/>
-<script type="module" src="device.js"></script>
+<link href="style.css?v=16" rel="stylesheet"/>
+<script type="module" src="device.js?v=12"></script>
 <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
         navigator.serviceWorker
-          .register("sw.js")
+          .register("sw.js?v=16")
           .catch(function (error) {
             console.error("Service worker registration failed:", error);
           });
@@ -92,8 +92,8 @@
 <section aria-label="Browse movies" class="carousel-collection" id="carouselList"></section>
 </main>
 <footer class="site-footer">Results powered by TMDB · Streams delivered through the Info relay.</footer>
-<script defer="" src="install_app.js"></script>
-<script src="background_motion.js" type="module"></script>
-<script src="movies.js?v=5" type="module"></script>
+<script defer="" src="install_app.js?v=12"></script>
+<script src="background_motion.js?v=16" type="module"></script>
+<script src="movies.js?v=11" type="module"></script>
 </body>
 </html>

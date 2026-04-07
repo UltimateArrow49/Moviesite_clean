@@ -1,16 +1,23 @@
 import { setupPreviewForGrid } from "./preview_manager.js";
-import { setupAnimatedList } from "./ui_effects.js";
+import { setupAnimatedList } from "./ui_effects.js?v=14";
 import { BACKDROP_BASE, IMG_BASE, requestTmdb } from "./tmdb_client.js";
 
 const searchForm = document.getElementById("searchForm");
 const searchInput = document.getElementById("search");
 const statusLine = document.getElementById("searchStatus");
+const movieGroup = document.getElementById("movieGroup");
+const showGroup = document.getElementById("showGroup");
 const movieList = document.getElementById("movieResults");
 const showList = document.getElementById("showResults");
 const movieCount = document.getElementById("movieCount");
 const showCount = document.getElementById("showCount");
 const movieEmpty = document.getElementById("movieEmpty");
 const showEmpty = document.getElementById("showEmpty");
+const scopeButtons = Array.from(document.querySelectorAll("[data-search-scope]"));
+
+const state = {
+  scope: "movie",
+};
 
 if (movieList) {
   setupPreviewForGrid(movieList, { mode: "movie" });
@@ -25,6 +32,10 @@ let activeController = null;
 
 function sanitizeQuery(value) {
   return (value || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeScope(value) {
+  return value === "tv" ? "tv" : "movie";
 }
 
 function setStatus(message) {
@@ -88,7 +99,7 @@ function createMovieCard(movie) {
   const facts = [];
   const year = (movie.release_date || "").slice(0, 4);
   if (year) facts.push(year);
-  if (rating > 0 && movie.vote_count > 0) facts.push(`⭐ ${rating.toFixed(1)}`);
+  if (rating > 0 && movie.vote_count > 0) facts.push(`Rating ${rating.toFixed(1)}`);
   if (facts.length) {
     const sub = document.createElement("p");
     sub.className = "sub";
@@ -150,7 +161,7 @@ function createShowCard(show) {
   const facts = [];
   const year = (show.first_air_date || "").slice(0, 4);
   if (year) facts.push(year);
-  if (rating > 0 && show.vote_count > 0) facts.push(`⭐ ${rating.toFixed(1)}`);
+  if (rating > 0 && show.vote_count > 0) facts.push(`Rating ${rating.toFixed(1)}`);
   if (Array.isArray(show.origin_country) && show.origin_country.length) {
     facts.push(show.origin_country[0]);
   }
@@ -191,7 +202,7 @@ function updateGroup(listEl, emptyEl, countEl, items, createCardFn) {
 
 function updateDocumentMeta(query) {
   if (query) {
-    document.title = `Search “${query}” · theblackbox`;
+    document.title = `Search "${query}" · theblackbox`;
   } else {
     document.title = "Search · theblackbox";
   }
@@ -204,7 +215,32 @@ function syncUrl(query) {
   } else {
     url.searchParams.delete("q");
   }
+  url.searchParams.set("scope", state.scope);
   history.replaceState({}, "", url);
+}
+
+function syncScopeButtons() {
+  scopeButtons.forEach((button) => {
+    const isActive = button.dataset.searchScope === state.scope;
+    button.classList.toggle("btn--primary", isActive);
+    button.classList.toggle("btn--ghost", !isActive);
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+    button.tabIndex = isActive ? 0 : -1;
+  });
+}
+
+function applyScopeLayout() {
+  if (!movieGroup || !showGroup || !movieGroup.parentElement) return;
+  const parent = movieGroup.parentElement;
+  if (state.scope === "tv") {
+    parent.appendChild(showGroup);
+    parent.appendChild(movieGroup);
+  } else {
+    parent.appendChild(movieGroup);
+    parent.appendChild(showGroup);
+  }
+  syncScopeButtons();
 }
 
 async function performSearch(rawQuery) {
@@ -227,7 +263,7 @@ async function performSearch(rawQuery) {
   activeController = new AbortController();
   const { signal } = activeController;
 
-  setStatus(`Searching for “${query}”…`);
+  setStatus(`Searching for "${query}"...`);
   document.body.classList.add("is-searching");
 
   try {
@@ -255,10 +291,13 @@ async function performSearch(rawQuery) {
     updateGroup(showList, showEmpty, showCount, showResults, createShowCard);
 
     if (!movieResults.length && !showResults.length) {
-      setStatus(`No results found for “${query}”. Try a different keyword.`);
+      setStatus(`No results found for "${query}". Try a different keyword.`);
     } else {
       const total = movieResults.length + showResults.length;
-      setStatus(`Showing ${total} match${total === 1 ? "" : "es"} for “${query}”.`);
+      const primaryLabel = state.scope === "tv" ? "shows" : "movies";
+      setStatus(
+        `Showing ${total} match${total === 1 ? "" : "es"} for "${query}" with ${primaryLabel} first.`,
+      );
     }
   } catch (error) {
     if (error.name === "AbortError") return;
@@ -270,6 +309,12 @@ async function performSearch(rawQuery) {
       activeController = null;
     }
   }
+}
+
+function updateScope(scope) {
+  state.scope = normalizeScope(scope);
+  applyScopeLayout();
+  syncUrl(searchInput?.value || "");
 }
 
 function handleSubmit(event) {
@@ -287,6 +332,8 @@ function handleSubmit(event) {
 function applyInitialQuery() {
   if (!searchInput) return;
   const url = new URL(window.location.href);
+  state.scope = normalizeScope(url.searchParams.get("scope"));
+  applyScopeLayout();
   const initial = sanitizeQuery(url.searchParams.get("q"));
   if (initial) {
     searchInput.value = initial;
@@ -297,6 +344,15 @@ function applyInitialQuery() {
 }
 
 function init() {
+  scopeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      updateScope(button.dataset.searchScope);
+      if (searchInput?.value) {
+        performSearch(searchInput.value);
+      }
+    });
+  });
+
   if (searchForm) {
     searchForm.addEventListener("submit", handleSubmit);
   }

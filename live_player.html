@@ -6,30 +6,53 @@
   <title>Live Player · theblackbox</title>
   <link rel="manifest" href="site.webmanifest">
   <meta name="theme-color" content="#14ff9f">
-  <link rel="stylesheet" href="style.css?v=5">
-  <script type="module" src="device.js"></script>
+  <link rel="stylesheet" href="style.css?v=16">
+  <script type="module" src="device.js?v=12"></script>
 </head>
   <body class="app-shell">
 
     <header class="topbar">
-    <a class="brand" href="index.html" aria-label="theblackbox home">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 88" role="img" aria-labelledby="logoTitle logoDesc">
-        <title id="logoTitle">theblackbox logotype</title>
-        <desc id="logoDesc">A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
-        <defs>
-          <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#12ffb0" stop-opacity="0.8" />
-            <stop offset="100%" stop-color="#0b6751" stop-opacity="0.95" />
-          </linearGradient>
-          <linearGradient id="wordmark" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#f8faff" stop-opacity="0.98" />
-            <stop offset="100%" stop-color="#80ffe6" stop-opacity="0.92" />
-          </linearGradient>
-        </defs>
-        <path fill="url(#panel)" d="M16 8h96v72H16z" />
-        <path fill="url(#wordmark)" d="M140 24h12v40h-12zm32 0h12v40h-12zm34 0c8 0 14 5.5 14 14v26h-12V39c0-3.5-1.5-6-5-6-3.6 0-5 2.5-5 6v25h-12V24h12v3.6c2.6-2.5 5.8-3.6 10-3.6zm72 0c11.9 0 20 8.3 20 20s-8.1 20-20 20-20-8.3-20-20 8.1-20 20-20zm0 12c-5.3 0-8 3.5-8 8s2.7 8 8 8 8-3.5 8-8-2.7-8-8-8zm-152 0c11.9 0 20 8.3 20 20s-8.1 20-20 20-20-8.3-20-20 8.1-20 20-20zm0 12c-5.3 0-8 3.5-8 8s2.7 8 8 8 8-3.5 8-8-2.7-8-8-8zm60-12h12l14 40h-12l-2-8h-12l-2 8h-12zm6 12-3 12h6zm122-12c8 0 13 4.3 13 11 0 6-3.6 8.8-9.2 10.2l-4.8 1.2c-2.8 0.7-4 1.5-4 3 0 1.9 1.7 3 4.6 3 3 0 5.4-1 7.4-3l6 7.2c-3.9 4-9.1 6.6-14.9 6.6-8 0-14-4.5-14-11 0-6 3.4-8.7 9.1-10.1l4.9-1.2c2.7-.6 4-1.4 4-3.1 0-2-1.8-3-4.7-3-2.6 0-5.5.9-7.5 3l-6.4-7c3.9-4.3 9.2-7 15.5-7z" />
-      </svg>
-    </a>
+    <a aria-label="theblackbox home" class="brand" href="index.html">
+<svg aria-labelledby="logoTitle logoDesc" role="img" viewbox="0 0 320 88" xmlns="http://www.w3.org/2000/svg">
+<title id="logoTitle">theblackbox logotype</title>
+<desc id="logoDesc">A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
+<defs>
+<lineargradient id="panel" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#12ffb0" stop-opacity="0.8"></stop>
+<stop offset="100%" stop-color="#0b6751" stop-opacity="0.95"></stop>
+</lineargradient>
+<lineargradient id="word" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#f7fff9"></stop>
+<stop offset="55%" stop-color="#8efed9"></stop>
+<stop offset="100%" stop-color="#12ffb0"></stop>
+</lineargradient>
+<radialgradient cx="50%" cy="50%" id="pulse" r="65%">
+<stop offset="0%" stop-color="#14ff9f" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#14ff9f" stop-opacity="0"></stop>
+</radialgradient>
+<filter height="180%" id="glow" width="180%" x="-40%" y="-40%">
+<fegaussianblur result="blur" stddeviation="6"></fegaussianblur>
+<femerge>
+<femergenode in="blur"></femergenode>
+<femergenode in="SourceGraphic"></femergenode>
+</femerge>
+</filter>
+</defs>
+<g filter="url(#glow)">
+<rect fill="#050a08" height="60" rx="18" stroke="#14ff9f" stroke-opacity="0.45" stroke-width="2.5" width="64" x="12" y="14"></rect>
+<rect fill="url(#panel)" height="40" rx="12" width="44" x="22" y="24"></rect>
+<path d="M33 52h6v-20h-6zm11 12h6V32h-6zm11-20h6v20h-6z" fill="#0f362c" opacity="0.6"></path>
+<path d="M33 48h6V32h-6zm11 12h6V28h-6zm11-16h6v16h-6z" fill="#12ffb0"></path>
+<circle cx="54" cy="44" fill="url(#pulse)" r="22"></circle>
+</g>
+<text fill="url(#word)" font-family="'Inter','Segoe UI',sans-serif" font-size="32" font-weight="700" letter-spacing="0.08em" x="96" y="48">
+          theblackbox
+        </text>
+<text fill="rgba(220,247,236,0.7)" font-family="'Inter','Segoe UI',sans-serif" font-size="12" letter-spacing="0.36em" x="96" y="68">
+          SHADOW SIGNAL
+        </text>
+</svg>
+</a>
     <nav>
       <a href="movies.html" class="btn">Movies</a>
       <a href="series.html" class="btn">Shows</a>
@@ -80,8 +103,8 @@
   </main>
   <footer class="site-footer">Live streams sourced from IPTV-Org · Playback powered by hls.js when available.</footer>
 
-  <script src="install_app.js" defer></script>
-  <script src="background_motion.js" type="module"></script>
+  <script src="install_app.js?v=12" defer></script>
+  <script src="background_motion.js?v=16" type="module"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js" crossorigin="anonymous"></script>
   <script src="live_player.js" type="module"></script>
 </body>

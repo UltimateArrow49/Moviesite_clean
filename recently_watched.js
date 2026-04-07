@@ -78,6 +78,7 @@ function normalizeEntry(raw = {}) {
     backdrop: typeof raw.backdrop === "string" && raw.backdrop ? raw.backdrop : null,
     href: typeof raw.href === "string" && raw.href ? raw.href : null,
     progress: Number.isFinite(Number(raw.progress)) ? Math.max(0, Math.floor(Number(raw.progress))) : 0,
+    completed: Boolean(raw.completed),
     runtime: Number.isFinite(Number(raw.runtime)) ? Math.max(0, Math.floor(Number(raw.runtime))) : null,
     lastPlayedAt: Number.isFinite(Number(raw.lastPlayedAt)) ? Number(raw.lastPlayedAt) : Date.now(),
   };

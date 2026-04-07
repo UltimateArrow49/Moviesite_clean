@@ -1,6 +1,6 @@
-import { getEntriesByMode, onHistoryChange } from "./continue_watching.js";
+import { getEntriesByMode, onHistoryChange } from "./continue_watching.js?v=9";
 import { setupPreviewForGrid } from "./preview_manager.js";
-import { setupAnimatedList } from "./ui_effects.js";
+import { setupAnimatedList } from "./ui_effects.js?v=14";
 import { IMG_BASE, requestTmdb } from "./tmdb_client.js";
 const continueSection = document.getElementById("continueShows");
 const continueList = document.getElementById("continueShowsList");
@@ -148,20 +148,13 @@ function formatEpisodeLabel(entry) {
 }
 
 function buildResumeUrl(entry) {
-  if (entry.href) return entry.href;
   const params = new URLSearchParams({
-    mode: entry.mode,
-    tmdb: entry.tmdb,
-    title: entry.title || "theblackbox",
-    autoplay: "true",
-    color: "14ff9f",
+    id: String(entry.tmdb || ""),
   });
-  if (entry.poster) params.set("poster", entry.poster);
-  if (entry.backdrop) params.set("backdrop", entry.backdrop);
-  if (entry.progress) params.set("progress", String(entry.progress));
-  if (entry.season) params.set("season", String(entry.season));
-  if (entry.episode) params.set("episode", String(entry.episode));
-  return `/player.html?${params.toString()}`;
+  if (Number(entry.progress) >= 30) params.set("progress", String(entry.progress));
+  if (Number.isFinite(Number(entry.season))) params.set("season", String(entry.season));
+  if (Number.isFinite(Number(entry.episode))) params.set("episode", String(entry.episode));
+  return `/series_detail.html?${params.toString()}`;
 }
 
 function createContinueCard(entry) {
@@ -175,8 +168,8 @@ function createContinueCard(entry) {
   card.setAttribute(
     "aria-label",
     entry.progress
-      ? `Resume ${entry.title || "show"} at ${formatTime(entry.progress)}`
-      : `Start ${entry.title || "show"}`,
+      ? `Open ${entry.title || "show"} details and resume at ${formatTime(entry.progress)}`
+      : `Open ${entry.title || "show"} details`,
   );
 
   const thumb = document.createElement("div");
@@ -575,7 +568,7 @@ function initSearchRedirect() {
     }
     event.preventDefault();
     const query = encodeURIComponent(value);
-    window.location.href = `/search.html?q=${query}`;
+    window.location.href = `/search.html?q=${query}&scope=tv`;
   });
 }
 
