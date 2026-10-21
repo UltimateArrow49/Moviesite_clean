@@ -2,7 +2,7 @@
 
 A cinema-inspired web interface for discovering films and series, tracking viewing progress, and sharing watch-together rooms. Includes a book discovery interface and an installable web app shell.
 
-[Open the live site](https://movies.example.com/)
+[How to set up the complete app](SETUP.md)
 
 ## Features
 
@@ -38,10 +38,11 @@ Serve the repository through Nginx for the complete application. Flask alone ser
 | `TMDB_API_KEY` | Alternative TMDB API key |
 | `MOVIESITE_SYNC_DB` | SQLite path; defaults to the application directory |
 | `GOOGLE_BOOKS_API_KEY` | Optional Google Books API credential |
+| `MOVIESITE_ADMIN_SYNC_KEY` | Optional SHA-256 sync key for watch-together access; access is disabled when unset |
 
 ## Deployment status
 
-The free hostname was configured on 21 October 2026 with HTTPS and scheduled certificate renewal. It depends on the current server IP and a third-party DNS service. Existing browser history and saved progress are scoped to the previous origin and will not automatically transfer.
+The setup guide covers a separate public frontend folder, a private backend and database, Nginx, HTTPS, and automatic certificate renewal. Browser history and saved progress are scoped to the site's origin and do not automatically transfer to a new domain.
 
 The player uses one shared source catalogue (`source-catalog.js`) for movie details and playback. CineSrc is the default, with VidCore, VidNest, and Videasy available through the source selector. CineSrc, VidCore, and VidNest embed routes were observed in Cineby's public browser interface on 21 October 2026. This integrates provider embeds, not Cineby's private APIs or media files.
 

@@ -5,6 +5,7 @@ import ipaddress
 import logging
 import os
 import re
+import secrets
 import sqlite3
 import threading
 import time
@@ -76,7 +77,7 @@ SYNC_DB_PATH = os.environ.get("MOVIESITE_SYNC_DB") or os.path.join(
     "moviesite_sync.sqlite3",
 )
 SYNC_KEY_PATTERN = re.compile(r"^[0-9a-f]{64}$")
-ADMIN_SYNC_KEY = "REDACTED"
+ADMIN_SYNC_KEY = os.environ.get("MOVIESITE_ADMIN_SYNC_KEY", "").strip()
 HISTORY_LIMIT = 25
 RECENT_LIMIT = 60
 GOOGLE_BOOKS_API_KEY = os.environ.get("GOOGLE_BOOKS_API_KEY")
@@ -557,7 +558,7 @@ def _require_admin_sync(payload: Dict[str, Any]) -> str:
     sync_key = str(payload.get("syncKey", "")).strip()
     if not _valid_sync_key(sync_key):
         raise TheaterError("invalid_sync_key", 400, "A valid sync key is required.")
-    if sync_key != ADMIN_SYNC_KEY:
+    if not ADMIN_SYNC_KEY or not secrets.compare_digest(sync_key, ADMIN_SYNC_KEY):
         raise TheaterError(
             "forbidden",
             403,

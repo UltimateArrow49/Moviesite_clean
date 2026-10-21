@@ -16,5 +16,6 @@ Keep changes focused and describe the user-visible problem they solve. Include v
 3. Verify affected pages at desktop and mobile widths.
 4. For playback changes, verify both a movie and a TV episode, switching sources, next-episode navigation, and existing progress handling.
 5. Bump script cache versions when changing deployed browser files.
+6. Run `python3 scripts/check_privacy.py` before pushing. It checks tracked files without printing matching secret values.
 
 Explain any untested third-party behavior rather than describing an iframe load as successful playback.

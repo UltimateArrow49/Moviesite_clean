@@ -14,3 +14,13 @@ __pycache__/
 *.bak*
 .bak*/
 MAINTENANCE.md
+*.bundle
+*.dump
+*.sql
+*.zip
+*.tar
+*.tar.gz
+data/
+public/
+*.local
+privacy-recovery/

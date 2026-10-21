@@ -18,3 +18,5 @@ jobs:
           node --check player-fullscreen.js
       - name: Test source selection and routes
         run: node --test tests/source-catalog.test.cjs
+      - name: Check for secrets and private runtime files
+        run: python3 scripts/check_privacy.py
