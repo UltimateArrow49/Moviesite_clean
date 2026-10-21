@@ -1,5 +1,5 @@
-import { createChannelLogoElement } from "./logo-placeholder.js";
-import { setupAnimatedList } from "./ui_effects.js?v=14";
+﻿import { createChannelLogoElement } from "./logo-placeholder.js?v=2";
+import { setupAnimatedList } from "./ui_effects.js?v=16";
 
 const API_BASE = "https://iptv-org.github.io/api";
 const CHANNELS_URL = `${API_BASE}/channels.json`;
@@ -18,17 +18,14 @@ const REGION_OPTIONS = [
 ];
 const REGION_OPTION_MAP = new Map(REGION_OPTIONS.map((option) => [option.id, option]));
 const PAGE_SIZE = 40;
+const SEARCH_DEBOUNCE_MS = 180;
 const STORAGE_PREFIX = "live:channel:";
-const STREAM_STATUS_TIMEOUT_MS = 7000;
-const STREAM_STATUS_MAX_CONCURRENT = 4;
-const STREAM_STATUS_CACHE_TTL = 60 * 1000;
-
 const grid = document.getElementById("grid");
 if (grid) {
   setupAnimatedList(grid, { axis: "y" });
 }
 const filtersEl = document.getElementById("filters");
-const searchInput = document.getElementById("search");
+const searchInput = document.getElementById("liveSearch");
 const statusLine = document.getElementById("statusLine");
 const viewTitle = document.getElementById("viewTitle");
 const countryListEl = document.getElementById("countryList");
@@ -51,10 +48,7 @@ const state = {
   selectedRegion: "all",
   page: 1,
 };
-
-const streamStatusQueue = [];
-let streamStatusActive = 0;
-const streamStatusCache = new Map();
+let searchDebounceId = 0;
 
 function setBusy(isBusy) {
   if (grid) {
@@ -347,7 +341,7 @@ function applyStreamStatus(card, statusIndicator, thumbBadge, state) {
     statusIndicator.textContent = "Down";
   } else {
     statusIndicator.classList.add("stream-status--pending");
-    statusIndicator.textContent = "Checking…";
+    statusIndicator.textContent = "Checking...";
   }
 
   if (thumbBadge) {
@@ -370,94 +364,9 @@ function applyStreamStatus(card, statusIndicator, thumbBadge, state) {
   }
 }
 
-function queueStreamStatusCheck(channel, onUpdate) {
-  if (!channel) return;
-  const cacheKey = channel.stream?.url || channel.id;
-  const now = Date.now();
-  if (cacheKey && streamStatusCache.has(cacheKey)) {
-    const cached = streamStatusCache.get(cacheKey);
-    if (now - cached.timestamp < STREAM_STATUS_CACHE_TTL) {
-      onUpdate(cached.status);
-      return;
-    }
-  }
-
-  const stored = readChannelStatus(channel.id);
-  if (stored === "up" || stored === "down") {
-    onUpdate(stored);
-  }
-
-  streamStatusQueue.push({ channel, onUpdate, cacheKey });
-  processStreamStatusQueue();
-}
-
-function processStreamStatusQueue() {
-  if (streamStatusActive >= STREAM_STATUS_MAX_CONCURRENT) return;
-  const next = streamStatusQueue.shift();
-  if (!next) return;
-  streamStatusActive += 1;
-  performStreamStatusCheck(next.channel)
-    .then((result) => {
-      const status = result === "up" ? "up" : "down";
-      if (next.cacheKey) {
-        streamStatusCache.set(next.cacheKey, { status, timestamp: Date.now() });
-      }
-      writeChannelStatus(next.channel.id, status);
-      next.onUpdate(status);
-    })
-    .catch(() => {
-      if (next.cacheKey) {
-        streamStatusCache.set(next.cacheKey, { status: "down", timestamp: Date.now() });
-      }
-      writeChannelStatus(next.channel.id, "down");
-      next.onUpdate("down");
-    })
-    .finally(() => {
-      streamStatusActive -= 1;
-      processStreamStatusQueue();
-    });
-}
-
-async function performStreamStatusCheck(channel) {
-  if (!channel?.stream?.url) return "down";
-  try {
-    return await pingStream(channel.stream.url);
-  } catch (error) {
-    return "down";
-  }
-}
-
-async function pingStream(url) {
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), STREAM_STATUS_TIMEOUT_MS);
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      mode: "cors",
-      signal: controller.signal,
-      cache: "no-store",
-      credentials: "omit",
-      redirect: "follow",
-      headers: {
-        Accept: "application/vnd.apple.mpegurl,text/plain;q=0.9,*/*;q=0.1",
-      },
-    });
-    if (response && (response.ok || response.status === 416)) {
-      if (response.body && typeof response.body.cancel === "function") {
-        try {
-          response.body.cancel();
-        } catch (error) {
-          /* ignore cancellation errors */
-        }
-      }
-      return "up";
-    }
-    return "down";
-  } catch (error) {
-    return "down";
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
+function getStoredStreamStatus(channelId) {
+  const stored = readChannelStatus(channelId);
+  return stored === "up" || stored === "down" ? stored : null;
 }
 
 function createChannelCard(channel) {
@@ -465,12 +374,9 @@ function createChannelCard(channel) {
   card.className = "card card--channel";
   card.dataset.channelId = channel.id;
   card.dataset.mode = channel.inlinePlayable ? "inline" : "external";
-  const shouldMonitorStream = Boolean(
-    channel.inlinePlayable &&
-      channel.playbackKind === "hls" &&
-      channel.stream?.url
-  );
-  card.href = channel.inlinePlayable && channel.stream?.url ? buildPlayerUrl(channel) : channel.stream?.url || "#";
+  const storedStatus = getStoredStreamStatus(channel.id);
+  card.href =
+    channel.inlinePlayable && channel.stream?.url ? buildPlayerUrl(channel) : channel.stream?.url || "#";
   card.rel = "noopener";
   if (!channel.inlinePlayable) {
     card.target = "_blank";
@@ -512,10 +418,9 @@ function createChannelCard(channel) {
     thumb.appendChild(badge);
   }
 
-  if (shouldMonitorStream) {
+  if (storedStatus) {
     thumbStatusBadge = document.createElement("span");
     thumbStatusBadge.className = "thumb-status";
-    thumbStatusBadge.hidden = true;
     thumb.appendChild(thumbStatusBadge);
   }
 
@@ -544,7 +449,7 @@ function createChannelCard(channel) {
   if (channel.network) details.push(channel.network);
   const sub = document.createElement("p");
   sub.className = "sub";
-  sub.textContent = details.join(" • ") || "Live channel";
+  sub.textContent = details.join(" \u2022 ") || "Live channel";
   meta.appendChild(sub);
 
   const actions = document.createElement("div");
@@ -553,25 +458,21 @@ function createChannelCard(channel) {
   actions.innerHTML =
     `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>${actionLabel}</span>`;
 
-  if (shouldMonitorStream) {
+  if (storedStatus) {
     const statusIndicator = document.createElement("span");
-    statusIndicator.className = "stream-status stream-status--pending";
-    statusIndicator.textContent = "Checking…";
+    statusIndicator.className = "stream-status";
     actions.appendChild(statusIndicator);
-    card.dataset.streamStatus = "pending";
-    queueStreamStatusCheck(channel, (state) => {
-      applyStreamStatus(card, statusIndicator, thumbStatusBadge, state);
-    });
+    applyStreamStatus(card, statusIndicator, thumbStatusBadge, storedStatus);
+  } else {
+    card.dataset.streamStatus = "unknown";
   }
 
   meta.appendChild(actions);
-
   card.appendChild(thumb);
   card.appendChild(meta);
 
   return card;
 }
-
 function matchesQuery(channel, query) {
   if (!query) return true;
   const normalized = query.toLowerCase();
@@ -668,7 +569,7 @@ function createCountryButton({ code, name, flag, count }) {
 
   const flagSpan = document.createElement("span");
   flagSpan.className = "country-flag";
-  flagSpan.textContent = flag || "🌐";
+  flagSpan.textContent = flag || "ðŸŒ";
   button.appendChild(flagSpan);
 
   const metaWrap = document.createElement("span");
@@ -699,7 +600,7 @@ function renderCountryList() {
         state.selectedRegion === "all"
           ? "All countries"
           : `All ${regionMeta?.label || "regions"}`,
-      flag: "🌍",
+      flag: "ðŸŒ",
       count: baseCount,
     },
     ...state.countryOptions.filter((option) =>
@@ -833,7 +734,7 @@ function renderPagination(totalResults, totalPages, rangeStart, rangeEnd) {
   const status = document.createElement("span");
   status.className = "pagination__status";
   const statusPlural = totalResults === 1 ? "channel" : "channels";
-  status.textContent = `Showing ${rangeStart.toLocaleString()}–${rangeEnd.toLocaleString()} of ${totalResults.toLocaleString()} ${statusPlural}`;
+  status.textContent = `Showing ${rangeStart.toLocaleString()}â€“${rangeEnd.toLocaleString()} of ${totalResults.toLocaleString()} ${statusPlural}`;
   fragment.appendChild(status);
 
   const controls = document.createElement("div");
@@ -911,9 +812,7 @@ function render() {
   if (!results.length) {
     renderPagination(0, 0, 0, 0);
     setStatus(
-      state.query
-        ? `No live channels match “${state.query}”.`
-        : "No live channels found for this filter."
+      state.query ? `No live channels match "${state.query}".` : "No live channels found for this filter."
     );
     return;
   }
@@ -940,7 +839,7 @@ function render() {
 
   const filterMeta = state.filter === "all" ? null : state.filterOptions.get(state.filter);
   const filterLabel = filterMeta ? ` in ${filterMeta.label}` : "";
-  const searchLabel = state.query ? ` matching “${state.query}”` : "";
+  const searchLabel = state.query ? ` matching "${state.query}"` : "";
   const locationLabel = (() => {
     if (state.selectedCountry === "all") {
       if (state.selectedRegion === "all") return " worldwide";
@@ -953,7 +852,7 @@ function render() {
 
   const summary = `Showing ${
     (startIndex + 1).toLocaleString()
-  }–${endIndex.toLocaleString()} of ${totalResults.toLocaleString()} ${
+  }-${endIndex.toLocaleString()} of ${totalResults.toLocaleString()} ${
     totalResults === 1 ? "channel" : "channels"
   }${locationLabel}${filterLabel}${searchLabel}. Ready for in-browser playback.`;
   setStatus(summary);
@@ -972,9 +871,13 @@ function onFilterClick(event) {
 }
 
 function onSearchInput(event) {
-  state.page = 1;
-  state.query = event.target.value || "";
-  render();
+  const nextQuery = event.target.value || "";
+  window.clearTimeout(searchDebounceId);
+  searchDebounceId = window.setTimeout(() => {
+    state.page = 1;
+    state.query = nextQuery;
+    render();
+  }, SEARCH_DEBOUNCE_MS);
 }
 
 function onCountryListClick(event) {
@@ -1039,7 +942,7 @@ async function fetchJson(url) {
 
 async function loadData() {
   setBusy(true);
-  setStatus("Loading live channels…");
+  setStatus("Loading live channels...");
   if (countrySummary) {
     countrySummary.textContent = "";
   }
@@ -1066,7 +969,7 @@ async function loadData() {
 
     const countriesMap = new Map((countries || []).map((entry) => [entry.code, entry]));
     if (!countriesMap.has("INT")) {
-      countriesMap.set("INT", { code: "INT", name: "International", flag: "🌐" });
+      countriesMap.set("INT", { code: "INT", name: "International", flag: "ðŸŒ" });
     }
 
     const allowedRegionCodes = new Set(
@@ -1217,3 +1120,5 @@ if (paginationEl) {
 }
 
 loadData();
+
+

@@ -1,4 +1,4 @@
-import { applyChannelLogo } from "./logo-placeholder.js";
+import { applyChannelLogo } from "./logo-placeholder.js?v=2";
 
 const STORAGE_PREFIX = "live:channel:";
 

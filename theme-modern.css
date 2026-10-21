@@ -1,0 +1,221 @@
+/* ==========================================================================
+   theme-modern.css — sleek refinement layer for theblackbox
+   Loaded AFTER style.css; purely additive so it can be removed to revert.
+   Original styling (not copied from any other site).
+   ========================================================================== */
+
+:root {
+  --tm-line: rgba(255, 255, 255, 0.08);
+  --tm-line-soft: rgba(255, 255, 255, 0.05);
+  --tm-glass: rgba(255, 255, 255, 0.05);
+  --tm-glass-hover: rgba(255, 255, 255, 0.09);
+  --tm-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  /* Use more of wide screens — less dead space on the sides */
+  --page-gutter: clamp(18px, 3.4vw, 60px);
+}
+
+/* Widen the main content column so rails/grids fill the screen */
+.content,
+.content--search,
+.content--books,
+.content--live {
+  max-width: min(1760px, 95vw) !important;
+}
+
+/* ---- Global feel: crisper text rendering ---- */
+body.app-shell {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---- Top nav: slim, glassy, floating ---- */
+.topbar {
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  background: linear-gradient(180deg, rgba(5, 8, 22, 0.82) 0%, rgba(5, 8, 22, 0.45) 70%, rgba(5, 8, 22, 0) 100%);
+  border-bottom: 1px solid var(--tm-line-soft);
+  box-shadow: none;
+}
+
+/* nav links — quieter pills that brighten on hover/active */
+.topbar a.btn,
+.topbar button.btn,
+.topbar .btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-weight: 600;
+}
+.topbar a.btn:hover,
+.topbar button.btn:hover,
+.topbar .btn--ghost:hover {
+  background: var(--tm-glass);
+  border-color: var(--tm-line);
+  color: var(--ink);
+  transform: none;
+}
+
+/* ---- Buttons: pill-shaped, flatter, smoother ---- */
+.btn {
+  border-radius: 999px;
+  padding: 0.62rem 1.25rem;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--tm-line);
+  background: var(--tm-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: none;
+  transition: transform 0.18s var(--tm-ease), background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+.btn:hover,
+.btn:focus-visible {
+  transform: translateY(-1px);
+  background: var(--tm-glass-hover);
+  border-color: var(--tm-line);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.38);
+}
+.btn--primary {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+  color: rgba(3, 25, 18, 0.95);
+  border-color: transparent;
+  box-shadow: 0 8px 22px rgba(var(--accent-rgb), 0.30);
+}
+.btn--primary:hover,
+.btn--primary:focus-visible {
+  filter: brightness(1.04);
+  box-shadow: 0 12px 30px rgba(var(--accent-rgb), 0.42);
+}
+.btn--ghost {
+  background: var(--tm-glass);
+}
+
+/* ---- Search: sleek rounded field with focus glow ---- */
+.search-bar input[type="search"] {
+  border-radius: 999px;
+  background: var(--tm-glass);
+  border: 1px solid var(--tm-line);
+  padding: 0.72rem 1.05rem 0.72rem 2.7rem;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.search-bar input[type="search"]::placeholder {
+  color: var(--muted);
+}
+.search-bar input[type="search"]:focus {
+  background: var(--tm-glass-hover);
+  border-color: rgba(var(--accent-rgb), 0.5);
+  box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.12);
+}
+
+/* ---- Cards: smooth lift + zoom, subtle ring on hover ---- */
+.card {
+  border-radius: 16px;
+  border: 1px solid var(--tm-line-soft);
+  overflow: hidden;
+  transition: transform 0.28s var(--tm-ease), box-shadow 0.28s ease, border-color 0.28s ease;
+}
+.card:hover,
+.card:focus-within {
+  transform: translateY(-6px);
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.55);
+  border-color: rgba(var(--accent-rgb), 0.32);
+}
+.card img {
+  transition: transform 0.4s var(--tm-ease);
+}
+.card:hover img {
+  transform: scale(1.05);
+}
+
+/* ---- Section headers: tighter, with accent tick ---- */
+.carousel__title {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  position: relative;
+  padding-left: 14px;
+}
+.carousel__title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 1.05em;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+}
+.carousel__arrow {
+  border-radius: 999px;
+  background: var(--tm-glass);
+  border: 1px solid var(--tm-line);
+  transition: background 0.2s ease, transform 0.2s var(--tm-ease);
+}
+.carousel__arrow:hover {
+  background: var(--tm-glass-hover);
+  transform: scale(1.06);
+}
+
+/* ---- Form inputs (theater, etc.): sleek dark fields, not plain gray ---- */
+.field-shell input,
+.stack-form input,
+.theater-shell input,
+.theater-shell textarea {
+  background: var(--tm-glass) !important;
+  border: 1px solid var(--tm-line) !important;
+  border-radius: 12px !important;
+  color: var(--ink) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease !important;
+}
+.field-shell input::placeholder,
+.stack-form input::placeholder,
+.theater-shell input::placeholder { color: var(--muted) !important; }
+.field-shell input:focus,
+.stack-form input:focus,
+.theater-shell input:focus,
+.theater-shell textarea:focus {
+  outline: none !important;
+  background: var(--tm-glass-hover) !important;
+  border-color: rgba(var(--accent-rgb), 0.5) !important;
+  box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.12) !important;
+}
+
+/* ---- Theater panels: glassy cards ---- */
+.theater-shell .detail-card,
+.theater-start {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)) !important;
+  border: 1px solid var(--tm-line) !important;
+  border-radius: 18px !important;
+}
+.hero--theater { border-radius: 22px; }
+
+/* ====== mobile layer (bottom tab bar + small-screen tuning) — added ====== */
+.tbb-bottomnav{position:fixed;left:0;right:0;bottom:0;top:auto;display:flex;justify-content:space-around;align-items:center;gap:4px;margin:0;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:linear-gradient(0deg,rgba(5,8,22,.97),rgba(5,8,22,.86));backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);border-top:1px solid var(--tm-line);z-index:60;max-width:none;width:auto}
+.tbb-bottomnav a.btn{flex:1 1 0;justify-content:center;text-align:center;padding:.5rem .25rem;font-size:.82rem;font-weight:600;border-radius:12px;background:transparent;border-color:transparent;color:var(--muted);transform:none;box-shadow:none}
+.tbb-bottomnav a.btn:hover{background:var(--tm-glass);color:var(--ink);transform:none}
+.tbb-bottomnav a.btn--primary{background:rgba(var(--accent-rgb),.14);color:var(--accent)}
+body.tbb-has-bottomnav .content,
+body.tbb-has-bottomnav main.content--theater,
+body.tbb-has-bottomnav main.content--live{padding-bottom:88px}
+@media (max-width:768px){
+  body.app-shell{--page-gutter:clamp(14px,4.5vw,20px)}
+  #tbbHero{height:clamp(340px,52vh,460px)!important;border-radius:16px!important}
+  #tbbHero .th-title{font-size:clamp(1.5rem,7.5vw,2.3rem)!important}
+  #tbbHero .th-overview{-webkit-line-clamp:2!important}
+  #tbbHero .th-body{right:clamp(16px,5vw,40px)!important}
+}
+
+/* series-detail mobile */
+@media (max-width:768px){
+  .glass-panel.seasons{grid-template-columns:1fr !important;padding:18px !important}
+  .episode-grid{grid-template-columns:1fr !important}
+  .season-selectors{flex-wrap:wrap}
+  .season-pill{flex:0 0 auto}
+}
+body.page-series-detail.tbb-has-bottomnav{padding-bottom:88px}
+
+/* mobile: keep the search icon (in .topbar__actions) visible in portrait — the
+   bundle hides the actions cluster on narrow screens, removing search/sync. */
+@media (max-width:768px){
+  .topbar__actions{display:flex !important;align-items:center;gap:8px}
+}

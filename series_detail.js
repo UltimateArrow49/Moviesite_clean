@@ -1,6 +1,6 @@
-import { BACKDROP_BASE, IMG_BASE as POSTER_BASE, requestTmdb as requestTmdbBase } from "./tmdb_client.js";
-import { onHistoryChange, readHistory } from "./continue_watching.js?v=9";
-import { getRecentlyWatchedByMode, onRecentlyChange } from "./recently_watched.js?v=9";
+import { BACKDROP_BASE, IMG_BASE as POSTER_BASE, requestTmdb as requestTmdbBase } from "./tmdb_client.js?v=17";
+import { onHistoryChange, readHistory } from "./continue_watching.js?v=11";
+import { getRecentlyWatchedByMode, onRecentlyChange } from "./recently_watched.js?v=11";
 
 const showTitleEl = document.getElementById("showTitle");
 const overviewEl = document.getElementById("overview");

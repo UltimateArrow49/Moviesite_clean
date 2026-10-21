@@ -110,14 +110,14 @@ function normalizeEntry(entry = {}) {
       mode === "tv" && Number.isFinite(Number(entry.season))
         ? Number(entry.season)
         : mode === "tv"
-        ? 1
-        : null,
+          ? 1
+          : null,
     episode:
       mode === "tv" && Number.isFinite(Number(entry.episode))
         ? Number(entry.episode)
         : mode === "tv"
-        ? 1
-        : null,
+          ? 1
+          : null,
     poster: typeof entry.poster === "string" ? entry.poster : null,
     backdrop: typeof entry.backdrop === "string" ? entry.backdrop : null,
     href: typeof entry.href === "string" ? entry.href : null,
@@ -129,7 +129,7 @@ function normalizeEntry(entry = {}) {
     normalized.progress = 0;
   }
   if (normalized.progress < 30) {
-    normalized.progress = 0;
+    return null;
   }
   return normalized;
 }
@@ -138,15 +138,30 @@ function sortEntries(entries) {
   return [...entries].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 }
 
+function prepareEntries(entries = []) {
+  const deduped = new Map();
+  for (const rawEntry of Array.isArray(entries) ? entries : []) {
+    const normalized = normalizeEntry(rawEntry);
+    if (!normalized) continue;
+    const existing = deduped.get(normalized.id);
+    if (!existing || normalized.updatedAt >= existing.updatedAt) {
+      deduped.set(normalized.id, normalized);
+    }
+  }
+  return sortEntries([...deduped.values()]).slice(0, MAX_ENTRIES);
+}
+
 function loadEntries() {
-  return safeParse(safeRead());
+  return prepareEntries(safeParse(safeRead()));
 }
 
 function writeEntries(entries, { silent = false } = {}) {
-  safeWrite(JSON.stringify(entries));
+  const prepared = prepareEntries(entries);
+  safeWrite(JSON.stringify(prepared));
   if (!silent) {
     window.dispatchEvent(new CustomEvent("continuewatchingchange"));
   }
+  return prepared;
 }
 
 export function historyId(mode, tmdb, season = null, episode = null) {
@@ -160,8 +175,12 @@ export function historyId(mode, tmdb, season = null, episode = null) {
   return `${normalizedMode}:${tmdb}`;
 }
 
+export function readStoredHistory() {
+  return loadEntries();
+}
+
 export function readHistory() {
-  return sortEntries(loadEntries()).filter((entry) => Number(entry?.progress) >= 30);
+  return readStoredHistory();
 }
 
 export function getEntriesByMode(mode) {
@@ -175,28 +194,37 @@ export function getEntryById(id) {
   return entries.find((entry) => entry && entry.id === id) || null;
 }
 
+export function replaceHistoryEntries(entries, { silent = false } = {}) {
+  return writeEntries(entries, { silent });
+}
+
+export function mergeHistoryEntries(entries, { silent = false } = {}) {
+  const currentEntries = loadEntries();
+  return writeEntries([...currentEntries, ...(Array.isArray(entries) ? entries : [])], { silent });
+}
+
 export function upsertEntry(entry, { silent = false } = {}) {
   const normalized = normalizeEntry(entry);
-  if (!normalized) return;
   const entries = loadEntries();
-  const existingIndex = entries.findIndex((item) => item && item.id === normalized.id);
+  const entryId = normalized?.id || historyId(entry?.mode, entry?.tmdb, entry?.season, entry?.episode);
+  const existingIndex = entryId
+    ? entries.findIndex((item) => item && item.id === entryId)
+    : -1;
 
-  if (normalized.progress < 30) {
+  if (!normalized) {
     if (existingIndex >= 0) {
       entries.splice(existingIndex, 1);
       writeEntries(entries, { silent });
     }
     return;
   }
+
   if (existingIndex >= 0) {
     const existing = entries[existingIndex] || {};
     const merged = { ...existing, ...normalized, updatedAt: normalized.updatedAt };
     entries.splice(existingIndex, 1, merged);
   } else {
     entries.unshift(normalized);
-  }
-  while (entries.length > MAX_ENTRIES) {
-    entries.pop();
   }
   writeEntries(entries, { silent });
 }
@@ -210,10 +238,7 @@ export function removeEntry(id, { silent = false } = {}) {
 }
 
 export function clearEntries({ silent = false } = {}) {
-  safeWrite(JSON.stringify([]));
-  if (!silent) {
-    window.dispatchEvent(new CustomEvent("continuewatchingchange"));
-  }
+  writeEntries([], { silent });
 }
 
 export function onHistoryChange(callback) {

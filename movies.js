@@ -1,22 +1,43 @@
-import { getEntriesByMode, onHistoryChange } from "./continue_watching.js?v=9";
+import { getEntriesByMode, onHistoryChange } from "./continue_watching.js?v=11";
+import {
+  formatRelativeTime,
+  getRecentlyWatchedByMode,
+  onRecentlyChange,
+} from "./recently_watched.js?v=11";
+import { getTheaterHistoryByMode, onTheaterHistoryChange } from "./theater_history.js?v=1";
 import { setupPreviewForGrid } from "./preview_manager.js";
-import { setupAnimatedList } from "./ui_effects.js?v=14";
-import { BACKDROP_BASE, IMG_BASE, requestTmdb } from "./tmdb_client.js";
+import { setupAnimatedList } from "./ui_effects.js?v=16";
+import {
+  ACTION_ICONS,
+  createCarouselSection as createSharedCarouselSection,
+  createContinueProgressCard,
+  createMediaCard,
+  enableScrollerGestureGuard,
+  joinFacts,
+  renderCarouselItems,
+  setCarouselLoading,
+  setCarouselMessage,
+} from "./catalog_ui.js?v=5";
+import { BACKDROP_BASE, IMG_BASE, requestTmdb } from "./tmdb_client.js?v=17";
+
 const continueSection = document.getElementById("continueMovies");
 const continueList = document.getElementById("continueMoviesList");
 const continueMessage = document.getElementById("continueMoviesMessage");
+const watchAgainSection = document.getElementById("watchAgainMovies");
+const watchAgainList = document.getElementById("watchAgainMoviesList");
+const watchAgainMessage = document.getElementById("watchAgainMoviesMessage");
+const theaterSection = document.getElementById("theaterMovies");
+const theaterList = document.getElementById("theaterMoviesList");
+const theaterMessage = document.getElementById("theaterMoviesMessage");
 const carouselList = document.getElementById("carouselList");
 const searchForm = document.getElementById("searchForm");
 const searchInput = document.getElementById("search");
 
-const usedMovieIds = new Set();
 const ROW_TARGET = 18;
-const MAX_FETCH_PAGES = 4;
-
-if (continueList) {
-  setupPreviewForGrid(continueList, { mode: "movie" });
-  setupAnimatedList(continueList, { axis: "x" });
-}
+const MAX_FETCH_PAGES = 8;
+const SEARCH_REDIRECT_DEBOUNCE_MS = 900;
+const WATCH_AGAIN_DELAY_MS = 14 * 24 * 60 * 60 * 1000;
+const WATCH_AGAIN_LIMIT = 12;
 
 const CAROUSELS = [
   { id: "trending", label: "Trending now", path: "trending/movie/week" },
@@ -53,17 +74,24 @@ const CAROUSELS = [
 const carouselStates = new Map();
 const suggestedItemIds = new Set();
 let suggestionsController = null;
+let searchRedirectTimer = 0;
+let disposeMoviesPage = null;
 
-function formatFacts(movie) {
+function buildMovieFacts(movie) {
   const facts = [];
   const year = (movie.release_date || "").slice(0, 4);
   if (year) facts.push(year);
+
   const rating = Number(movie.vote_average || 0);
-  if (movie.vote_count > 0 && rating > 0) facts.push(`⭐ ${rating.toFixed(1)}`);
+  if (movie.vote_count > 0 && rating > 0) {
+    facts.push(`\u2605 ${rating.toFixed(1)}`);
+  }
+
   if (movie.original_language && movie.original_language !== "en") {
     facts.push(movie.original_language.toUpperCase());
   }
-  return facts.join(" • ");
+
+  return joinFacts(facts);
 }
 
 function buildPlayerUrl(movie) {
@@ -74,6 +102,7 @@ function buildPlayerUrl(movie) {
     autoplay: "true",
     color: "14ff9f",
   });
+
   if (movie.poster_path) {
     params.set("poster", `${IMG_BASE}${movie.poster_path}`);
   }
@@ -83,66 +112,60 @@ function buildPlayerUrl(movie) {
   if (movie.release_date) {
     params.set("release", movie.release_date);
   }
+
   return `/player.html?${params.toString()}`;
 }
 
-function createCard(movie) {
-  const card = document.createElement("a");
-  card.className = "card";
-  card.href = buildPlayerUrl(movie);
-  card.dataset.tmdbId = movie.id;
-  card.dataset.mode = "movie";
-  card.setAttribute(
-    "aria-label",
-    `Stream ${movie.title || movie.name || "movie"} on theblackbox`,
-  );
-
-  const thumb = document.createElement("div");
-  thumb.className = "thumb";
+function buildTheaterSeedUrl(movie) {
+  const params = new URLSearchParams({
+    seedTmdb: String(movie.id),
+    seedTitle: movie.title || movie.original_title || "Movie",
+  });
   if (movie.poster_path) {
-    const img = document.createElement("img");
-    img.src = IMG_BASE + movie.poster_path;
-    img.alt = `${movie.title || movie.name || "Movie"} poster`;
-    thumb.appendChild(img);
-  } else {
-    const fallback = document.createElement("div");
-    fallback.className = "placeholder";
-    fallback.textContent = "No artwork";
-    thumb.appendChild(fallback);
+    params.set("seedPoster", `${IMG_BASE}${movie.poster_path}`);
   }
+  if (movie.backdrop_path) {
+    params.set("seedBackdrop", `${BACKDROP_BASE}${movie.backdrop_path}`);
+  }
+  if (movie.release_date) {
+    params.set("seedRelease", movie.release_date);
+  }
+  return `/theater.html?${params.toString()}`;
+}
+
+function wrapMovieCard(card, movie) {
+  if (!card || !movie?.id) return card;
+  const shell = document.createElement("div");
+  shell.className = "card-stack";
+  shell.appendChild(card);
+
+  const link = document.createElement("a");
+  link.className = "btn btn--ghost card-stack__action";
+  link.href = buildTheaterSeedUrl(movie);
+  link.textContent = "Watch together";
+  shell.appendChild(link);
+  return shell;
+}
+
+function createCard(movie) {
+  if (!movie?.id) return null;
   const rating = Number(movie.vote_average || 0);
-  if (movie.vote_count > 0 && rating > 0) {
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = rating.toFixed(1);
-    thumb.appendChild(badge);
-  }
-
-  const meta = document.createElement("div");
-  meta.className = "meta";
-
-  const title = document.createElement("p");
-  title.className = "title";
-  title.textContent = movie.title || movie.original_title || movie.name || "Untitled";
-  meta.appendChild(title);
-
-  const facts = formatFacts(movie);
-  if (facts) {
-    const sub = document.createElement("p");
-    sub.className = "sub";
-    sub.textContent = facts;
-    meta.appendChild(sub);
-  }
-
-  const actions = document.createElement("div");
-  actions.className = "actions";
-  actions.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>Watch now</span>';
-  meta.appendChild(actions);
-
-  card.appendChild(thumb);
-  card.appendChild(meta);
-  return card;
+  const card = createMediaCard({
+    href: buildPlayerUrl(movie),
+    title: movie.title || movie.original_title || movie.name || "Untitled",
+    imageSrc: movie.poster_path ? IMG_BASE + movie.poster_path : "",
+    imageAlt: `${movie.title || movie.name || "Movie"} poster`,
+    badgeText: movie.vote_count > 0 && rating > 0 ? rating.toFixed(1) : "",
+    factsText: buildMovieFacts(movie),
+    ariaLabel: `Stream ${movie.title || movie.name || "movie"} on theblackbox`,
+    actionLabel: "Watch now",
+    actionIconPath: ACTION_ICONS.play,
+    dataset: {
+      tmdbId: movie.id,
+      mode: "movie",
+    },
+  });
+  return wrapMovieCard(card, movie);
 }
 
 function formatTime(seconds) {
@@ -159,6 +182,7 @@ function formatTime(seconds) {
 
 function buildResumeUrl(entry) {
   if (entry.href) return entry.href;
+
   const params = new URLSearchParams({
     mode: entry.mode,
     tmdb: entry.tmdb,
@@ -166,79 +190,80 @@ function buildResumeUrl(entry) {
     autoplay: "true",
     color: "14ff9f",
   });
+
   if (entry.poster) params.set("poster", entry.poster);
   if (entry.backdrop) params.set("backdrop", entry.backdrop);
   if (entry.progress) params.set("progress", String(entry.progress));
+
   return `/player.html?${params.toString()}`;
 }
 
 function createContinueCard(entry) {
-  const card = document.createElement("a");
-  card.className = "card card--continue";
-  card.href = buildResumeUrl(entry);
-  card.dataset.mode = entry.mode;
-  card.dataset.tmdbId = entry.tmdb;
-  card.setAttribute(
-    "aria-label",
-    entry.progress
-      ? `Resume ${entry.title || "movie"} from ${formatTime(entry.progress)}`
-      : `Start ${entry.title || "movie"} from the beginning`,
-  );
-
-  const thumb = document.createElement("div");
-  thumb.className = "thumb thumb--continue";
-  if (entry.poster) {
-    const img = document.createElement("img");
-    img.src = entry.poster;
-    img.alt = `${entry.title || "Movie"} artwork`;
-    thumb.appendChild(img);
-  } else {
-    const placeholderEl = document.createElement("div");
-    placeholderEl.className = "placeholder";
-    placeholderEl.textContent = "No artwork";
-    thumb.appendChild(placeholderEl);
-  }
-  card.appendChild(thumb);
-
-  const progressBar = document.createElement("div");
-  progressBar.className = "card-progress";
-  const fill = document.createElement("span");
   let percent = 0;
   if (entry.runtime && entry.progress) {
     percent = Math.min(100, Math.round((entry.progress / entry.runtime) * 100));
   } else if (entry.progress) {
     percent = 5;
   }
-  if (percent > 0) {
-    fill.style.width = `${Math.max(5, percent)}%`;
-  } else {
-    fill.style.width = "0%";
-  }
-  progressBar.appendChild(fill);
-  card.appendChild(progressBar);
 
-  const meta = document.createElement("div");
-  meta.className = "meta meta--continue";
+  return createContinueProgressCard({
+    href: buildResumeUrl(entry),
+    title: entry.title || "Untitled",
+    imageSrc: entry.poster || "",
+    imageAlt: `${entry.title || "Movie"} artwork`,
+    progressPercent: percent,
+    resumeText: entry.progress ? `Resume from ${formatTime(entry.progress)}` : "Start over",
+    ariaLabel: entry.progress
+      ? `Resume ${entry.title || "movie"} from ${formatTime(entry.progress)}`
+      : `Start ${entry.title || "movie"} from the beginning`,
+    dataset: {
+      mode: entry.mode,
+      tmdbId: entry.tmdb,
+    },
+  });
+}
 
-  const title = document.createElement("p");
-  title.className = "title";
-  title.textContent = entry.title || "Untitled";
-  meta.appendChild(title);
+function getWatchAgainEntries() {
+  const activeMovieIds = new Set(getEntriesByMode("movie").map((entry) => entry?.id).filter(Boolean));
+  return getRecentlyWatchedByMode("movie")
+    .filter((entry) => {
+      if (!entry?.tmdb || !entry?.completed) return false;
+      if (activeMovieIds.has(`movie:${entry.tmdb}`)) return false;
+      const lastPlayedAt = Number(entry.lastPlayedAt) || 0;
+      return lastPlayedAt > 0 && Date.now() - lastPlayedAt >= WATCH_AGAIN_DELAY_MS;
+    })
+    .slice(0, WATCH_AGAIN_LIMIT);
+}
 
-  const resume = document.createElement("p");
-  resume.className = "resume";
-  resume.textContent = entry.progress ? `Resume from ${formatTime(entry.progress)}` : "Start over";
-  meta.appendChild(resume);
-
-  card.appendChild(meta);
-  return card;
+function createWatchAgainCard(entry) {
+  return createContinueProgressCard({
+    href:
+      entry.href ||
+      `/player.html?mode=movie&tmdb=${encodeURIComponent(entry.tmdb)}&title=${encodeURIComponent(
+        entry.title || "Movie",
+      )}&autoplay=true&color=14ff9f`,
+    title: entry.title || "Untitled",
+    imageSrc: entry.poster || "",
+    imageAlt: `${entry.title || "Movie"} artwork`,
+    progressPercent: 0,
+    resumeText: `Watched ${formatRelativeTime(entry.lastPlayedAt) || "previously"}`,
+    ariaLabel: `Play ${entry.title || "movie"} again`,
+    dataset: {
+      mode: entry.mode,
+      tmdbId: entry.tmdb,
+      revisit: "true",
+    },
+    showProgressBar: false,
+  });
 }
 
 function renderContinueWatching() {
   if (!continueSection || !continueList) return;
+
   const entries = getEntriesByMode("movie").slice(0, 12);
   continueSection.hidden = false;
   continueList.innerHTML = "";
+
   if (!entries.length) {
     continueSection.classList.add("continue--empty");
     if (continueMessage) {
@@ -248,154 +273,118 @@ function renderContinueWatching() {
     }
     return;
   }
+
   continueSection.classList.remove("continue--empty");
   if (continueMessage) {
     continueMessage.hidden = true;
   }
+
   const fragment = document.createDocumentFragment();
-  for (const entry of entries) {
-    fragment.appendChild(createContinueCard(entry));
-  }
+  entries.forEach((entry) => {
+    const card = createContinueCard(entry);
+    if (card) {
+      fragment.appendChild(card);
+    }
+  });
   continueList.appendChild(fragment);
 }
 
-function createCarouselSection(definition) {
-  if (!carouselList) return null;
-  const section = document.createElement("section");
-  section.className = "carousel";
-  section.dataset.carousel = definition.id;
-
-  const header = document.createElement("div");
-  header.className = "carousel__header";
-
-  const title = document.createElement("h2");
-  title.className = "carousel__title";
-  title.textContent = definition.label;
-  header.appendChild(title);
-
-  const controls = document.createElement("div");
-  controls.className = "carousel__controls";
-
-  const prev = document.createElement("button");
-  prev.type = "button";
-  prev.className = "carousel__arrow";
-  prev.innerHTML =
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>';
-  prev.disabled = true;
-  controls.appendChild(prev);
-
-  const next = document.createElement("button");
-  next.type = "button";
-  next.className = "carousel__arrow";
-  next.innerHTML =
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m8.59 16.59 1.41 1.41 6-6-6-6-1.41 1.41L12.17 12z"/></svg>';
-  controls.appendChild(next);
-
-  header.appendChild(controls);
-  section.appendChild(header);
-
-  const scroller = document.createElement("div");
-  scroller.className = "carousel__scroller";
-  scroller.setAttribute("role", "list");
-  section.appendChild(scroller);
-
-  const loader = document.createElement("div");
-  loader.className = "carousel__loader";
-  loader.innerHTML =
-    '<span class="spinner" aria-hidden="true"></span><span class="carousel__loader-text">Loading titles…</span>';
-  loader.hidden = true;
-  section.appendChild(loader);
-
-  const message = document.createElement("p");
-  message.className = "carousel__message";
-  message.hidden = true;
-  section.appendChild(message);
-
-  carouselList.appendChild(section);
-
-  const state = {
-    def: definition,
-    section,
-    scroller,
-    prev,
-    next,
-    message,
-    loader,
-    loaderText: loader.querySelector(".carousel__loader-text"),
-  };
-
-  const updateArrows = () => {
-    const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
-    prev.disabled = scroller.scrollLeft <= 8;
-    next.disabled = scroller.scrollLeft >= maxScroll - 8;
-  };
-
-  const scrollByDirection = (direction) => {
-    const amount = scroller.clientWidth * 0.9 * direction;
-    scroller.scrollBy({ left: amount, behavior: "smooth" });
-  };
-
-  prev.addEventListener("click", () => {
-    scrollByDirection(-1);
-    setTimeout(updateArrows, 320);
-  });
-
-  next.addEventListener("click", () => {
-    scrollByDirection(1);
-    setTimeout(updateArrows, 320);
-  });
-
-  scroller.addEventListener("scroll", () => updateArrows());
-  window.addEventListener("resize", () => updateArrows(), { passive: true });
-
-  setupPreviewForGrid(scroller, { mode: "movie" });
-  setupAnimatedList(scroller, { axis: "x" });
-
-  const enhancedState = { ...state, updateArrows };
-  carouselStates.set(definition.id, enhancedState);
-  updateArrows();
-  return enhancedState;
-}
-
-function setCarouselLoading(state, isLoading, label = "Loading titles…") {
-  if (!state || !state.loader) return;
-  if (state.loaderText && label) {
-    state.loaderText.textContent = label;
-  }
-  state.loader.hidden = !isLoading;
-  state.section.classList.toggle("carousel--loading", Boolean(isLoading));
-  if (isLoading) {
-    state.scroller.setAttribute("aria-busy", "true");
-  } else {
-    state.scroller.removeAttribute("aria-busy");
-  }
-}
-
-function setCarouselMessage(state, message) {
-  if (!state) return;
-  if (!message) {
-    state.message.textContent = "";
-    state.message.hidden = true;
+function renderTheaterHistory() {
+  if (!theaterSection || !theaterList) return;
+  const entries = getTheaterHistoryByMode("movie", 12);
+  theaterSection.hidden = false;
+  theaterList.innerHTML = "";
+  if (!entries.length) {
+    theaterSection.classList.add("continue--empty");
+    if (theaterMessage) {
+      theaterMessage.hidden = false;
+      theaterMessage.textContent = "Watch a movie in a theater room to build this rail.";
+    }
     return;
   }
-  state.message.textContent = message;
-  state.message.hidden = false;
+  theaterSection.classList.remove("continue--empty");
+  if (theaterMessage) {
+    theaterMessage.hidden = true;
+  }
+  const fragment = document.createDocumentFragment();
+  entries.forEach((entry) => {
+    const card = createContinueProgressCard({
+      href:
+        entry.href ||
+        `/player.html?mode=movie&tmdb=${encodeURIComponent(entry.tmdb)}&title=${encodeURIComponent(
+          entry.title || "Movie",
+        )}&autoplay=true&color=14ff9f`,
+      title: entry.title || "Untitled",
+      imageSrc: entry.poster || "",
+      imageAlt: `${entry.title || "Movie"} artwork`,
+      progressPercent: 0,
+      resumeText: `Shared screening · ${formatRelativeTime(entry.lastPlayedAt) || "recently"}`,
+      ariaLabel: `Play ${entry.title || "movie"} again`,
+      dataset: {
+        mode: entry.mode,
+        tmdbId: entry.tmdb,
+        theater: "true",
+      },
+      showProgressBar: false,
+    });
+    if (card) fragment.appendChild(card);
+  });
+  theaterList.appendChild(fragment);
 }
 
-function renderCarousel(state, items) {
-  if (!state) return;
-  state.scroller.innerHTML = "";
-  const fragment = document.createDocumentFragment();
-  for (const item of items) {
-    if (!item || !item.id) continue;
-    fragment.appendChild(createCard(item));
+function renderWatchAgain() {
+  if (!watchAgainSection || !watchAgainList) return;
+
+  const entries = getWatchAgainEntries();
+  watchAgainSection.hidden = false;
+  watchAgainList.innerHTML = "";
+
+  if (!entries.length) {
+    watchAgainSection.classList.add("continue--empty");
+    if (watchAgainMessage) {
+      watchAgainMessage.hidden = false;
+      watchAgainMessage.textContent =
+        "Completed movies you have not revisited for a couple of weeks will surface here.";
+    }
+    return;
   }
-  state.scroller.appendChild(fragment);
-  state.updateArrows();
+
+  watchAgainSection.classList.remove("continue--empty");
+  if (watchAgainMessage) {
+    watchAgainMessage.hidden = true;
+  }
+
+  const fragment = document.createDocumentFragment();
+  entries.forEach((entry) => {
+    const card = createWatchAgainCard(entry);
+    if (card) {
+      fragment.appendChild(card);
+    }
+  });
+  watchAgainList.appendChild(fragment);
+}
+
+function createCarouselSection(definition) {
+  const state = createSharedCarouselSection({
+    definition,
+    container: carouselList,
+    previewMode: "movie",
+    setupPreviewForGrid,
+    setupAnimatedList,
+  });
+  if (!state) return null;
+
+  carouselStates.set(definition.id, state);
+  return state;
 }
 
 async function fetchCarouselItems(definition) {
+  return fetchCarouselItemsWithReserved(definition, new Set());
+}
+
+async function fetchCarouselItemsWithReserved(definition, reservedIds = new Set()) {
   const items = [];
+  const rowIds = new Set();
   const params = { ...(definition.params || {}) };
   let page = 1;
   let totalPages = 1;
@@ -403,14 +392,15 @@ async function fetchCarouselItems(definition) {
   while (items.length < ROW_TARGET && page <= MAX_FETCH_PAGES && page <= totalPages) {
     const response = await requestTmdb(definition.path, { ...params, page: String(page) });
     totalPages = Number(response.total_pages) || totalPages || 1;
+
     const results = Array.isArray(response.results) ? response.results : [];
     for (const result of results) {
-      if (!result || !result.id) continue;
-      if (usedMovieIds.has(result.id)) continue;
-      usedMovieIds.add(result.id);
+      if (!result?.id || rowIds.has(result.id) || reservedIds.has(result.id)) continue;
+      rowIds.add(result.id);
       items.push(result);
       if (items.length >= ROW_TARGET) break;
     }
+
     if (!results.length) break;
     page += 1;
   }
@@ -419,47 +409,56 @@ async function fetchCarouselItems(definition) {
 }
 
 async function loadCarousel(definition) {
+  return loadCarouselWithReserved(definition, new Set());
+}
+
+async function loadCarouselWithReserved(definition, reservedIds = new Set()) {
   let state = carouselStates.get(definition.id);
   if (!state) {
     state = createCarouselSection(definition);
   }
-  if (!state) return;
+  if (!state) return [];
 
   setCarouselMessage(state, "");
-  setCarouselLoading(state, true, "Loading titles…");
+  setCarouselLoading(state, true, `Loading titles\u2026`);
+
   try {
-    const items = await fetchCarouselItems(definition);
+    const items = await fetchCarouselItemsWithReserved(definition, reservedIds);
     if (!items.length) {
-      renderCarousel(state, []);
+      renderCarouselItems(state, [], createCard);
       setCarouselMessage(state, "No titles available right now. Please check back soon.");
       setCarouselLoading(state, false);
-      return;
+      return [];
     }
-    renderCarousel(state, items);
+
+    renderCarouselItems(state, items, createCard);
     setCarouselMessage(state, "");
     setCarouselLoading(state, false);
+    return items;
   } catch (error) {
     console.error(error);
-    renderCarousel(state, []);
+    renderCarouselItems(state, [], createCard);
     setCarouselMessage(state, "Unable to load this row right now. Retry shortly.");
     setCarouselLoading(state, false);
+    return [];
   }
 }
 
-function releaseSuggestedItems() {
-  for (const id of suggestedItemIds) {
-    usedMovieIds.delete(id);
-  }
+function clearSuggestedReservations() {
   suggestedItemIds.clear();
 }
 
+function reserveItemIds(target, items) {
+  items.forEach((item) => {
+    if (item?.id) target.add(item.id);
+  });
+}
 async function fetchSuggestedFromHistory(historyEntries, { signal } = {}) {
   const suggestions = [];
   const seenSources = new Set();
 
   for (const entry of historyEntries) {
-    if (!entry || !entry.tmdb) continue;
-    if (seenSources.has(entry.tmdb)) continue;
+    if (!entry?.tmdb || seenSources.has(entry.tmdb)) continue;
     seenSources.add(entry.tmdb);
 
     const endpoints = [`movie/${entry.tmdb}/recommendations`, `movie/${entry.tmdb}/similar`];
@@ -469,9 +468,8 @@ async function fetchSuggestedFromHistory(historyEntries, { signal } = {}) {
         const payload = await requestTmdb(endpoint, { page: "1" }, { signal });
         const results = Array.isArray(payload.results) ? payload.results : [];
         for (const result of results) {
-          if (!result || !result.id) continue;
-          if (usedMovieIds.has(result.id)) continue;
-          if (suggestions.some((item) => item && item.id === result.id)) continue;
+          if (!result?.id) continue;
+          if (suggestions.some((item) => item?.id === result.id)) continue;
           suggestions.push(result);
           if (suggestions.length >= ROW_TARGET) break;
         }
@@ -479,8 +477,10 @@ async function fetchSuggestedFromHistory(historyEntries, { signal } = {}) {
         if (error.name === "AbortError") throw error;
         console.warn(`Unable to load suggestions from ${endpoint}`, error);
       }
+
       if (suggestions.length >= ROW_TARGET) break;
     }
+
     if (suggestions.length >= ROW_TARGET) break;
   }
 
@@ -489,13 +489,16 @@ async function fetchSuggestedFromHistory(historyEntries, { signal } = {}) {
 
 async function loadSuggestedRow() {
   const historyEntries = getEntriesByMode("movie");
-  if (!historyEntries.length) {
+  const removeSuggestedRow = () => {
     const existing = carouselStates.get("suggested");
     if (existing) {
-      releaseSuggestedItems();
       existing.section.remove();
       carouselStates.delete("suggested");
     }
+  };
+  if (!historyEntries.length) {
+    clearSuggestedReservations();
+    removeSuggestedRow();
     return;
   }
 
@@ -505,48 +508,39 @@ async function loadSuggestedRow() {
   const controller = new AbortController();
   suggestionsController = controller;
 
-  let state = carouselStates.get("suggested");
-  if (!state) {
-    state = createCarouselSection({ id: "suggested", label: "Suggested for you" });
-    if (state) {
-      carouselList?.prepend(state.section);
-    }
-  }
-  if (!state) {
-    suggestionsController = null;
-    return;
-  }
-
-  releaseSuggestedItems();
-  setCarouselMessage(state, "");
-  setCarouselLoading(state, true, "Personalizing recommendations…");
+  clearSuggestedReservations();
 
   try {
-    const items = await fetchSuggestedFromHistory(historyEntries, { signal: controller.signal });
+    const items = await fetchSuggestedFromHistory(historyEntries, {
+      signal: controller.signal,
+    });
     if (suggestionsController !== controller) return;
+
     if (!items.length) {
-      renderCarousel(state, []);
-      setCarouselMessage(
-        state,
-        "Watch a few more movies to unlock personalized suggestions.",
-      );
-      setCarouselLoading(state, false);
+      removeSuggestedRow();
       return;
     }
-    renderCarousel(state, items);
-    for (const item of items) {
-      if (!item || !item.id) continue;
-      suggestedItemIds.add(item.id);
-      usedMovieIds.add(item.id);
+
+    let state = carouselStates.get("suggested");
+    if (!state) {
+      state = createCarouselSection({ id: "suggested", label: "Suggested for you" });
+      if (state) {
+        carouselList?.prepend(state.section);
+      }
     }
+    if (!state) {
+      suggestionsController = null;
+      return;
+    }
+
+    renderCarouselItems(state, items, createCard);
+    reserveItemIds(suggestedItemIds, items);
     setCarouselMessage(state, "");
     setCarouselLoading(state, false);
   } catch (error) {
     if (error.name !== "AbortError") {
       console.error("Unable to build suggested row", error);
-      renderCarousel(state, []);
-      setCarouselMessage(state, "Personalized picks are unavailable right now. Try again soon.");
-      setCarouselLoading(state, false);
+      removeSuggestedRow();
     }
   } finally {
     if (suggestionsController === controller) {
@@ -555,7 +549,28 @@ async function loadSuggestedRow() {
   }
 }
 
+function primeCarousels() {
+  CAROUSELS.forEach((definition) => {
+    let state = carouselStates.get(definition.id);
+    if (!state) {
+      state = createCarouselSection(definition);
+    }
+    if (!state) return;
+    setCarouselMessage(state, "");
+    setCarouselLoading(state, true, `Loading titles\u2026`);
+  });
+}
+
+async function loadStandardCarousels() {
+  const reservedIds = new Set(suggestedItemIds);
+  for (const definition of CAROUSELS) {
+    const items = await loadCarouselWithReserved(definition, reservedIds);
+    reserveItemIds(reservedIds, items);
+  }
+}
+
 function initCarousels() {
+  primeCarousels();
   loadSuggestedRow()
     .catch((error) => {
       if (error.name !== "AbortError") {
@@ -563,38 +578,155 @@ function initCarousels() {
       }
     })
     .finally(() => {
-      for (const def of CAROUSELS) {
-        loadCarousel(def);
-      }
+      loadStandardCarousels().catch((error) => {
+        console.error("Failed to prepare movie rows", error);
+      });
     });
 }
 
 function initSearchRedirect() {
   if (!searchForm || !searchInput) return;
-  searchForm.addEventListener("submit", (event) => {
+
+  const navigateToSearch = (value) => {
+    const query = encodeURIComponent(value);
+    window.location.href = `/search.html?q=${query}&scope=movie`;
+  };
+
+  const handleSubmit = (event) => {
     const value = searchInput.value.trim();
     if (!value) {
       event.preventDefault();
       return;
     }
+
     event.preventDefault();
-    const query = encodeURIComponent(value);
-    window.location.href = `/search.html?q=${query}&scope=movie`;
-  });
+    window.clearTimeout(searchRedirectTimer);
+    navigateToSearch(value);
+  };
+
+  const handleInput = (event) => {
+    const value = event.target.value.trim();
+    window.clearTimeout(searchRedirectTimer);
+    if (!value) return;
+    searchRedirectTimer = window.setTimeout(() => {
+      navigateToSearch(value);
+    }, SEARCH_REDIRECT_DEBOUNCE_MS);
+  };
+
+  searchForm.addEventListener("submit", handleSubmit);
+  searchInput.addEventListener("input", handleInput);
+
+  return () => {
+    searchForm.removeEventListener("submit", handleSubmit);
+    searchInput.removeEventListener("input", handleInput);
+    window.clearTimeout(searchRedirectTimer);
+  };
 }
 
-function init() {
+async function initFeatureHero() {
+  const content = document.querySelector(".content");
+  if (!content) return;
+
+  const existing = content.querySelector(".feature-hero");
+  if (existing) existing.remove();
+
+  try {
+    const data = await requestTmdb("trending/movie/week", { page: "1" });
+    const movies = Array.isArray(data?.results) ? data.results : [];
+    const movie = movies.find((m) => m?.backdrop_path && m?.overview) || movies[0];
+    if (!movie) return;
+
+    const backdropUrl = movie.backdrop_path
+      ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
+      : "";
+    const year = (movie.release_date || "").slice(0, 4);
+    const rating = movie.vote_count > 0 ? Number(movie.vote_average || 0).toFixed(1) : "";
+    const overview = (movie.overview || "").slice(0, 220).trimEnd();
+    const displayOverview = overview.length < (movie.overview || "").length ? overview + "…" : overview;
+    const playerUrl = buildPlayerUrl(movie);
+
+    const hero = document.createElement("section");
+    hero.className = "feature-hero";
+    hero.setAttribute("aria-label", `Featured: ${movie.title || movie.name || "Movie"}`);
+    hero.innerHTML = `
+      <div class="feature-hero__backdrop"${backdropUrl ? ` style="background-image:url('${backdropUrl.replace(/'/g, "%27")}')"` : ""}></div>
+      <div class="feature-hero__gradient"></div>
+      <div class="feature-hero__content">
+        <p class="feature-hero__eyebrow">Featured today</p>
+        <h2 class="feature-hero__title">${movie.title || movie.name || "Untitled"}</h2>
+        <div class="feature-hero__meta">
+          ${year ? `<span class="feature-hero__year">${year}</span>` : ""}
+          ${rating ? `<span class="feature-hero__rating">★ ${rating}</span>` : ""}
+        </div>
+        ${displayOverview ? `<p class="feature-hero__overview">${displayOverview}</p>` : ""}
+        <div class="feature-hero__actions">
+          <a class="btn btn--primary feature-hero__btn" href="${playerUrl}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7L8 5z"/></svg>
+            Watch Now
+          </a>
+        </div>
+      </div>`;
+
+    const carouselEl = document.getElementById("carouselList");
+    if (carouselEl) {
+      content.insertBefore(hero, carouselEl);
+    } else {
+      content.prepend(hero);
+    }
+  } catch (error) {
+    console.warn("Feature hero failed:", error);
+  }
+}
+
+export function initMoviesPage() {
+  if (typeof disposeMoviesPage === "function") {
+    disposeMoviesPage();
+  }
+
+  if (continueList) {
+    setupPreviewForGrid(continueList, { mode: "movie" });
+    setupAnimatedList(continueList, { axis: "x" });
+    enableScrollerGestureGuard(continueList);
+  }
+  if (watchAgainList) {
+    setupPreviewForGrid(watchAgainList, { mode: "movie" });
+    setupAnimatedList(watchAgainList, { axis: "x" });
+    enableScrollerGestureGuard(watchAgainList);
+  }
+
   renderContinueWatching();
-  onHistoryChange(() => {
+  renderWatchAgain();
+  renderTheaterHistory();
+  initFeatureHero().catch(() => {});
+
+  const removeHistoryListener = onHistoryChange(() => {
     renderContinueWatching();
+    renderWatchAgain();
     loadSuggestedRow().catch((error) => {
       if (error.name !== "AbortError") {
         console.error("Failed to refresh suggestions", error);
       }
     });
   });
-  initCarousels();
-  initSearchRedirect();
-}
+  const removeRecentlyListener = onRecentlyChange(() => {
+    renderWatchAgain();
+  });
+  const removeTheaterHistoryListener = onTheaterHistoryChange(() => {
+    renderTheaterHistory();
+  });
 
-document.addEventListener("DOMContentLoaded", init);
+  initCarousels();
+  const removeSearchRedirect = initSearchRedirect();
+
+  disposeMoviesPage = () => {
+    removeHistoryListener?.();
+    removeRecentlyListener?.();
+    removeTheaterHistoryListener?.();
+    removeSearchRedirect?.();
+    window.clearTimeout(searchRedirectTimer);
+    suggestionsController?.abort();
+    suggestionsController = null;
+  };
+
+  return disposeMoviesPage;
+}

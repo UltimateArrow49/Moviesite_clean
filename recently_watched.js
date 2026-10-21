@@ -38,15 +38,6 @@ function dispatchChange() {
   }
 }
 
-function readEntries() {
-  return safeParse(safeRead());
-}
-
-function writeEntries(entries) {
-  safeWrite(JSON.stringify(entries));
-  dispatchChange();
-}
-
 function buildSlug({ mode, tmdb, season, episode, slug }) {
   if (typeof slug === "string" && slug.trim()) {
     return slug.trim();
@@ -67,7 +58,7 @@ function normalizeEntry(raw = {}) {
   const mode = raw.mode === "tv" ? "tv" : raw.mode === "movie" ? "movie" : null;
   const slug = buildSlug({ mode, tmdb, season: raw.season, episode: raw.episode, slug: raw.slug });
   if (!slug || !mode || !tmdb) return null;
-  const normalized = {
+  return {
     slug,
     mode,
     tmdb,
@@ -82,7 +73,34 @@ function normalizeEntry(raw = {}) {
     runtime: Number.isFinite(Number(raw.runtime)) ? Math.max(0, Math.floor(Number(raw.runtime))) : null,
     lastPlayedAt: Number.isFinite(Number(raw.lastPlayedAt)) ? Number(raw.lastPlayedAt) : Date.now(),
   };
-  return normalized;
+}
+
+function prepareEntries(entries = []) {
+  const deduped = new Map();
+  for (const rawEntry of Array.isArray(entries) ? entries : []) {
+    const normalized = normalizeEntry(rawEntry);
+    if (!normalized) continue;
+    const existing = deduped.get(normalized.slug);
+    if (!existing || normalized.lastPlayedAt >= existing.lastPlayedAt) {
+      deduped.set(normalized.slug, normalized);
+    }
+  }
+  return [...deduped.values()]
+    .sort((a, b) => (Number(b?.lastPlayedAt) || 0) - (Number(a?.lastPlayedAt) || 0))
+    .slice(0, MAX_RECENT);
+}
+
+function readEntries() {
+  return prepareEntries(safeParse(safeRead()));
+}
+
+function writeEntries(entries, { silent = false } = {}) {
+  const prepared = prepareEntries(entries);
+  safeWrite(JSON.stringify(prepared));
+  if (!silent) {
+    dispatchChange();
+  }
+  return prepared;
 }
 
 export function recordRecentlyWatched(raw) {
@@ -104,25 +122,27 @@ export function recordRecentlyWatched(raw) {
   } else {
     entries.unshift(normalized);
   }
-  entries.sort((a, b) => (Number(b?.lastPlayedAt) || 0) - (Number(a?.lastPlayedAt) || 0));
-  while (entries.length > MAX_RECENT) {
-    entries.pop();
-  }
   writeEntries(entries);
 }
 
 export function getRecentlyWatched() {
-  const entries = readEntries();
-  return entries
-    .filter((entry) => entry && entry.slug)
-    .sort((a, b) => (Number(b?.lastPlayedAt) || 0) - (Number(a?.lastPlayedAt) || 0));
+  return readEntries();
+}
+
+export function replaceRecentlyWatched(entries, { silent = false } = {}) {
+  return writeEntries(entries, { silent });
+}
+
+export function mergeRecentlyWatched(entries, { silent = false } = {}) {
+  const currentEntries = readEntries();
+  return writeEntries([...currentEntries, ...(Array.isArray(entries) ? entries : [])], { silent });
 }
 
 export function getRecentlyWatchedByMode(mode, limit = Infinity) {
   const normalizedMode = mode === "tv" ? "tv" : "movie";
   const prefix = `${normalizedMode}:`;
-  const entries = getRecentlyWatched().filter((entry) =>
-    typeof entry?.slug === "string" && entry.slug.startsWith(prefix)
+  const entries = getRecentlyWatched().filter(
+    (entry) => typeof entry?.slug === "string" && entry.slug.startsWith(prefix),
   );
   if (!Number.isFinite(limit) || limit <= 0) {
     return entries;
@@ -131,8 +151,7 @@ export function getRecentlyWatchedByMode(mode, limit = Infinity) {
 }
 
 export function clearRecentlyWatched() {
-  safeWrite(JSON.stringify([]));
-  dispatchChange();
+  writeEntries([]);
 }
 
 export function onRecentlyChange(callback) {

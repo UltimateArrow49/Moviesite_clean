@@ -1,99 +1,40 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<title>Movies · theblackbox</title>
-<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
-<link href="site.webmanifest" rel="manifest"/>
-<meta content="#14ff9f" name="theme-color"/>
-<link href="style.css?v=16" rel="stylesheet"/>
-<script type="module" src="device.js?v=12"></script>
-<script>
+  <meta charset="utf-8" />
+  <title>Movies &middot; theblackbox</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <link rel="manifest" href="/assets/site-BjNnFoGv.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon-GWdT6FjN.svg" />
+  <meta name="theme-color" content="#14ff9f" />
+  <script src="/intro-splash.js?v=2"></script>
+  <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
         navigator.serviceWorker
-          .register("sw.js?v=16")
+          .register("sw.js?v=26")
           .catch(function (error) {
             console.error("Service worker registration failed:", error);
           });
       });
     }
   </script>
+  <link rel="stylesheet" crossorigin href="/assets/style-Cz-1-Rwo.css">
+  <link rel="stylesheet" href="/theme-modern.css?v=3">
+  <script src="/detail-route.js?v=2"></script>
+  <script defer src="/home-hero.js?v=5"></script>
+  <script defer src="/search-overlay.js?v=7"></script>
+  <script defer src="/mobile-nav.js?v=3"></script>
+  <script defer src="/theatre-spelling.js?v=2"></script>
+  <script type="module" crossorigin src="/assets/movies-BQG5KjHr.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/useLegacyPageController-W0nDTF7p.js">
+  <link rel="modulepreload" crossorigin href="/assets/SearchBar-Cw8hp66A.js">
+  <link rel="modulepreload" crossorigin href="/assets/recently_watched-Yl_0sTPT.js">
+  <link rel="modulepreload" crossorigin href="/assets/progress_sync-V6oKx_un.js">
+  <link rel="modulepreload" crossorigin href="/assets/SyncTopbar-D35z_NKV.js">
 </head>
-<body class="app-shell">
-<header class="topbar">
-<a aria-label="theblackbox home" class="brand" href="index.html">
-<svg aria-labelledby="logoTitle logoDesc" role="img" viewbox="0 0 320 88" xmlns="http://www.w3.org/2000/svg">
-<title id="logoTitle">theblackbox logotype</title>
-<desc id="logoDesc">A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
-<defs>
-<lineargradient id="panel" x1="0%" x2="100%" y1="0%" y2="100%">
-<stop offset="0%" stop-color="#12ffb0" stop-opacity="0.8"></stop>
-<stop offset="100%" stop-color="#0b6751" stop-opacity="0.95"></stop>
-</lineargradient>
-<lineargradient id="word" x1="0%" x2="100%" y1="0%" y2="0%">
-<stop offset="0%" stop-color="#f7fff9"></stop>
-<stop offset="55%" stop-color="#8efed9"></stop>
-<stop offset="100%" stop-color="#12ffb0"></stop>
-</lineargradient>
-<radialgradient cx="50%" cy="50%" id="pulse" r="65%">
-<stop offset="0%" stop-color="#14ff9f" stop-opacity="0.3"></stop>
-<stop offset="100%" stop-color="#14ff9f" stop-opacity="0"></stop>
-</radialgradient>
-<filter height="180%" id="glow" width="180%" x="-40%" y="-40%">
-<fegaussianblur result="blur" stddeviation="6"></fegaussianblur>
-<femerge>
-<femergenode in="blur"></femergenode>
-<femergenode in="SourceGraphic"></femergenode>
-</femerge>
-</filter>
-</defs>
-<g filter="url(#glow)">
-<rect fill="#050a08" height="60" rx="18" stroke="#14ff9f" stroke-opacity="0.45" stroke-width="2.5" width="64" x="12" y="14"></rect>
-<rect fill="url(#panel)" height="40" rx="12" width="44" x="22" y="24"></rect>
-<path d="M33 52h6v-20h-6zm11 12h6V32h-6zm11-20h6v20h-6z" fill="#0f362c" opacity="0.6"></path>
-<path d="M33 48h6V32h-6zm11 12h6V28h-6zm11-16h6v16h-6z" fill="#12ffb0"></path>
-<circle cx="54" cy="44" fill="url(#pulse)" r="22"></circle>
-</g>
-<text fill="url(#word)" font-family="'Inter','Segoe UI',sans-serif" font-size="32" font-weight="700" letter-spacing="0.08em" x="96" y="48">
-          theblackbox
-        </text>
-<text fill="rgba(220,247,236,0.7)" font-family="'Inter','Segoe UI',sans-serif" font-size="12" letter-spacing="0.36em" x="96" y="68">
-          SHADOW SIGNAL
-        </text>
-</svg>
-</a>
-<nav>
-<a class="btn btn--primary" href="movies.html">Movies</a>
-<a class="btn" href="series.html">Shows</a>
-<a class="btn" href="live.html">Live</a>
-<a class="btn btn--ghost" href="player.html">Info</a>
-</nav>
-<div class="topbar__actions">
-<form action="search.html" class="search-bar" id="searchForm" method="get"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z" fill="currentColor"></path></svg><input aria-label="Search the entire catalog" autocomplete="off" id="search" name="q" placeholder="Search movies &amp; shows" spellcheck="false" type="search"/></form>
-      </div>
-</header>
-<section class="hero hero--banner">
-<div class="hero-text">
-<p class="hero-kicker">Movie inventory</p>
-<h1>Feature films curated for measurable engagement.</h1>
-<p class="hero-subtitle">Leverage TMDB-backed insights while the Info relay keeps every stream steady for your placements.</p>
-</div>
-</section>
-<main class="content">
-  <section aria-labelledby="continueMoviesTitle" class="continue" hidden="" id="continueMovies">
-<div class="continue__header">
-<h2 id="continueMoviesTitle">Continue watching</h2>
-<p class="continue__message" id="continueMoviesMessage" hidden>Start watching to build your list. Progress saves automatically on this device.</p>
-</div>
-<div class="continue__scroller" id="continueMoviesList" role="list"></div>
-</section>
-<section aria-label="Browse movies" class="carousel-collection" id="carouselList"></section>
-</main>
-<footer class="site-footer">Results powered by TMDB · Streams delivered through the Info relay.</footer>
-<script defer="" src="install_app.js?v=12"></script>
-<script src="background_motion.js?v=16" type="module"></script>
-<script src="movies.js?v=11" type="module"></script>
+<body class="app-shell page-movies">
+  <div id="app-root"></div>
+  <script defer src="install_app.js?v=12"></script>
 </body>
 </html>

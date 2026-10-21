@@ -1,0 +1,21 @@
+/* theatre-fix.css — centering fix for the watch-together pages.
+   The compiled layout sizes the theatre content with `calc(100vw - 2rem)`
+   (grid column + shell widths), but those elements live INSIDE a parent that
+   already applies the page-gutter padding — so the width double-counts the
+   gutter and ends up WIDER than the parent's content box. That overflows a few
+   px past the right edge (creating a horizontal scrollbar) and, on desktop,
+   left-pins the column — i.e. "everything slightly to the right / not central".
+
+   Fix: size the column relative to the parent content box (`min(1300px,100%)`)
+   and centre it, and let the shells fill that box instead of using 100vw. The
+   selectors are theatre-specific classes, so nothing else is affected. */
+main.content--theater {
+  grid-template-columns: min(1300px, 100%) !important;
+  justify-content: center !important;
+}
+.theater-shell,
+[class*="theater-shell--"] {
+  width: auto !important;
+  max-width: 100% !important;
+  margin-inline: auto !important;
+}

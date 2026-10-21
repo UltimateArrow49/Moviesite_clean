@@ -1,22 +1,33 @@
-import { getEntriesByMode, onHistoryChange } from "./continue_watching.js?v=9";
+import { getEntriesByMode, onHistoryChange } from "./continue_watching.js?v=11";
+import { getTheaterHistoryByMode, onTheaterHistoryChange } from "./theater_history.js?v=1";
 import { setupPreviewForGrid } from "./preview_manager.js";
-import { setupAnimatedList } from "./ui_effects.js?v=14";
-import { IMG_BASE, requestTmdb } from "./tmdb_client.js";
+import { setupAnimatedList } from "./ui_effects.js?v=16";
+import {
+  ACTION_ICONS,
+  createCarouselSection as createSharedCarouselSection,
+  createContinueProgressCard,
+  createMediaCard,
+  enableScrollerGestureGuard,
+  joinFacts,
+  renderCarouselItems,
+  setCarouselLoading,
+  setCarouselMessage,
+} from "./catalog_ui.js?v=5";
+import { IMG_BASE, requestTmdb } from "./tmdb_client.js?v=17";
+
 const continueSection = document.getElementById("continueShows");
 const continueList = document.getElementById("continueShowsList");
 const continueMessage = document.getElementById("continueShowsMessage");
+const theaterSection = document.getElementById("theaterShows");
+const theaterList = document.getElementById("theaterShowsList");
+const theaterMessage = document.getElementById("theaterShowsMessage");
 const carouselList = document.getElementById("carouselList");
 const searchForm = document.getElementById("searchForm");
 const searchInput = document.getElementById("search");
 
-const usedSeriesIds = new Set();
 const ROW_TARGET = 18;
-const MAX_FETCH_PAGES = 4;
-
-if (continueList) {
-  setupPreviewForGrid(continueList, { mode: "tv" });
-  setupAnimatedList(continueList, { axis: "x" });
-}
+const MAX_FETCH_PAGES = 8;
+const SEARCH_REDIRECT_DEBOUNCE_MS = 900;
 
 const CAROUSELS = [
   { id: "trending", label: "Trending series", path: "trending/tv/week" },
@@ -53,17 +64,34 @@ const CAROUSELS = [
 const carouselStates = new Map();
 const suggestedSeriesIds = new Set();
 let suggestionsController = null;
+let searchRedirectTimer = 0;
+let disposeSeriesPage = null;
 
-function formatFacts(show) {
+function deriveShowTitle(entry) {
+  const rawTitle = typeof entry?.title === "string" ? entry.title.trim() : "";
+  if (!rawTitle) return "Untitled";
+  const separatorIndex = rawTitle.indexOf(" - ");
+  if (separatorIndex > 0) {
+    return rawTitle.slice(0, separatorIndex).trim() || rawTitle;
+  }
+  return rawTitle;
+}
+
+function buildSeriesFacts(show) {
   const facts = [];
   const year = (show.first_air_date || "").slice(0, 4);
   if (year) facts.push(year);
+
   const rating = Number(show.vote_average || 0);
-  if (show.vote_count > 0 && rating > 0) facts.push(`⭐ ${rating.toFixed(1)}`);
+  if (show.vote_count > 0 && rating > 0) {
+    facts.push(`\u2605 ${rating.toFixed(1)}`);
+  }
+
   if (Array.isArray(show.origin_country) && show.origin_country.length) {
     facts.push(show.origin_country[0]);
   }
-  return facts.join(" • ");
+
+  return joinFacts(facts);
 }
 
 function buildSeriesUrl(show) {
@@ -73,64 +101,25 @@ function buildSeriesUrl(show) {
 }
 
 function createCard(show) {
-  const card = document.createElement("a");
-  card.className = "card";
-  card.href = buildSeriesUrl(show);
-  card.dataset.tmdbId = show.id;
-  card.dataset.mode = "tv";
-  card.dataset.season = "1";
-  card.dataset.episode = "1";
-  card.setAttribute(
-    "aria-label",
-    `Open details for ${show.name || show.original_name || "show"}`,
-  );
-
-  const thumb = document.createElement("div");
-  thumb.className = "thumb";
-  if (show.poster_path) {
-    const img = document.createElement("img");
-    img.src = IMG_BASE + show.poster_path;
-    img.alt = `${show.name || show.original_name || "Show"} poster`;
-    thumb.appendChild(img);
-  } else {
-    const fallback = document.createElement("div");
-    fallback.className = "placeholder";
-    fallback.textContent = "No artwork";
-    thumb.appendChild(fallback);
-  }
+  if (!show?.id) return null;
   const rating = Number(show.vote_average || 0);
-  if (show.vote_count > 0 && rating > 0) {
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = rating.toFixed(1);
-    thumb.appendChild(badge);
-  }
-
-  const meta = document.createElement("div");
-  meta.className = "meta";
-
-  const title = document.createElement("p");
-  title.className = "title";
-  title.textContent = show.name || show.original_name || show.title || "Untitled";
-  meta.appendChild(title);
-
-  const facts = formatFacts(show);
-  if (facts) {
-    const sub = document.createElement("p");
-    sub.className = "sub";
-    sub.textContent = facts;
-    meta.appendChild(sub);
-  }
-
-  const actions = document.createElement("div");
-  actions.className = "actions";
-  actions.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16v2H4zm0 14h16v2H4zm0-7h16v2H4z"/></svg><span>Browse seasons</span>';
-  meta.appendChild(actions);
-
-  card.appendChild(thumb);
-  card.appendChild(meta);
-  return card;
+  return createMediaCard({
+    href: buildSeriesUrl(show),
+    title: show.name || show.original_name || show.title || "Untitled",
+    imageSrc: show.poster_path ? IMG_BASE + show.poster_path : "",
+    imageAlt: `${show.name || show.original_name || "Show"} poster`,
+    badgeText: show.vote_count > 0 && rating > 0 ? rating.toFixed(1) : "",
+    factsText: buildSeriesFacts(show),
+    ariaLabel: `Open details for ${show.name || show.original_name || "show"}`,
+    actionLabel: "Browse seasons",
+    actionIconPath: ACTION_ICONS.browse,
+    dataset: {
+      tmdbId: show.id,
+      mode: "tv",
+      season: "1",
+      episode: "1",
+    },
+  });
 }
 
 function formatTime(seconds) {
@@ -144,7 +133,7 @@ function formatTime(seconds) {
 function formatEpisodeLabel(entry) {
   const season = Number(entry.season) || 1;
   const episode = Number(entry.episode) || 1;
-  return `S${String(season).padStart(2, "0")} • E${String(episode).padStart(2, "0")}`;
+  return `S${String(season).padStart(2, "0")} \u2022 E${String(episode).padStart(2, "0")}`;
 }
 
 function buildResumeUrl(entry) {
@@ -158,76 +147,52 @@ function buildResumeUrl(entry) {
 }
 
 function createContinueCard(entry) {
-  const card = document.createElement("a");
-  card.className = "card card--continue";
-  card.href = buildResumeUrl(entry);
-  card.dataset.mode = entry.mode;
-  card.dataset.tmdbId = entry.tmdb;
-  card.dataset.season = entry.season;
-  card.dataset.episode = entry.episode;
-  card.setAttribute(
-    "aria-label",
-    entry.progress
-      ? `Open ${entry.title || "show"} details and resume at ${formatTime(entry.progress)}`
-      : `Open ${entry.title || "show"} details`,
-  );
-
-  const thumb = document.createElement("div");
-  thumb.className = "thumb thumb--continue";
-  if (entry.poster) {
-    const img = document.createElement("img");
-    img.src = entry.poster;
-    img.alt = `${entry.title || "Show"} artwork`;
-    thumb.appendChild(img);
-  } else {
-    const placeholderEl = document.createElement("div");
-    placeholderEl.className = "placeholder";
-    placeholderEl.textContent = "No artwork";
-    thumb.appendChild(placeholderEl);
-  }
-  card.appendChild(thumb);
-
-  const progressBar = document.createElement("div");
-  progressBar.className = "card-progress";
-  const fill = document.createElement("span");
   let percent = 0;
   if (entry.runtime && entry.progress) {
     percent = Math.min(100, Math.round((entry.progress / entry.runtime) * 100));
   } else if (entry.progress) {
     percent = 5;
   }
-  if (percent > 0) {
-    fill.style.width = `${Math.max(5, percent)}%`;
-  } else {
-    fill.style.width = "0%";
-  }
-  progressBar.appendChild(fill);
-  card.appendChild(progressBar);
 
-  const meta = document.createElement("div");
-  meta.className = "meta meta--continue";
-
-  const title = document.createElement("p");
-  title.className = "title";
-  title.textContent = entry.title || "Untitled";
-  meta.appendChild(title);
-
-  const episode = document.createElement("p");
-  episode.className = "resume";
-  episode.textContent = entry.progress
-    ? `${formatEpisodeLabel(entry)} · Resume from ${formatTime(entry.progress)}`
-    : `${formatEpisodeLabel(entry)} · Start over`;
-  meta.appendChild(episode);
-
-  card.appendChild(meta);
-  return card;
+  return createContinueProgressCard({
+    href: buildResumeUrl(entry),
+    title: deriveShowTitle(entry),
+    imageSrc: entry.poster || "",
+    imageAlt: `${entry.title || "Show"} artwork`,
+    progressPercent: percent,
+    resumeText: entry.progress
+      ? `${formatEpisodeLabel(entry)} \u2022 Resume from ${formatTime(entry.progress)}`
+      : `${formatEpisodeLabel(entry)} \u2022 Start over`,
+    ariaLabel: entry.progress
+      ? `Open ${entry.title || "show"} details and resume at ${formatTime(entry.progress)}`
+      : `Open ${entry.title || "show"} details`,
+    dataset: {
+      mode: entry.mode,
+      tmdbId: entry.tmdb,
+      season: entry.season,
+      episode: entry.episode,
+    },
+  });
 }
 
 function renderContinueWatching() {
   if (!continueSection || !continueList) return;
-  const entries = getEntriesByMode("tv").slice(0, 12);
+
+  const groupedEntries = new Map();
+  getEntriesByMode("tv").forEach((entry) => {
+    const key = String(entry?.tmdb || "");
+    if (!key) return;
+    const existing = groupedEntries.get(key);
+    if (!existing || Number(entry.updatedAt || 0) >= Number(existing.updatedAt || 0)) {
+      groupedEntries.set(key, entry);
+    }
+  });
+  const entries = [...groupedEntries.values()]
+    .sort((left, right) => Number(right?.updatedAt || 0) - Number(left?.updatedAt || 0))
+    .slice(0, 12);
   continueSection.hidden = false;
   continueList.innerHTML = "";
+
   if (!entries.length) {
     continueSection.classList.add("continue--empty");
     if (continueMessage) {
@@ -237,154 +202,88 @@ function renderContinueWatching() {
     }
     return;
   }
+
   continueSection.classList.remove("continue--empty");
   if (continueMessage) {
     continueMessage.hidden = true;
   }
+
   const fragment = document.createDocumentFragment();
-  for (const entry of entries) {
-    fragment.appendChild(createContinueCard(entry));
-  }
+  entries.forEach((entry) => {
+    const card = createContinueCard(entry);
+    if (card) {
+      fragment.appendChild(card);
+    }
+  });
   continueList.appendChild(fragment);
 }
 
-function createCarouselSection(definition) {
-  if (!carouselList) return null;
-  const section = document.createElement("section");
-  section.className = "carousel";
-  section.dataset.carousel = definition.id;
-
-  const header = document.createElement("div");
-  header.className = "carousel__header";
-
-  const title = document.createElement("h2");
-  title.className = "carousel__title";
-  title.textContent = definition.label;
-  header.appendChild(title);
-
-  const controls = document.createElement("div");
-  controls.className = "carousel__controls";
-
-  const prev = document.createElement("button");
-  prev.type = "button";
-  prev.className = "carousel__arrow";
-  prev.innerHTML =
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>';
-  prev.disabled = true;
-  controls.appendChild(prev);
-
-  const next = document.createElement("button");
-  next.type = "button";
-  next.className = "carousel__arrow";
-  next.innerHTML =
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m8.59 16.59 1.41 1.41 6-6-6-6-1.41 1.41L12.17 12z"/></svg>';
-  controls.appendChild(next);
-
-  header.appendChild(controls);
-  section.appendChild(header);
-
-  const scroller = document.createElement("div");
-  scroller.className = "carousel__scroller";
-  scroller.setAttribute("role", "list");
-  section.appendChild(scroller);
-
-  const loader = document.createElement("div");
-  loader.className = "carousel__loader";
-  loader.innerHTML =
-    '<span class="spinner" aria-hidden="true"></span><span class="carousel__loader-text">Loading titles…</span>';
-  loader.hidden = true;
-  section.appendChild(loader);
-
-  const message = document.createElement("p");
-  message.className = "carousel__message";
-  message.hidden = true;
-  section.appendChild(message);
-
-  carouselList.appendChild(section);
-
-  const state = {
-    def: definition,
-    section,
-    scroller,
-    prev,
-    next,
-    message,
-    loader,
-    loaderText: loader.querySelector(".carousel__loader-text"),
-  };
-
-  const updateArrows = () => {
-    const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
-    prev.disabled = scroller.scrollLeft <= 8;
-    next.disabled = scroller.scrollLeft >= maxScroll - 8;
-  };
-
-  const scrollByDirection = (direction) => {
-    const amount = scroller.clientWidth * 0.9 * direction;
-    scroller.scrollBy({ left: amount, behavior: "smooth" });
-  };
-
-  prev.addEventListener("click", () => {
-    scrollByDirection(-1);
-    setTimeout(updateArrows, 320);
-  });
-
-  next.addEventListener("click", () => {
-    scrollByDirection(1);
-    setTimeout(updateArrows, 320);
-  });
-
-  scroller.addEventListener("scroll", () => updateArrows());
-  window.addEventListener("resize", () => updateArrows(), { passive: true });
-
-  setupPreviewForGrid(scroller, { mode: "tv" });
-  setupAnimatedList(scroller, { axis: "x" });
-
-  const enhancedState = { ...state, updateArrows };
-  carouselStates.set(definition.id, enhancedState);
-  updateArrows();
-  return enhancedState;
-}
-
-function setCarouselLoading(state, isLoading, label = "Loading titles…") {
-  if (!state || !state.loader) return;
-  if (state.loaderText && label) {
-    state.loaderText.textContent = label;
-  }
-  state.loader.hidden = !isLoading;
-  state.section.classList.toggle("carousel--loading", Boolean(isLoading));
-  if (isLoading) {
-    state.scroller.setAttribute("aria-busy", "true");
-  } else {
-    state.scroller.removeAttribute("aria-busy");
-  }
-}
-
-function setCarouselMessage(state, message) {
-  if (!state) return;
-  if (!message) {
-    state.message.textContent = "";
-    state.message.hidden = true;
+function renderTheaterHistory() {
+  if (!theaterSection || !theaterList) return;
+  const entries = getTheaterHistoryByMode("tv", 12);
+  theaterSection.hidden = false;
+  theaterList.innerHTML = "";
+  if (!entries.length) {
+    theaterSection.classList.add("continue--empty");
+    if (theaterMessage) {
+      theaterMessage.hidden = false;
+      theaterMessage.textContent = "Watch an episode in a theater room to build this rail.";
+    }
     return;
   }
-  state.message.textContent = message;
-  state.message.hidden = false;
+  theaterSection.classList.remove("continue--empty");
+  if (theaterMessage) {
+    theaterMessage.hidden = true;
+  }
+  const fragment = document.createDocumentFragment();
+  entries.forEach((entry) => {
+    const card = createContinueProgressCard({
+      href:
+        entry.href ||
+        `/series_detail.html?id=${encodeURIComponent(entry.tmdb)}&season=${encodeURIComponent(
+          entry.season || 1,
+        )}&episode=${encodeURIComponent(entry.episode || 1)}`,
+      title: deriveShowTitle(entry),
+      imageSrc: entry.poster || "",
+      imageAlt: `${entry.title || "Show"} artwork`,
+      progressPercent: 0,
+      resumeText: `${formatEpisodeLabel(entry)} · Shared screening`,
+      ariaLabel: `Open ${entry.title || "show"} details`,
+      dataset: {
+        mode: entry.mode,
+        tmdbId: entry.tmdb,
+        season: entry.season,
+        episode: entry.episode,
+        theater: "true",
+      },
+      showProgressBar: false,
+    });
+    if (card) fragment.appendChild(card);
+  });
+  theaterList.appendChild(fragment);
 }
 
-function renderCarousel(state, items) {
-  if (!state) return;
-  state.scroller.innerHTML = "";
-  const fragment = document.createDocumentFragment();
-  for (const item of items) {
-    if (!item || !item.id) continue;
-    fragment.appendChild(createCard(item));
-  }
-  state.scroller.appendChild(fragment);
-  state.updateArrows();
+function createCarouselSection(definition) {
+  const state = createSharedCarouselSection({
+    definition,
+    container: carouselList,
+    previewMode: "tv",
+    setupPreviewForGrid,
+    setupAnimatedList,
+  });
+  if (!state) return null;
+
+  carouselStates.set(definition.id, state);
+  return state;
 }
 
 async function fetchCarouselItems(definition) {
+  return fetchCarouselItemsWithReserved(definition, new Set());
+}
+
+async function fetchCarouselItemsWithReserved(definition, reservedIds = new Set()) {
   const items = [];
+  const rowIds = new Set();
   const params = { ...(definition.params || {}) };
   let page = 1;
   let totalPages = 1;
@@ -392,14 +291,15 @@ async function fetchCarouselItems(definition) {
   while (items.length < ROW_TARGET && page <= MAX_FETCH_PAGES && page <= totalPages) {
     const response = await requestTmdb(definition.path, { ...params, page: String(page) });
     totalPages = Number(response.total_pages) || totalPages || 1;
+
     const results = Array.isArray(response.results) ? response.results : [];
     for (const result of results) {
-      if (!result || !result.id) continue;
-      if (usedSeriesIds.has(result.id)) continue;
-      usedSeriesIds.add(result.id);
+      if (!result?.id || rowIds.has(result.id) || reservedIds.has(result.id)) continue;
+      rowIds.add(result.id);
       items.push(result);
       if (items.length >= ROW_TARGET) break;
     }
+
     if (!results.length) break;
     page += 1;
   }
@@ -408,47 +308,56 @@ async function fetchCarouselItems(definition) {
 }
 
 async function loadCarousel(definition) {
+  return loadCarouselWithReserved(definition, new Set());
+}
+
+async function loadCarouselWithReserved(definition, reservedIds = new Set()) {
   let state = carouselStates.get(definition.id);
   if (!state) {
     state = createCarouselSection(definition);
   }
-  if (!state) return;
+  if (!state) return [];
 
   setCarouselMessage(state, "");
-  setCarouselLoading(state, true, "Loading shows…");
+  setCarouselLoading(state, true, `Loading shows\u2026`);
+
   try {
-    const items = await fetchCarouselItems(definition);
+    const items = await fetchCarouselItemsWithReserved(definition, reservedIds);
     if (!items.length) {
-      renderCarousel(state, []);
-      setCarouselMessage(state, "No series available right now. Please check back soon.");
+      renderCarouselItems(state, [], createCard);
+      setCarouselMessage(state, "No shows available right now. Please check back soon.");
       setCarouselLoading(state, false);
-      return;
+      return [];
     }
-    renderCarousel(state, items);
+
+    renderCarouselItems(state, items, createCard);
     setCarouselMessage(state, "");
     setCarouselLoading(state, false);
+    return items;
   } catch (error) {
     console.error(error);
-    renderCarousel(state, []);
+    renderCarouselItems(state, [], createCard);
     setCarouselMessage(state, "Unable to load this row right now. Retry shortly.");
     setCarouselLoading(state, false);
+    return [];
   }
 }
 
-function releaseSuggestedItems() {
-  for (const id of suggestedSeriesIds) {
-    usedSeriesIds.delete(id);
-  }
+function clearSuggestedReservations() {
   suggestedSeriesIds.clear();
 }
 
+function reserveItemIds(target, items) {
+  items.forEach((item) => {
+    if (item?.id) target.add(item.id);
+  });
+}
 async function fetchSuggestedFromHistory(historyEntries, { signal } = {}) {
   const suggestions = [];
   const seenSources = new Set();
 
   for (const entry of historyEntries) {
-    if (!entry || !entry.tmdb) continue;
-    if (seenSources.has(entry.tmdb)) continue;
+    if (!entry?.tmdb || seenSources.has(entry.tmdb)) continue;
     seenSources.add(entry.tmdb);
 
     const endpoints = [`tv/${entry.tmdb}/recommendations`, `tv/${entry.tmdb}/similar`];
@@ -458,18 +367,19 @@ async function fetchSuggestedFromHistory(historyEntries, { signal } = {}) {
         const payload = await requestTmdb(endpoint, { page: "1" }, { signal });
         const results = Array.isArray(payload.results) ? payload.results : [];
         for (const result of results) {
-          if (!result || !result.id) continue;
-          if (usedSeriesIds.has(result.id)) continue;
-          if (suggestions.some((item) => item && item.id === result.id)) continue;
+          if (!result?.id) continue;
+          if (suggestions.some((item) => item?.id === result.id)) continue;
           suggestions.push(result);
           if (suggestions.length >= ROW_TARGET) break;
         }
       } catch (error) {
         if (error.name === "AbortError") throw error;
-        console.warn(`Unable to load series suggestions from ${endpoint}`, error);
+        console.warn(`Unable to load suggestions from ${endpoint}`, error);
       }
+
       if (suggestions.length >= ROW_TARGET) break;
     }
+
     if (suggestions.length >= ROW_TARGET) break;
   }
 
@@ -478,13 +388,16 @@ async function fetchSuggestedFromHistory(historyEntries, { signal } = {}) {
 
 async function loadSuggestedRow() {
   const historyEntries = getEntriesByMode("tv");
-  if (!historyEntries.length) {
+  const removeSuggestedRow = () => {
     const existing = carouselStates.get("suggested_shows");
     if (existing) {
-      releaseSuggestedItems();
       existing.section.remove();
       carouselStates.delete("suggested_shows");
     }
+  };
+  if (!historyEntries.length) {
+    clearSuggestedReservations();
+    removeSuggestedRow();
     return;
   }
 
@@ -494,48 +407,39 @@ async function loadSuggestedRow() {
   const controller = new AbortController();
   suggestionsController = controller;
 
-  let state = carouselStates.get("suggested_shows");
-  if (!state) {
-    state = createCarouselSection({ id: "suggested_shows", label: "Suggested for you" });
-    if (state) {
-      carouselList?.prepend(state.section);
-    }
-  }
-  if (!state) {
-    suggestionsController = null;
-    return;
-  }
-
-  releaseSuggestedItems();
-  setCarouselMessage(state, "");
-  setCarouselLoading(state, true, "Personalizing recommendations…");
+  clearSuggestedReservations();
 
   try {
-    const items = await fetchSuggestedFromHistory(historyEntries, { signal: controller.signal });
+    const items = await fetchSuggestedFromHistory(historyEntries, {
+      signal: controller.signal,
+    });
     if (suggestionsController !== controller) return;
+
     if (!items.length) {
-      renderCarousel(state, []);
-      setCarouselMessage(
-        state,
-        "Watch a few more shows to unlock personalized suggestions.",
-      );
-      setCarouselLoading(state, false);
+      removeSuggestedRow();
       return;
     }
-    renderCarousel(state, items);
-    for (const item of items) {
-      if (!item || !item.id) continue;
-      suggestedSeriesIds.add(item.id);
-      usedSeriesIds.add(item.id);
+
+    let state = carouselStates.get("suggested_shows");
+    if (!state) {
+      state = createCarouselSection({ id: "suggested_shows", label: "Suggested for you" });
+      if (state) {
+        carouselList?.prepend(state.section);
+      }
     }
+    if (!state) {
+      suggestionsController = null;
+      return;
+    }
+
+    renderCarouselItems(state, items, createCard);
+    reserveItemIds(suggestedSeriesIds, items);
     setCarouselMessage(state, "");
     setCarouselLoading(state, false);
   } catch (error) {
     if (error.name !== "AbortError") {
-      console.error("Unable to build show suggestions", error);
-      renderCarousel(state, []);
-      setCarouselMessage(state, "Personalized picks are unavailable right now. Try again soon.");
-      setCarouselLoading(state, false);
+      console.error("Unable to build suggested row", error);
+      removeSuggestedRow();
     }
   } finally {
     if (suggestionsController === controller) {
@@ -544,46 +448,117 @@ async function loadSuggestedRow() {
   }
 }
 
+function primeCarousels() {
+  CAROUSELS.forEach((definition) => {
+    let state = carouselStates.get(definition.id);
+    if (!state) {
+      state = createCarouselSection(definition);
+    }
+    if (!state) return;
+    setCarouselMessage(state, "");
+    setCarouselLoading(state, true, `Loading shows\u2026`);
+  });
+}
+
+async function loadStandardCarousels() {
+  const reservedIds = new Set(suggestedSeriesIds);
+  for (const definition of CAROUSELS) {
+    const items = await loadCarouselWithReserved(definition, reservedIds);
+    reserveItemIds(reservedIds, items);
+  }
+}
+
 function initCarousels() {
+  primeCarousels();
   loadSuggestedRow()
     .catch((error) => {
       if (error.name !== "AbortError") {
-        console.error("Failed to prepare show suggestions", error);
+        console.error("Failed to prepare suggestions", error);
       }
     })
     .finally(() => {
-      for (const def of CAROUSELS) {
-        loadCarousel(def);
-      }
+      loadStandardCarousels().catch((error) => {
+        console.error("Failed to prepare show rows", error);
+      });
     });
 }
 
 function initSearchRedirect() {
   if (!searchForm || !searchInput) return;
-  searchForm.addEventListener("submit", (event) => {
+
+  const navigateToSearch = (value) => {
+    const query = encodeURIComponent(value);
+    window.location.href = `/search.html?q=${query}&scope=tv`;
+  };
+
+  const handleSubmit = (event) => {
     const value = searchInput.value.trim();
     if (!value) {
       event.preventDefault();
       return;
     }
+
     event.preventDefault();
-    const query = encodeURIComponent(value);
-    window.location.href = `/search.html?q=${query}&scope=tv`;
-  });
+    window.clearTimeout(searchRedirectTimer);
+    navigateToSearch(value);
+  };
+
+  const handleInput = (event) => {
+    const value = event.target.value.trim();
+    window.clearTimeout(searchRedirectTimer);
+    if (!value) return;
+    searchRedirectTimer = window.setTimeout(() => {
+      navigateToSearch(value);
+    }, SEARCH_REDIRECT_DEBOUNCE_MS);
+  };
+
+  searchForm.addEventListener("submit", handleSubmit);
+  searchInput.addEventListener("input", handleInput);
+
+  return () => {
+    searchForm.removeEventListener("submit", handleSubmit);
+    searchInput.removeEventListener("input", handleInput);
+    window.clearTimeout(searchRedirectTimer);
+  };
 }
 
-function init() {
+export function initSeriesPage() {
+  if (typeof disposeSeriesPage === "function") {
+    disposeSeriesPage();
+  }
+
+  if (continueList) {
+    setupPreviewForGrid(continueList, { mode: "tv" });
+    setupAnimatedList(continueList, { axis: "x" });
+    enableScrollerGestureGuard(continueList);
+  }
+
   renderContinueWatching();
-  onHistoryChange(() => {
+  renderTheaterHistory();
+
+  const removeHistoryListener = onHistoryChange(() => {
     renderContinueWatching();
     loadSuggestedRow().catch((error) => {
       if (error.name !== "AbortError") {
-        console.error("Failed to refresh show suggestions", error);
+        console.error("Failed to refresh suggestions", error);
       }
     });
   });
-  initCarousels();
-  initSearchRedirect();
-}
+  const removeTheaterHistoryListener = onTheaterHistoryChange(() => {
+    renderTheaterHistory();
+  });
 
-document.addEventListener("DOMContentLoaded", init);
+  initCarousels();
+  const removeSearchRedirect = initSearchRedirect();
+
+  disposeSeriesPage = () => {
+    removeHistoryListener?.();
+    removeTheaterHistoryListener?.();
+    removeSearchRedirect?.();
+    window.clearTimeout(searchRedirectTimer);
+    suggestionsController?.abort();
+    suggestionsController = null;
+  };
+
+  return disposeSeriesPage;
+}

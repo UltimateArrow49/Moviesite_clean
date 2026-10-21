@@ -1,6 +1,12 @@
 import { setupPreviewForGrid } from "./preview_manager.js";
-import { setupAnimatedList } from "./ui_effects.js?v=14";
-import { BACKDROP_BASE, IMG_BASE, requestTmdb } from "./tmdb_client.js";
+import { setupAnimatedList } from "./ui_effects.js?v=16";
+import {
+  ACTION_ICONS,
+  createMediaCard,
+  joinFacts,
+  updateResultGroup,
+} from "./catalog_ui.js?v=5";
+import { BACKDROP_BASE, IMG_BASE, requestTmdb } from "./tmdb_client.js?v=17";
 
 const searchForm = document.getElementById("searchForm");
 const searchInput = document.getElementById("search");
@@ -18,17 +24,20 @@ const scopeButtons = Array.from(document.querySelectorAll("[data-search-scope]")
 const state = {
   scope: "movie",
 };
+const SEARCH_DEBOUNCE_MS = 220;
 
 if (movieList) {
   setupPreviewForGrid(movieList, { mode: "movie" });
   setupAnimatedList(movieList, { axis: "y" });
 }
+
 if (showList) {
   setupPreviewForGrid(showList, { mode: "tv" });
   setupAnimatedList(showList, { axis: "y" });
 }
 
 let activeController = null;
+let searchDebounceId = 0;
 
 function sanitizeQuery(value) {
   return (value || "").replace(/\s+/g, " ").trim();
@@ -52,112 +61,42 @@ function buildMovieUrl(movie) {
     autoplay: "true",
     color: "14ff9f",
   });
+
   if (movie.poster_path) params.set("poster", `${IMG_BASE}${movie.poster_path}`);
   if (movie.backdrop_path) params.set("backdrop", `${BACKDROP_BASE}${movie.backdrop_path}`);
   if (movie.release_date) params.set("release", movie.release_date);
+
   return `/player.html?${params.toString()}`;
 }
 
 function createMovieCard(movie) {
-  const card = document.createElement("a");
-  card.className = "card";
-  card.href = buildMovieUrl(movie);
-  card.dataset.tmdbId = movie.id;
-  card.dataset.mode = "movie";
-  card.setAttribute("aria-label", `Stream ${movie.title || movie.name || "movie"} on theblackbox`);
-
-  const thumb = document.createElement("div");
-  thumb.className = "thumb";
-  if (movie.poster_path) {
-    const img = document.createElement("img");
-    img.src = IMG_BASE + movie.poster_path;
-    img.alt = `${movie.title || movie.name || "Movie"} poster`;
-    thumb.appendChild(img);
-  } else {
-    const fallback = document.createElement("div");
-    fallback.className = "placeholder";
-    fallback.textContent = "No artwork";
-    thumb.appendChild(fallback);
-  }
-
+  if (!movie?.id) return null;
   const rating = Number(movie.vote_average || 0);
-  if (movie.vote_count > 0 && rating > 0) {
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = rating.toFixed(1);
-    thumb.appendChild(badge);
-  }
-
-  const meta = document.createElement("div");
-  meta.className = "meta";
-
-  const title = document.createElement("p");
-  title.className = "title";
-  title.textContent = movie.title || movie.original_title || movie.name || "Untitled";
-  meta.appendChild(title);
-
   const facts = [];
   const year = (movie.release_date || "").slice(0, 4);
   if (year) facts.push(year);
   if (rating > 0 && movie.vote_count > 0) facts.push(`Rating ${rating.toFixed(1)}`);
-  if (facts.length) {
-    const sub = document.createElement("p");
-    sub.className = "sub";
-    sub.textContent = facts.join(" • ");
-    meta.appendChild(sub);
-  }
 
-  const actions = document.createElement("div");
-  actions.className = "actions";
-  actions.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5.14 10 6-10 6V5.14Z"/></svg><span>Watch now</span>';
-  meta.appendChild(actions);
-
-  card.appendChild(thumb);
-  card.appendChild(meta);
-  return card;
+  return createMediaCard({
+    href: buildMovieUrl(movie),
+    title: movie.title || movie.original_title || movie.name || "Untitled",
+    imageSrc: movie.poster_path ? IMG_BASE + movie.poster_path : "",
+    imageAlt: `${movie.title || movie.name || "Movie"} poster`,
+    badgeText: movie.vote_count > 0 && rating > 0 ? rating.toFixed(1) : "",
+    factsText: joinFacts(facts),
+    ariaLabel: `Stream ${movie.title || movie.name || "movie"} on theblackbox`,
+    actionLabel: "Watch now",
+    actionIconPath: ACTION_ICONS.play,
+    dataset: {
+      tmdbId: movie.id,
+      mode: "movie",
+    },
+  });
 }
 
 function createShowCard(show) {
-  const card = document.createElement("a");
-  card.className = "card";
-  card.href = `/series_detail.html?id=${encodeURIComponent(show.id)}`;
-  card.dataset.tmdbId = show.id;
-  card.dataset.mode = "tv";
-  card.dataset.season = "1";
-  card.dataset.episode = "1";
-  card.setAttribute("aria-label", `Open details for ${show.name || show.original_name || "show"}`);
-
-  const thumb = document.createElement("div");
-  thumb.className = "thumb";
-  if (show.poster_path) {
-    const img = document.createElement("img");
-    img.src = IMG_BASE + show.poster_path;
-    img.alt = `${show.name || show.original_name || "Show"} poster`;
-    thumb.appendChild(img);
-  } else {
-    const fallback = document.createElement("div");
-    fallback.className = "placeholder";
-    fallback.textContent = "No artwork";
-    thumb.appendChild(fallback);
-  }
-
+  if (!show?.id) return null;
   const rating = Number(show.vote_average || 0);
-  if (show.vote_count > 0 && rating > 0) {
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = rating.toFixed(1);
-    thumb.appendChild(badge);
-  }
-
-  const meta = document.createElement("div");
-  meta.className = "meta";
-
-  const title = document.createElement("p");
-  title.className = "title";
-  title.textContent = show.name || show.original_name || show.title || "Untitled";
-  meta.appendChild(title);
-
   const facts = [];
   const year = (show.first_air_date || "").slice(0, 4);
   if (year) facts.push(year);
@@ -165,46 +104,31 @@ function createShowCard(show) {
   if (Array.isArray(show.origin_country) && show.origin_country.length) {
     facts.push(show.origin_country[0]);
   }
-  if (facts.length) {
-    const sub = document.createElement("p");
-    sub.className = "sub";
-    sub.textContent = facts.join(" • ");
-    meta.appendChild(sub);
-  }
 
-  const actions = document.createElement("div");
-  actions.className = "actions";
-  actions.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16v2H4zm0 14h16v2H4zm0-7h16v2H4z"/></svg><span>Browse seasons</span>';
-  meta.appendChild(actions);
-
-  card.appendChild(thumb);
-  card.appendChild(meta);
-  return card;
-}
-
-function updateGroup(listEl, emptyEl, countEl, items, createCardFn) {
-  if (!listEl || !emptyEl || !countEl) return;
-  listEl.innerHTML = "";
-  if (!items.length) {
-    emptyEl.hidden = false;
-    countEl.textContent = "";
-    return;
-  }
-  emptyEl.hidden = true;
-  const fragment = document.createDocumentFragment();
-  for (const item of items) {
-    fragment.appendChild(createCardFn(item));
-  }
-  listEl.appendChild(fragment);
-  countEl.textContent = `${items.length} match${items.length === 1 ? "" : "es"}`;
+  return createMediaCard({
+    href: `/series_detail.html?id=${encodeURIComponent(show.id)}`,
+    title: show.name || show.original_name || show.title || "Untitled",
+    imageSrc: show.poster_path ? IMG_BASE + show.poster_path : "",
+    imageAlt: `${show.name || show.original_name || "Show"} poster`,
+    badgeText: show.vote_count > 0 && rating > 0 ? rating.toFixed(1) : "",
+    factsText: joinFacts(facts),
+    ariaLabel: `Open details for ${show.name || show.original_name || "show"}`,
+    actionLabel: "Browse seasons",
+    actionIconPath: ACTION_ICONS.browse,
+    dataset: {
+      tmdbId: show.id,
+      mode: "tv",
+      season: "1",
+      episode: "1",
+    },
+  });
 }
 
 function updateDocumentMeta(query) {
   if (query) {
-    document.title = `Search "${query}" · theblackbox`;
+    document.title = `Search "${query}" \u00b7 theblackbox`;
   } else {
-    document.title = "Search · theblackbox";
+    document.title = "Search \u00b7 theblackbox";
   }
 }
 
@@ -246,14 +170,15 @@ function applyScopeLayout() {
 async function performSearch(rawQuery) {
   const query = sanitizeQuery(rawQuery);
   if (!searchInput) return;
+
   searchInput.value = query;
   updateDocumentMeta(query);
   syncUrl(query);
 
   if (!query) {
     setStatus("Start typing to search across movies and shows.");
-    updateGroup(movieList, movieEmpty, movieCount, [], createMovieCard);
-    updateGroup(showList, showEmpty, showCount, [], createShowCard);
+    updateResultGroup(movieList, movieEmpty, movieCount, [], createMovieCard);
+    updateResultGroup(showList, showEmpty, showCount, [], createShowCard);
     return;
   }
 
@@ -281,14 +206,14 @@ async function performSearch(rawQuery) {
     ]);
 
     const movieResults = Array.isArray(movieData.results)
-      ? movieData.results.filter((item) => item && item.id).slice(0, 20)
+      ? movieData.results.filter((item) => item?.id).slice(0, 20)
       : [];
     const showResults = Array.isArray(showData.results)
-      ? showData.results.filter((item) => item && item.id).slice(0, 20)
+      ? showData.results.filter((item) => item?.id).slice(0, 20)
       : [];
 
-    updateGroup(movieList, movieEmpty, movieCount, movieResults, createMovieCard);
-    updateGroup(showList, showEmpty, showCount, showResults, createShowCard);
+    updateResultGroup(movieList, movieEmpty, movieCount, movieResults, createMovieCard);
+    updateResultGroup(showList, showEmpty, showCount, showResults, createShowCard);
 
     if (!movieResults.length && !showResults.length) {
       setStatus(`No results found for "${query}". Try a different keyword.`);
@@ -320,13 +245,22 @@ function updateScope(scope) {
 function handleSubmit(event) {
   if (!searchInput) return;
   event.preventDefault();
+
   const query = sanitizeQuery(searchInput.value);
   if (!query) {
     setStatus("Enter a title, actor, or keyword to begin searching.");
     searchInput.focus();
     return;
   }
+
   performSearch(query);
+}
+
+function scheduleSearch(rawQuery) {
+  window.clearTimeout(searchDebounceId);
+  searchDebounceId = window.setTimeout(() => {
+    performSearch(rawQuery);
+  }, SEARCH_DEBOUNCE_MS);
 }
 
 function applyInitialQuery() {
@@ -334,6 +268,7 @@ function applyInitialQuery() {
   const url = new URL(window.location.href);
   state.scope = normalizeScope(url.searchParams.get("scope"));
   applyScopeLayout();
+
   const initial = sanitizeQuery(url.searchParams.get("q"));
   if (initial) {
     searchInput.value = initial;
@@ -356,11 +291,16 @@ function init() {
   if (searchForm) {
     searchForm.addEventListener("submit", handleSubmit);
   }
+
   if (searchInput) {
+    searchInput.addEventListener("input", (event) => {
+      scheduleSearch(event.target.value);
+    });
     searchInput.addEventListener("search", (event) => {
       performSearch(event.target.value);
     });
   }
+
   applyInitialQuery();
 }
 

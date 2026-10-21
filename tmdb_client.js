@@ -1,27 +1,29 @@
 const IMG_BASE = "https://image.tmdb.org/t/p/w500";
 const BACKDROP_BASE = "https://image.tmdb.org/t/p/w780";
-const TMDB_BASE = "https://api.themoviedb.org/3";
-const TMDB_API_KEY = "REDACTED";
-const TMDB_READ_TOKEN =
-  "REDACTED";
 const INFO_RELAY_BASE = "https://info-relay.theblackbox.run";
 
 async function requestTmdb(path, params = {}, { signal } = {}) {
   const query = new URLSearchParams(params);
   const cleanPath = String(path || "").replace(/^\/+/, "");
+  const queryString = query.toString();
+  const proxyPath = `/api/tmdb/${cleanPath}${queryString ? `?${queryString}` : ""}`;
 
-  const attempt = async (target, extraOptions = {}) => {
+  const attempt = async (target) => {
     const response = await fetch(target, {
       cache: "no-store",
       signal,
-      ...extraOptions,
+      headers: {
+        Accept: "application/json",
+      },
     });
 
     const text = await response.text();
     if (!response.ok) {
       throw new Error(text || `TMDB request failed (${response.status})`);
     }
-    if (!text) return {};
+    if (!text) {
+      return {};
+    }
 
     try {
       return JSON.parse(text);
@@ -30,42 +32,19 @@ async function requestTmdb(path, params = {}, { signal } = {}) {
     }
   };
 
-  const headers = { Accept: "application/json" };
-  if (TMDB_READ_TOKEN) {
-    headers.Authorization = `Bearer ${TMDB_READ_TOKEN}`;
-  }
-
-  const directUrl = new URL(`${TMDB_BASE}/${cleanPath}`);
-  for (const [key, value] of query.entries()) {
-    directUrl.searchParams.set(key, value);
-  }
-
-  if (!headers.Authorization && !directUrl.searchParams.has("api_key")) {
-    directUrl.searchParams.set("api_key", TMDB_API_KEY);
-  }
-
-  const queryString = query.toString();
-  const attempts = [
-    { url: directUrl.toString(), options: { headers } },
-  ];
-
-  const proxyPath = `/api/tmdb/${cleanPath}${queryString ? `?${queryString}` : ""}`;
-  attempts.push({ url: proxyPath, options: {} });
-
+  const attempts = [proxyPath];
   if (INFO_RELAY_BASE) {
-    const base = INFO_RELAY_BASE.replace(/\/+$/, "");
-    const relayUrl = `${base}${proxyPath}`;
-    attempts.push({ url: relayUrl, options: {} });
+    attempts.push(`${INFO_RELAY_BASE.replace(/\/+$/, "")}${proxyPath}`);
   }
 
   let lastError = null;
-  for (const { url, options } of attempts) {
+  for (const target of attempts) {
     try {
-      return await attempt(url, options);
+      return await attempt(target);
     } catch (error) {
       if (error.name === "AbortError") throw error;
       lastError = error;
-      console.warn(`TMDB fetch via ${url} failed`, error);
+      console.warn(`TMDB fetch via ${target} failed`, error);
     }
   }
 

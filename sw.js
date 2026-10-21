@@ -1,7 +1,8 @@
-const CACHE_NAME = "theblackbox-shell-v16";
+const CACHE_NAME = "theblackbox-shell-v26";
 const PRECACHE_PATHS = [
   "",
   "index.html",
+  "reader.html",
   "site.webmanifest",
   "icons/app-icon.svg",
 ];

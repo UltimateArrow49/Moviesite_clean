@@ -1,1 +1,16 @@
 app/theblackbox-desktop.zip
+.env
+.env.*
+!.env.example
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.sqlite3*
+*.db
+*.pem
+*.key
+*.log
+*.bak*
+.bak*/
+MAINTENANCE.md

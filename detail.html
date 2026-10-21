@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>theblackbox</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon-GWdT6FjN.svg" />
+  <meta name="theme-color" content="#050816" />
+  <link rel="stylesheet" crossorigin href="/assets/style-Cz-1-Rwo.css" />
+  <link rel="stylesheet" href="/theme-modern.css?v=3" />
+  <style>
+    :root { --d-gutter: clamp(20px, 6vw, 84px); }
+    body.detail-page { margin: 0; background: var(--bg); color: var(--ink); min-height: 100vh; }
+    .d-wrap { position: relative; min-height: 100vh; }
+
+    /* Cinematic backdrop */
+    .d-backdrop {
+      position: fixed; inset: 0; z-index: 0;
+      background-size: cover; background-position: center 18%;
+      filter: saturate(1.05);
+    }
+    /* two stacked layers so backdrop swaps crossfade instead of hard-cutting */
+    .d-bd-layer {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center 18%;
+      opacity: 0; transition: opacity .4s ease; will-change: opacity;
+    }
+    .d-bd-layer.on { opacity: 1; }
+    .d-backdrop::after {
+      content: ""; position: absolute; inset: 0;
+      background:
+        linear-gradient(180deg, rgba(5,8,22,0.35) 0%, rgba(5,8,22,0.65) 45%, rgba(5,8,22,0.96) 88%, var(--bg) 100%),
+        linear-gradient(90deg, rgba(5,8,22,0.92) 0%, rgba(5,8,22,0.55) 45%, rgba(5,8,22,0.15) 100%);
+    }
+
+    .d-top {
+      position: relative; z-index: 3;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px var(--d-gutter) 0;
+    }
+    .d-back {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 0.55rem 1rem; border-radius: 999px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      color: var(--ink); text-decoration: none; font-weight: 600; font-size: 0.92rem;
+      backdrop-filter: blur(10px); transition: background .2s, transform .18s;
+    }
+    .d-back:hover { background: rgba(255,255,255,0.12); transform: translateX(-2px); }
+    .d-brand { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:-0.01em; }
+    .d-brand img { width: 30px; height: 30px; }
+
+    .d-hero {
+      position: relative; z-index: 2;
+      display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+      gap: clamp(24px, 4vw, 56px);
+      align-items: end;
+      padding: clamp(120px, 26vh, 280px) var(--d-gutter) 36px;
+      max-width: 1400px; margin-inline: auto;
+    }
+    /* No-poster hero (TV detail, or a movie with no poster): single column */
+    .d-hero.d-hero--nopost { grid-template-columns: minmax(0, 1fr); }
+    .d-poster {
+      width: 100%; aspect-ratio: 2/3; border-radius: 18px; object-fit: cover;
+      box-shadow: 0 30px 70px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.08);
+    }
+    .d-meta-col { min-width: 0; }
+    .d-title {
+      font-size: clamp(2.1rem, 5vw, 4rem); font-weight: 800; line-height: 1.02;
+      letter-spacing: -0.02em; margin: 0 0 14px;
+      text-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    }
+    .d-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 18px; }
+    .d-chip {
+      display:inline-flex; align-items:center; gap:6px;
+      padding: 4px 11px; border-radius: 999px; font-size: 0.82rem; font-weight: 600;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08); color: var(--ink);
+    }
+    .d-chip--rating { color: #ffd24a; border-color: rgba(255,210,74,0.3); }
+    .d-overview {
+      max-width: 720px; color: rgba(228,235,255,0.85); line-height: 1.6;
+      font-size: clamp(0.95rem, 1.1vw, 1.06rem); margin: 0 0 26px;
+    }
+    .d-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .d-play {
+      display:inline-flex; align-items:center; gap:10px;
+      padding: 0.9rem 1.8rem; border-radius: 999px; border: none; cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #04150e; font-weight: 700; font-size: 1.02rem; text-decoration: none;
+      box-shadow: 0 12px 30px rgba(var(--accent-rgb), 0.4); transition: transform .18s, box-shadow .2s, filter .2s;
+    }
+    .d-play:hover { transform: translateY(-2px); filter: brightness(1.05); box-shadow: 0 16px 40px rgba(var(--accent-rgb),0.55); }
+    /* how far into this title/episode you are — same red as the episode rows */
+    .d-play { position: relative; overflow: hidden; }
+    .d-play-bar { position:absolute; left:0; right:0; bottom:0; height:4px; background: rgba(4,21,14,0.25); }
+    .d-play-bar-fill { display:block; height:100%; width:0; background:#e50914; }
+    .d-secondary {
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 0.9rem 1.4rem; border-radius: 999px; cursor: pointer;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+      color: var(--ink); font-weight: 600; text-decoration: none; backdrop-filter: blur(10px);
+      transition: background .2s, transform .18s;
+    }
+    .d-secondary:hover { background: rgba(255,255,255,0.13); transform: translateY(-2px); }
+
+    /* Lower content sections */
+    .d-section { position: relative; z-index: 2; padding: 8px var(--d-gutter) 28px; max-width: 1400px; margin-inline: auto; }
+    .d-section h2 {
+      font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 16px;
+      padding-left: 13px; position: relative;
+    }
+    .d-section h2::before {
+      content:""; position:absolute; left:0; top:50%; transform:translateY(-50%);
+      width:4px; height:1em; border-radius:999px; background:linear-gradient(180deg,var(--accent),var(--accent-strong));
+    }
+    .d-cast { display: grid; grid-auto-flow: column; grid-auto-columns: 110px; gap: 16px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
+    .d-cast-card { text-align: center; }
+    .d-cast-card img, .d-cast-ph {
+      width: 96px; height: 96px; border-radius: 50%; object-fit: cover; margin: 0 auto 8px;
+      border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); display:block;
+    }
+    .d-cast-name { font-size: 0.82rem; font-weight: 600; line-height: 1.2; }
+    .d-cast-role { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
+
+    .d-reco { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+    .d-reco a { text-decoration: none; color: var(--ink); display: block; transition: transform .2s; }
+    .d-reco a:hover { transform: translateY(-5px); }
+    .d-reco img, .d-reco-ph {
+      width: 100%; aspect-ratio: 2/3; border-radius: 14px; object-fit: cover; display:block; margin-bottom: 8px;
+      border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.04);
+    }
+    .d-reco-title { font-size: 0.86rem; font-weight: 600; line-height: 1.25; }
+
+    /* TV episode picker */
+    .d-eps { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom: 4px; }
+    .d-eps select {
+      background: rgba(255,255,255,0.06); color: var(--ink); border:1px solid rgba(255,255,255,0.12);
+      border-radius: 10px; padding: 0.5rem 0.8rem; font: inherit; cursor: pointer;
+      -webkit-appearance: none; -moz-appearance: none; appearance: none;
+      padding-right: 2rem;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3c7' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.7rem center;
+    }
+    .d-eps select:hover { background-color: rgba(255,255,255,0.1); }
+    .d-eps select:focus { outline: none; border-color: rgba(var(--accent-rgb),0.55); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.12); }
+    /* Solid, opaque colors for the native option popup (Windows renders the
+       translucent select bg as light grey, making near-white text invisible). */
+    .d-eps select option { background: #0b1324; color: #e4ebff; }
+    .d-eps select option:checked, .d-eps select option:hover { background: #14233f; }
+
+    /* Episode list (replaces the episode dropdown) with red watch-progress bars */
+    .d-eps.d-eps--list { display: block; }
+    .d-eps--list select { margin-bottom: 16px; }
+    /* Header row holding the season + source pickers side by side */
+    .d-eps-head { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+    .d-eps-head select { margin-bottom: 0 !important; margin-left: 0 !important; }
+    .d-ep-list { display: flex; flex-direction: column; gap: 8px; max-width: 820px; }
+    .d-ep-row {
+      display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+      padding: 8px; border-radius: 14px; cursor: pointer; color: var(--ink);
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      transition: background .18s, border-color .18s, transform .18s; font: inherit;
+    }
+    .d-ep-row:hover { background: rgba(255,255,255,0.085); border-color: rgba(var(--accent-rgb),0.3); transform: translateX(2px); }
+    .d-ep-thumb { width: 132px; height: 74px; flex: 0 0 auto; border-radius: 9px; object-fit: cover; background: rgba(255,255,255,0.06); }
+    .d-ep-thumb--ph { display: block; }
+    .d-ep-info { min-width: 0; flex: 1; }
+    .d-ep-head { display: flex; align-items: baseline; gap: 8px; }
+    .d-ep-num { font-weight: 800; color: var(--accent); font-size: 0.84rem; flex: 0 0 auto; }
+    .d-ep-name { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .d-ep-rt { margin-left: auto; color: var(--muted); font-size: 0.76rem; flex: 0 0 auto; }
+    .d-ep-ov { margin: 4px 0 8px; color: rgba(228,235,255,0.68); font-size: 0.8rem; line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .d-ep-bar { height: 4px; border-radius: 999px; background: rgba(255,255,255,0.13); overflow: hidden; margin-top: 4px; }
+    .d-ep-bar-fill { display: block; height: 100%; width: 0; background: #e50914; border-radius: 999px; }
+    .d-ep-row.is-watched .d-ep-name { color: var(--muted); }
+    .d-ep-play { width: 26px; height: 26px; flex: 0 0 auto; color: var(--muted); opacity: 0; transition: opacity .18s; }
+    .d-ep-row:hover .d-ep-play { opacity: 1; color: var(--ink); }
+    .d-ep-loading { color: var(--muted); padding: 14px 4px; }
+    @media (max-width: 720px) { .d-ep-thumb { width: 104px; height: 59px; } .d-ep-ov { display: none; } }
+
+    .d-loading { position: fixed; inset: 0; display:grid; place-items:center; z-index: 5; color: var(--muted); }
+    .d-loading[hidden] { display: none; }
+
+    @media (max-width: 720px) {
+      .d-hero { grid-template-columns: 1fr; padding-top: clamp(90px, 22vh, 200px); }
+      .d-poster { width: 130px; }
+    }
+  </style>
+</head>
+<body class="detail-page app-shell">
+  <div class="d-loading" id="dLoading">Loading…</div>
+  <div class="d-wrap" id="dWrap" hidden>
+    <div class="d-backdrop" id="dBackdrop"></div>
+    <div class="d-top">
+      <a class="d-back" href="javascript:history.length>1?history.back():(location.href='/movies.html')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        Back
+      </a>
+      <div class="d-brand"><img src="/assets/favicon-GWdT6FjN.svg" alt="" />theblackbox</div>
+    </div>
+    <div class="d-hero">
+      <img class="d-poster" id="dPoster" alt="" />
+      <div class="d-meta-col">
+        <h1 class="d-title" id="dTitle"></h1>
+        <div class="d-facts" id="dFacts"></div>
+        <p class="d-overview" id="dOverview"></p>
+        <div class="d-eps" id="dEps" hidden></div>
+        <div class="d-actions">
+          <a class="d-play" id="dPlay" href="#">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
+            Play
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="d-section" id="dCastSection" hidden>
+      <h2>Cast</h2>
+      <div class="d-cast" id="dCast"></div>
+    </div>
+    <div class="d-section" id="dRecoSection" hidden>
+      <h2>More like this</h2>
+      <div class="d-reco" id="dReco"></div>
+    </div>
+  </div>
+  <style>
+    .d-provider { margin-left: 10px; font: inherit; color: var(--ink); cursor: pointer;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px; padding: 0.7rem 1.1rem; -webkit-appearance: none; appearance: none; }
+    .d-provider option { background: #0b1324; color: #e4ebff; }
+  </style>
+  <script src="/detail.js?v=18"></script>
+</body>
+</html>

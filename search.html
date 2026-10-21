@@ -1,103 +1,96 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta charset="utf-8" />
   <title>Search · theblackbox</title>
-  <link rel="manifest" href="site.webmanifest">
-  <link rel="stylesheet" href="style.css?v=16">
-  <script type="module" src="device.js?v=12"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon-GWdT6FjN.svg" />
+  <meta name="theme-color" content="#050816" />
+  <link rel="stylesheet" crossorigin href="/assets/style-Cz-1-Rwo.css" />
+  <link rel="stylesheet" href="/theme-modern.css?v=3" />
+  <style>
+    :root { --s-gutter: clamp(20px, 6vw, 84px); }
+    body.search-live { margin: 0; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+    .s-nav {
+      display: flex; align-items: center; gap: 18px;
+      padding: 18px var(--s-gutter);
+      position: sticky; top: 0; z-index: 5;
+      backdrop-filter: blur(20px) saturate(150%);
+      background: linear-gradient(180deg, rgba(5,8,22,0.85), rgba(5,8,22,0.4));
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .s-brand { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:-0.01em; text-decoration:none; color:var(--ink); }
+    .s-brand img { width: 28px; height: 28px; }
+    .s-links { display:flex; gap:6px; margin-left: 6px; }
+    .s-links a {
+      padding: 0.5rem 0.95rem; border-radius: 999px; text-decoration:none;
+      color: var(--muted); font-weight: 600; font-size: 0.92rem; transition: background .2s, color .2s;
+    }
+    .s-links a:hover { background: rgba(255,255,255,0.06); color: var(--ink); }
+
+    .s-hero { padding: clamp(28px, 6vw, 64px) var(--s-gutter) 14px; max-width: 1000px; }
+    .s-hero h1 { font-size: clamp(1.6rem, 3.5vw, 2.4rem); font-weight: 800; letter-spacing:-0.02em; margin: 0 0 18px; }
+    .s-field {
+      position: relative; display:flex; align-items:center;
+    }
+    .s-field svg { position:absolute; left: 18px; width: 20px; height: 20px; color: var(--muted); pointer-events:none; }
+    .s-field input {
+      width: 100%; font: inherit; font-size: 1.1rem; color: var(--ink);
+      padding: 1rem 1.1rem 1rem 3.1rem; border-radius: 16px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      outline: none; transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+    .s-field input::placeholder { color: var(--muted); }
+    .s-field input:focus {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(var(--accent-rgb),0.55);
+      box-shadow: 0 0 0 4px rgba(var(--accent-rgb),0.12);
+    }
+
+    .s-status { padding: 4px var(--s-gutter); color: var(--muted); font-size: 0.9rem; min-height: 22px; }
+
+    .s-grid {
+      display: grid; gap: 18px; padding: 10px var(--s-gutter) 60px;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      max-width: 1500px;
+    }
+    .s-card { text-decoration: none; color: var(--ink); display:block; transition: transform .22s var(--tm-ease); }
+    .s-card:hover { transform: translateY(-6px); }
+    .s-poster, .s-poster-ph {
+      width: 100%; aspect-ratio: 2/3; border-radius: 14px; object-fit: cover; display:block; margin-bottom: 9px;
+      border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.04);
+      transition: box-shadow .22s, border-color .22s;
+    }
+    .s-card:hover .s-poster { box-shadow: 0 18px 40px rgba(0,0,0,0.55); border-color: rgba(var(--accent-rgb),0.32); }
+    .s-poster-ph { display:grid; place-items:center; color: var(--muted); font-size:0.8rem; text-align:center; padding:8px; }
+    .s-name { font-size: 0.9rem; font-weight: 600; line-height: 1.25; }
+    .s-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; display:flex; gap:8px; align-items:center; }
+    .s-badge { padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,0.08); font-size: 0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
+
+    .s-empty { padding: 40px var(--s-gutter); color: var(--muted); }
+  </style>
 </head>
-<body class="app-shell">
-  <header class="topbar">
-    <a aria-label="theblackbox home" class="brand" href="index.html">
-<svg aria-labelledby="logoTitle logoDesc" role="img" viewbox="0 0 320 88" xmlns="http://www.w3.org/2000/svg">
-<title id="logoTitle">theblackbox logotype</title>
-<desc id="logoDesc">A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
-<defs>
-<lineargradient id="panel" x1="0%" x2="100%" y1="0%" y2="100%">
-<stop offset="0%" stop-color="#12ffb0" stop-opacity="0.8"></stop>
-<stop offset="100%" stop-color="#0b6751" stop-opacity="0.95"></stop>
-</lineargradient>
-<lineargradient id="word" x1="0%" x2="100%" y1="0%" y2="0%">
-<stop offset="0%" stop-color="#f7fff9"></stop>
-<stop offset="55%" stop-color="#8efed9"></stop>
-<stop offset="100%" stop-color="#12ffb0"></stop>
-</lineargradient>
-<radialgradient cx="50%" cy="50%" id="pulse" r="65%">
-<stop offset="0%" stop-color="#14ff9f" stop-opacity="0.3"></stop>
-<stop offset="100%" stop-color="#14ff9f" stop-opacity="0"></stop>
-</radialgradient>
-<filter height="180%" id="glow" width="180%" x="-40%" y="-40%">
-<fegaussianblur result="blur" stddeviation="6"></fegaussianblur>
-<femerge>
-<femergenode in="blur"></femergenode>
-<femergenode in="SourceGraphic"></femergenode>
-</femerge>
-</filter>
-</defs>
-<g filter="url(#glow)">
-<rect fill="#050a08" height="60" rx="18" stroke="#14ff9f" stroke-opacity="0.45" stroke-width="2.5" width="64" x="12" y="14"></rect>
-<rect fill="url(#panel)" height="40" rx="12" width="44" x="22" y="24"></rect>
-<path d="M33 52h6v-20h-6zm11 12h6V32h-6zm11-20h6v20h-6z" fill="#0f362c" opacity="0.6"></path>
-<path d="M33 48h6V32h-6zm11 12h6V28h-6zm11-16h6v16h-6z" fill="#12ffb0"></path>
-<circle cx="54" cy="44" fill="url(#pulse)" r="22"></circle>
-</g>
-<text fill="url(#word)" font-family="'Inter','Segoe UI',sans-serif" font-size="32" font-weight="700" letter-spacing="0.08em" x="96" y="48">
-          theblackbox
-        </text>
-<text fill="rgba(220,247,236,0.7)" font-family="'Inter','Segoe UI',sans-serif" font-size="12" letter-spacing="0.36em" x="96" y="68">
-          SHADOW SIGNAL
-        </text>
-</svg>
-</a>
-    <nav>
-      <a class="btn" href="movies.html">Movies</a>
-      <a class="btn" href="series.html">Shows</a>
-      <a class="btn" href="live.html">Live</a>
-      <a class="btn btn--ghost" href="player.html">Info</a>
-    </nav>
-    <div class="topbar__actions">
-      <form class="search-bar" id="searchForm" action="search.html" method="get">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.71.71l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 4.5-4.5A4.5 4.5 0 0 1 9.5 14Z"/></svg>
-        <input id="search" type="search" name="q" placeholder="Search movies &amp; shows" autocomplete="off" spellcheck="false" aria-label="Search the entire catalog">
-      </form>
+<body class="search-live app-shell">
+  <nav class="s-nav">
+    <a class="s-brand" href="/movies.html"><img src="/assets/favicon-GWdT6FjN.svg" alt="" />theblackbox</a>
+    <div class="s-links">
+      <a href="/movies.html">Movies</a>
+      <a href="/series.html">Shows</a>
+      <a href="/theater.html">Theater</a>
+      <a href="/live.html">Live</a>
+    </div>
+  </nav>
+  <header class="s-hero">
+    <h1>Search</h1>
+    <div class="s-field">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="sInput" type="search" placeholder="Search movies & shows…" autocomplete="off" autofocus />
     </div>
   </header>
-  <main class="content content--search" aria-labelledby="searchTitle">
-    <section class="search-hero">
-      <h1 id="searchTitle">Search everything</h1>
-      <p class="search-hero__subtitle">Find films, series, and episodes without switching tabs.</p>
-      <div class="search-scope" id="searchScope" role="tablist" aria-label="Search priority">
-        <button class="btn btn--ghost search-scope__button" type="button" data-search-scope="movie" role="tab" aria-selected="false">
-          Movies First
-        </button>
-        <button class="btn btn--ghost search-scope__button" type="button" data-search-scope="tv" role="tab" aria-selected="false">
-          Shows First
-        </button>
-      </div>
-    </section>
-    <p class="search-status" id="searchStatus" role="status" aria-live="polite"></p>
-    <section class="search-group" id="movieGroup" aria-labelledby="movieHeading">
-      <div class="search-group__header">
-        <h2 id="movieHeading">Movies</h2>
-        <span class="search-count" id="movieCount"></span>
-      </div>
-      <div class="search-grid" id="movieResults" role="list"></div>
-      <p class="search-empty" id="movieEmpty" hidden>No movies matched that title. Try another keyword.</p>
-    </section>
-    <section class="search-group" id="showGroup" aria-labelledby="showHeading">
-      <div class="search-group__header">
-        <h2 id="showHeading">Shows</h2>
-        <span class="search-count" id="showCount"></span>
-      </div>
-      <div class="search-grid" id="showResults" role="list"></div>
-      <p class="search-empty" id="showEmpty" hidden>No shows matched that title. Try another keyword.</p>
-    </section>
-  </main>
-  <footer class="site-footer">Independent node · sandboxed embeds · Info relay keeps playback steady.</footer>
-  <script defer src="install_app.js?v=12"></script>
-  <script src="background_motion.js?v=16" type="module"></script>
-  <script type="module" src="search.js?v=11"></script>
+  <div class="s-status" id="sStatus"></div>
+  <div class="s-grid" id="sGrid"></div>
+  <div class="s-empty" id="sEmpty" hidden></div>
+  <script src="/search-live.js?v=1"></script>
 </body>
 </html>

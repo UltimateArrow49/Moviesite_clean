@@ -2,7 +2,7 @@ import {
   initDockNavigation,
   initMagicBento,
   initClickSpark,
-} from "./ui_effects.js?v=14";
+} from "./ui_effects.js?v=16";
 
 initDockNavigation();
 initMagicBento();

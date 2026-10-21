@@ -300,7 +300,7 @@ export function initMagicBento() {
 }
 
 export function initClickSpark() {
-  if (!supportsPointerEvents || prefersReducedMotion()) return;
+  if (!supportsPointerEvents || prefersReducedMotion() || hasCoarsePointer()) return;
   const body = document.body;
   if (!body || body.dataset.sparkReady === "true") return;
   body.dataset.sparkReady = "true";
@@ -310,6 +310,7 @@ export function initClickSpark() {
   const spawnSpark = (event) => {
     if (prefersReducedMotion()) return;
     if (event.button != null && event.button !== 0) return;
+    if (event.target?.closest?.(".carousel__scroller, .continue__scroller")) return;
     const spark = document.createElement("span");
     spark.className = "click-spark";
     spark.style.left = `${event.clientX}px`;

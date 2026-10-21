@@ -1,111 +1,20 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Live Player · theblackbox</title>
-  <link rel="manifest" href="site.webmanifest">
-  <meta name="theme-color" content="#14ff9f">
-  <link rel="stylesheet" href="style.css?v=16">
-  <script type="module" src="device.js?v=12"></script>
+  <meta charset="utf-8" />
+  <title>Live Player &middot; theblackbox</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <link rel="manifest" href="/assets/site-BjNnFoGv.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon-GWdT6FjN.svg" />
+  <meta name="theme-color" content="#14ff9f" />
+  <link rel="stylesheet" crossorigin href="/assets/style-Cz-1-Rwo.css">
+  <link rel="stylesheet" href="/theme-modern.css?v=3">
+  <script type="module" crossorigin src="/assets/live_player-BBRkei5j.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/useLegacyPageController-W0nDTF7p.js">
 </head>
-  <body class="app-shell">
-
-    <header class="topbar">
-    <a aria-label="theblackbox home" class="brand" href="index.html">
-<svg aria-labelledby="logoTitle logoDesc" role="img" viewbox="0 0 320 88" xmlns="http://www.w3.org/2000/svg">
-<title id="logoTitle">theblackbox logotype</title>
-<desc id="logoDesc">A stylised neon box with stacked signal bars alongside the theblackbox wordmark.</desc>
-<defs>
-<lineargradient id="panel" x1="0%" x2="100%" y1="0%" y2="100%">
-<stop offset="0%" stop-color="#12ffb0" stop-opacity="0.8"></stop>
-<stop offset="100%" stop-color="#0b6751" stop-opacity="0.95"></stop>
-</lineargradient>
-<lineargradient id="word" x1="0%" x2="100%" y1="0%" y2="0%">
-<stop offset="0%" stop-color="#f7fff9"></stop>
-<stop offset="55%" stop-color="#8efed9"></stop>
-<stop offset="100%" stop-color="#12ffb0"></stop>
-</lineargradient>
-<radialgradient cx="50%" cy="50%" id="pulse" r="65%">
-<stop offset="0%" stop-color="#14ff9f" stop-opacity="0.3"></stop>
-<stop offset="100%" stop-color="#14ff9f" stop-opacity="0"></stop>
-</radialgradient>
-<filter height="180%" id="glow" width="180%" x="-40%" y="-40%">
-<fegaussianblur result="blur" stddeviation="6"></fegaussianblur>
-<femerge>
-<femergenode in="blur"></femergenode>
-<femergenode in="SourceGraphic"></femergenode>
-</femerge>
-</filter>
-</defs>
-<g filter="url(#glow)">
-<rect fill="#050a08" height="60" rx="18" stroke="#14ff9f" stroke-opacity="0.45" stroke-width="2.5" width="64" x="12" y="14"></rect>
-<rect fill="url(#panel)" height="40" rx="12" width="44" x="22" y="24"></rect>
-<path d="M33 52h6v-20h-6zm11 12h6V32h-6zm11-20h6v20h-6z" fill="#0f362c" opacity="0.6"></path>
-<path d="M33 48h6V32h-6zm11 12h6V28h-6zm11-16h6v16h-6z" fill="#12ffb0"></path>
-<circle cx="54" cy="44" fill="url(#pulse)" r="22"></circle>
-</g>
-<text fill="url(#word)" font-family="'Inter','Segoe UI',sans-serif" font-size="32" font-weight="700" letter-spacing="0.08em" x="96" y="48">
-          theblackbox
-        </text>
-<text fill="rgba(220,247,236,0.7)" font-family="'Inter','Segoe UI',sans-serif" font-size="12" letter-spacing="0.36em" x="96" y="68">
-          SHADOW SIGNAL
-        </text>
-</svg>
-</a>
-    <nav>
-      <a href="movies.html" class="btn">Movies</a>
-      <a href="series.html" class="btn">Shows</a>
-      <a href="live.html" class="btn btn--primary">Live</a>
-      <a href="player.html" class="btn btn--ghost">Info</a>
-    </nav>
-    <div class="topbar__actions">
-      <button class="btn btn--ghost" id="backButton" type="button">Back to live guide</button>
-    </div>
-  </header>
-
-  <main class="player-layout">
-    <div class="player-header">
-      <div class="player-heading">
-        <img id="channelLogo" class="channel-logo" alt="" hidden>
-        <div>
-          <h1 class="player-title" id="channelTitle">Loading live stream…</h1>
-          <p class="player-subtitle" id="channelSubtitle"></p>
-        </div>
-      </div>
-    </div>
-
-    <div class="player-status" id="statusWrap" role="status">
-      <div class="loading-indicator" id="loadingIndicator" hidden aria-hidden="true">
-        <span class="loading-box" aria-hidden="true"></span>
-        <span class="loading-text" id="loadingText">Preparing live stream…</span>
-      </div>
-      <p id="playerStatus">Preparing live stream…</p>
-    </div>
-
-    <div class="player-frame" id="playerStage">
-      <div class="player-overlay" id="playerOverlay" hidden>Server down</div>
-      <video id="liveVideo" controls playsinline></video>
-    </div>
-
-    <section class="player-details">
-      <div class="detail-card">
-        <h3>Channel information</h3>
-        <p id="channelDescription">Gathering broadcast details…</p>
-        <div class="meta-tags" id="channelTags"></div>
-        <p id="channelWebsite"></p>
-      </div>
-      <div class="detail-card">
-        <h3>Playback tips</h3>
-        <p id="streamDetails">Reviewing stream capabilities…</p>
-      </div>
-    </section>
-  </main>
-  <footer class="site-footer">Live streams sourced from IPTV-Org · Playback powered by hls.js when available.</footer>
-
+<body class="app-shell page-live-player">
+  <div id="app-root"></div>
   <script src="install_app.js?v=12" defer></script>
-  <script src="background_motion.js?v=16" type="module"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js" crossorigin="anonymous"></script>
-  <script src="live_player.js" type="module"></script>
 </body>
 </html>

@@ -37,6 +37,7 @@ const PLACEHOLDER_PALETTES = [
 ];
 
 const PLACEHOLDER_CACHE = new Map();
+const SKIPPED_LOGO_HOSTS = [/^https?:\/\/i\.imgur\.com\//i];
 
 function normalizeName(name) {
   if (typeof name !== "string") return "";
@@ -46,30 +47,33 @@ function normalizeName(name) {
 function computeInitials(name) {
   const normalized = normalizeName(name);
   if (!normalized) return "??";
+
   let cleaned = normalized.replace(/[_-]+/g, " ");
   try {
     cleaned = cleaned.replace(new RegExp("[^\\p{L}\\p{N}\\s]+", "gu"), " ");
   } catch (error) {
     cleaned = cleaned.replace(/[^A-Za-z0-9\s]+/g, " ");
   }
+
   cleaned = cleaned.replace(/\s+/g, " ").trim();
   if (!cleaned) return "??";
+
   const parts = cleaned.split(" ").filter(Boolean);
   if (!parts.length) return "??";
   if (parts.length === 1) {
     const token = parts[0].slice(0, 2).toUpperCase();
-    if (token.length === 1) return token;
-    return token[0] + token[1];
+    return token.length === 1 ? token : token[0] + token[1];
   }
+
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
 function hashString(value) {
   const input = value || "";
   let hash = 0;
-  for (let i = 0; i < input.length; i += 1) {
-    hash = (hash << 5) - hash + input.charCodeAt(i);
-    hash |= 0; // Convert to 32bit integer
+  for (let index = 0; index < input.length; index += 1) {
+    hash = (hash << 5) - hash + input.charCodeAt(index);
+    hash |= 0;
   }
   return Math.abs(hash);
 }
@@ -97,7 +101,8 @@ function buildPlaceholderSvg(initials, palette, aspect, hash) {
   const noiseId = `noise${hash}`;
   const glowId = `glow${hash}`;
   const fontSize = Math.round(height * 0.36);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true">
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true">
     <defs>
       <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stop-color="${palette.start}" />
@@ -118,7 +123,6 @@ function buildPlaceholderSvg(initials, palette, aspect, hash) {
     <circle cx="${width / 2}" cy="${height / 2}" r="${Math.min(width, height) * 0.42}" fill="url(#${glowId})" />
     <text x="50%" y="50%" fill="${palette.text}" font-family="'Inter','Segoe UI',sans-serif" font-size="${fontSize}" font-weight="700" text-anchor="middle" dominant-baseline="middle" letter-spacing="0.08em">${initials}</text>
   </svg>`;
-  return svg;
 }
 
 function createPlaceholder(name, aspect = "landscape") {
@@ -127,6 +131,7 @@ function createPlaceholder(name, aspect = "landscape") {
   if (PLACEHOLDER_CACHE.has(cacheKey)) {
     return PLACEHOLDER_CACHE.get(cacheKey);
   }
+
   const { palette, hash } = pickPalette(cacheKey);
   const initials = computeInitials(normalized);
   const svg = buildPlaceholderSvg(initials, palette, aspect, hash);
@@ -135,10 +140,14 @@ function createPlaceholder(name, aspect = "landscape") {
   return encoded;
 }
 
+function shouldSkipProvidedLogo(url) {
+  return SKIPPED_LOGO_HOSTS.some((pattern) => pattern.test(url));
+}
+
 export function resolveChannelLogo(name, logoUrl, options = {}) {
   const aspect = options.aspect || "landscape";
   const provided = typeof logoUrl === "string" ? logoUrl.trim() : "";
-  if (provided) {
+  if (provided && !shouldSkipProvidedLogo(provided)) {
     return { url: provided, isPlaceholder: false };
   }
   return { url: createPlaceholder(name, aspect), isPlaceholder: true };
@@ -148,17 +157,17 @@ export function applyChannelLogo(img, name, logoUrl, options = {}) {
   if (!(img instanceof HTMLImageElement)) {
     return { isPlaceholder: false };
   }
+
   const { aspect = "landscape", lazy = true } = options;
   const title = normalizeName(name) || "Channel";
   const { url, isPlaceholder } = resolveChannelLogo(title, logoUrl, { aspect });
-  if ("decoding" in img) {
-    img.decoding = "async";
-  }
-  if ("loading" in img) {
-    img.loading = lazy === false ? "eager" : "lazy";
-  }
+
+  img.decoding = "async";
+  img.loading = lazy === false ? "eager" : "lazy";
+  img.referrerPolicy = "no-referrer";
   img.src = url;
   img.alt = isPlaceholder ? `${title} placeholder logo` : `${title} logo`;
+
   if (isPlaceholder) {
     img.dataset.placeholder = "true";
   } else {
@@ -171,9 +180,10 @@ export function applyChannelLogo(img, name, logoUrl, options = {}) {
         img.alt = `${title} placeholder logo`;
         img.dataset.placeholder = "true";
       },
-      { once: true }
+      { once: true },
     );
   }
+
   return { isPlaceholder };
 }
 

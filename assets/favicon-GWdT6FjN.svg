@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#12ffb0"/>
+      <stop offset="100%" stop-color="#0b6751"/>
+    </linearGradient>
+    <radialGradient id="pulse" cx="50%" cy="50%" r="65%">
+      <stop offset="0%" stop-color="#14ff9f" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#14ff9f" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="#050a08"/>
+  <rect x="12" y="12" width="40" height="40" rx="12" fill="url(#panel)" stroke="#14ff9f" stroke-opacity="0.45" stroke-width="2"/>
+  <path d="M21 40h5V24h-5zm9 8h5V20h-5zm9-12h5v12h-5z" fill="#0f362c" opacity="0.6"/>
+  <path d="M21 36h5V24h-5zm9 12h5V18h-5zm9-16h5v16h-5z" fill="#12ffb0"/>
+  <circle cx="41" cy="32" r="16" fill="url(#pulse)"/>
+</svg>
