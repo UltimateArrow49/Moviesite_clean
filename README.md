@@ -43,7 +43,9 @@ Serve the repository through Nginx for the complete application. Flask alone ser
 
 The free hostname was configured on 21 October 2026 with HTTPS and scheduled certificate renewal. It depends on the current server IP and a third-party DNS service. Existing browser history and saved progress are scoped to the previous origin and will not automatically transfer.
 
-Third-party playback availability is independent of metadata search. Cineby returned HTTP 403 during this maintenance pass; no new Cineby source integration has been added. Only use media and upstream services you are authorized to access.
+The player uses one shared source catalogue (`source-catalog.js`) for movie details and playback. CineSrc is the default, with VidCore, VidNest, and Videasy available through the source selector. CineSrc, VidCore, and VidNest embed routes were observed in Cineby's public browser interface on 21 October 2026. This integrates provider embeds, not Cineby's private APIs or media files.
+
+Third-party availability varies by title and region. The host page cannot determine whether a cross-origin iframe successfully plays video; switch sources if playback fails. Automatic progress saving currently uses the existing Videasy bridge. The other providers do not yet have verified progress-message integrations. Only use media and upstream services you are authorized to access.
 
 ## Maintenance
 

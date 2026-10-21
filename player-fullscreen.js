@@ -21,40 +21,13 @@
 
   injectStyles();
 
-  // Alternate providers (VidKing backups). videasy/VidKing can go down, so when
-  // the detail page sends ?provider=X (X != vidking) we skip the bundle player
-  // and embed that provider. Domains are the ones confirmed working (matched
-  // against ramoflix.net's source list). Ad-blocking is two-layer:
-  //   1. `proxied` providers go through our OWN /ext/provider proxy (same idea
-  //      as VidKing's videasy proxy): the server fetches the embed, strips ad
-  //      scripts and neutralizes window.open → fully ad-free. Only old-style,
-  //      server-rendered embeds (VidSrc) survive path-proxying.
-  //   2. SPA providers (vidsrc.wtf / 111movies resolve sources via their own
-  //      origin + anti-bot challenge, which breaks when path-proxied) are
-  //      embedded directly but in a popup-blocking sandbox (see mountProvider),
-  //      which kills the popunder ads while the video still plays.
-  var PROVIDERS = {
-    // Videasy's OWN embeddable player — the primary. VidKing's source API is now
-    // origin-locked (503s our proxied origin) so proxying it broke; embedding
-    // videasy directly runs it under videasy's allowed origin and streams from the
-    // user's residential IP (like Cineby), which works + has the full source list.
-    // Clean (no popups) so it skips the sandbox (which would risk breaking it).
-    videasy:     { proxied: false, sandbox: false, movie: "https://player.videasy.to/movie/{id}", tv: "https://player.videasy.to/tv/{id}/{s}/{e}" },
-    vidsrc:      { proxied: true,  movie: "/ext/provider/vidsrc-to/embed/movie/{id}", tv: "/ext/provider/vidsrc-to/embed/tv/{id}/{s}/{e}" },
-    vidwtf:      { proxied: false, movie: "https://vidsrc.wtf/api/1/movie/?id={id}",  tv: "https://vidsrc.wtf/api/1/tv/?id={id}&s={s}&e={e}" },
-    "111movies": { proxied: false, movie: "https://111movies.com/movie/{id}",         tv: "https://111movies.com/tv/{id}/{s}/{e}" }
-  };
+  var PROVIDERS = window.tbbSources.providers;
   var _params = new URLSearchParams(location.search);
   var _prov = _params.get("provider");
   // Theater (watch-together) rooms run the bundle's own sync player — never
   // hijack those; they are identified by the roomId the lobby hands over.
   var _isTheater = !!(_params.get("roomId") || _params.get("invite"));
-  // No ?provider at all means the link came from the bundle itself (continue
-  // watching / watch-again rails, catalog Play buttons, old bookmarks). Those
-  // used to land on the proxied VidKing bundle player, which no longer resolves
-  // any source, so they played nothing. Videasy is the working primary now, so
-  // an unspecified provider means videasy.
-  if (!_prov && !_isTheater) _prov = "videasy";
+  if (!_isTheater && _prov !== "vidking") _prov = window.tbbSources.selected(_prov);
   if (_prov && PROVIDERS[_prov] && !_isTheater) {
     whenBody(function () { mountProvider(_prov); });
     return;
@@ -124,6 +97,18 @@
     }
     f.referrerPolicy = "origin";
     document.body.appendChild(f);
+    // A source can fail inside a cross-origin frame without notifying this page.
+    // Keep a source switcher available rather than guessing playback success.
+    var sourceSelect = document.createElement("select");
+    sourceSelect.className = "tbb-source-picker";
+    window.tbbSources.fill(sourceSelect, key);
+    sourceSelect.addEventListener("change", function () {
+      var target = new URL(location.href);
+      target.searchParams.set("provider", sourceSelect.value);
+      location.replace(target.pathname + target.search + target.hash);
+    });
+    document.body.appendChild(sourceSelect);
+
     var back = makeBtn("tbb-pf tbb-pf--back",
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
       "Back", goBack);
@@ -253,7 +238,8 @@
       '.tbb-pf-dim{opacity:.18 !important}' +
       '.tbb-pf-dim:hover{opacity:1 !important}' +
       '.tbb-pf-hidden{opacity:0 !important;pointer-events:none !important}' +
-      '@media(max-width:560px){.tbb-pf{width:42px;height:42px}.tbb-pf svg{width:20px;height:20px}}';
+      '.tbb-source-picker{position:fixed;top:max(16px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:10020;max-width:calc(100vw - 260px);padding:10px 12px;border:1px solid #34403e;border-radius:12px;background:#101916;color:#e7fff5;font:14px system-ui}' +
+      '@media(max-width:560px){.tbb-pf{width:42px;height:42px}.tbb-pf svg{width:20px;height:20px}.tbb-source-picker{top:calc(max(16px,env(safe-area-inset-top)) + 54px);max-width:calc(100vw - 32px)}}';
     var s = document.createElement("style");
     s.id = "tbbPlayerFsStyles";
     s.textContent = css;

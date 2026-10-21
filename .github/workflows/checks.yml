@@ -1,0 +1,20 @@
+name: Application checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Python syntax
+        run: python3 -m compileall -q app_main.py books_backend.py theater_backend.py wsgi.py
+      - name: Check playback scripts
+        run: |
+          node --check source-catalog.js
+          node --check detail.js
+          node --check player-fullscreen.js
+      - name: Test source selection and routes
+        run: node --test tests/source-catalog.test.cjs

@@ -10,11 +10,7 @@
 
   if (!tmdb) { location.replace("/movies.html"); return; }
 
-  // Videasy (its own embeddable player) is the default primary source — VidKing's
-  // backend became origin-locked so proxying it broke; videasy embedded directly
-  // works + has the most sources. The choice is per-page and NOT persisted, so
-  // each title opens on Videasy unless the user switches it here.
-  var provider = "videasy";
+  var provider = window.tbbSources.selected(params.get("provider"));
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -373,24 +369,11 @@
 
     if (mode === "tv") { setupTvEpisodes(d); } else { wirePlay(d, null); }
 
-    // Source/server picker (Videasy vs backups) — any source can go down, so
-    // let the user switch. The choice feeds buildPlayerUrl and is NOT
-    // persisted (every title starts on Videasy — see `provider` init above).
+    // Shared source choices also appear on the playback screen.
     (function () {
       var sel = document.createElement("select");
       sel.className = "d-provider";
-      // NOTE: VidSrc (vidsrc.to) can't be made ad-free — its popunder ads use
-      // randomly-rotating domains in a deep cross-origin frame, and it refuses
-      // to run sandboxed — so it's labelled "(has ads)" as a last resort. The
-      // ad-free options are Videasy (primary) and the sandboxed VidWTF/111Movies.
-      // VidKing is gone from this list: its source backend is origin-locked and
-      // resolves nothing for us any more, so offering it just gave a dead
-      // player. Videasy (its own embed) is primary; the rest are backups.
-      sel.innerHTML = '<option value="videasy">Source: Videasy</option>' +
-        '<option value="vidwtf">Source: VidWTF</option>' +
-        '<option value="111movies">Source: 111Movies</option>' +
-        '<option value="vidsrc">Source: VidSrc (has ads)</option>';
-      sel.value = provider;
+      window.tbbSources.fill(sel, provider);
       sel.addEventListener("change", function () { provider = sel.value; });
       var dp = $("dPlay");
       // TV: place the picker in the episode header (next to the season select) so
