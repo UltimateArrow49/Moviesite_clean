@@ -55,7 +55,7 @@ Watch-together access is disabled unless `MOVIESITE_ADMIN_SYNC_KEY` is configure
 ```bash
 python3 - <<'PY'
 import getpass, hashlib
-phrase = getpass.getpass('Choose a strong sync passphrase: ')
+phrase = getpass.getpass('Choose a strong sync passphrase: ').strip()
 if len(phrase) < 20:
     raise SystemExit('Use a longer passphrase, then try again.')
 print(hashlib.sha256(phrase.encode('utf-8')).hexdigest())

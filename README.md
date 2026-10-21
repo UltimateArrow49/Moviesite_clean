@@ -2,7 +2,7 @@
 
 A cinema-inspired web interface for discovering films and series, tracking viewing progress, and sharing watch-together rooms. Includes a book discovery interface and an installable web app shell.
 
-[How to set up the complete app](SETUP.md)
+[How to set up the complete app](SETUP.md) · [Privacy cleanup and remaining actions](PRIVACY.md)
 
 ## Features
 
