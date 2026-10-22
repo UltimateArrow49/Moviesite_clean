@@ -44,9 +44,9 @@ Serve the repository through Nginx for the complete application. Flask alone ser
 
 The setup guide covers a separate public frontend folder, a private backend and database, Nginx, HTTPS, and automatic certificate renewal. Browser history and saved progress are scoped to the site's origin and do not automatically transfer to a new domain.
 
-The player uses one shared source catalogue (`source-catalog.js`) for movie details and playback. CineSrc is the default, with VidCore, VidNest, and Videasy available through the source selector. CineSrc, VidCore, and VidNest embed routes were observed in Cineby's public browser interface on 21 October 2026. This integrates provider embeds, not Cineby's private APIs or media files.
+The player uses one shared source catalogue (`source-catalog.js`) for movie details and playback. CineSrc is the embedded default and supplies its own internal server selector. The site does not filter that list or add premium-source credentials. VidCore and VidNest refuse sandboxed embeds, so their choices provide a separate-tab launch link with opener isolation. Videasy also has a separate-tab launch link after redirect and browser-blocking failures were observed. These choices preserve the selected movie or episode and offer an in-site CineSrc fallback. They do not bypass provider restrictions.
 
-Third-party availability varies by title and region. The host page cannot determine whether a cross-origin iframe successfully plays video; switch sources if playback fails. Automatic progress saving currently uses the existing Videasy bridge. The other providers do not yet have verified progress-message integrations. Only use media and upstream services you are authorized to access.
+Third-party availability varies by title and region. The host page cannot determine whether a cross-origin iframe successfully plays video; switch sources if playback fails. External players do not sync viewing progress back to this site. The legacy Videasy bridge remains in the source but is not started for external playback. Only use media and upstream services you are authorized to access.
 
 ## Maintenance
 

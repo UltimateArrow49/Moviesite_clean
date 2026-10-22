@@ -191,7 +191,7 @@ curl -s -o /dev/null -w 'Backend source blocked: %{http_code}\n' "https://$SITE_
 sudo journalctl -u theblackbox -n 50 --no-pager
 ```
 
-Use `http://` instead if testing locally without HTTPS. Expect successful page and API responses; backend source must return 403 or 404. In a browser, check movies, a TV season, next-episode navigation, and source switching. Third-party playback varies by title and region. Only Videasy currently has a verified progress-saving integration.
+Use `http://` instead if testing locally without HTTPS. Expect successful page and API responses; backend source must return 403 or 404. In a browser, check movies, a TV season, next-episode navigation, and source switching. Third-party playback varies by title and region. VidCore, VidNest, and Videasy open separately and do not sync progress back to this site.
 
 ## Update later
 

@@ -47,7 +47,7 @@
     var tmdb = _params.get("tmdb"), mode = _params.get("mode"),
         s = _params.get("season") || 1, e = _params.get("episode") || 1;
     var src;
-    if (key === "videasy" && window.tbbVideasy) {
+    if (key === "videasy" && !cfg.external && window.tbbVideasy) {
       // videasy-bridge owns the videasy URL: it adds the resume position and
       // the episode features (next-episode button / autoplay next / selector),
       // then listens for the player's progress messages so continue watching,
@@ -69,8 +69,11 @@
         }
       });
     } else {
-      src = (mode === "tv" ? cfg.tv : cfg.movie)
-        .replace("{id}", tmdb).replace("{s}", s).replace("{e}", e);
+      src = window.tbbSources.buildUrl(key, mode, tmdb, s, e);
+    }
+    if (!src) {
+      location.replace("/movies.html");
+      return;
     }
     // player.html no longer loads the bundle for provider embeds (it used to
     // wipe the continue-watching entry from behind us), so the page title is
@@ -81,7 +84,38 @@
     var st = document.createElement("style");
     st.textContent = "#app-root{display:none !important}.tbb-vs{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;border:0;background:#000;z-index:1}";
     document.head.appendChild(st);
-    var f = document.createElement("iframe");
+    var f = null;
+    if (cfg.external) {
+      var panel = document.createElement("section");
+      panel.className = "tbb-external-player";
+      var heading = document.createElement("h1");
+      var name = cfg.label.split(" · ")[0];
+      heading.textContent = "Watch with " + name;
+      var description = document.createElement("p");
+      description.textContent = "This player opens in a separate tab. Your movie or episode selection is preserved.";
+      var open = document.createElement("a");
+      open.className = "tbb-external-open";
+      open.textContent = "Open " + name;
+      open.href = src;
+      open.target = "_blank";
+      open.rel = "noopener noreferrer";
+      var fallback = document.createElement("a");
+      var fallbackUrl = new URL(location.href);
+      fallbackUrl.searchParams.set("provider", "cinesrc");
+      fallback.href = fallbackUrl.pathname + fallbackUrl.search;
+      fallback.className = "tbb-external-fallback";
+      fallback.textContent = "Watch here with CineSrc";
+      var note = document.createElement("p");
+      note.className = "tbb-external-note";
+      note.textContent = "If the provider does not load, return here and choose another source. Progress in the external player is not synced to this site.";
+      panel.appendChild(heading);
+      panel.appendChild(description);
+      panel.appendChild(open);
+      panel.appendChild(fallback);
+      panel.appendChild(note);
+      document.body.appendChild(panel);
+    } else {
+    f = document.createElement("iframe");
     f.className = "tbb-vs";
     f.src = src;
     f.setAttribute("allow", "autoplay; fullscreen; encrypted-media; picture-in-picture");
@@ -97,6 +131,7 @@
     }
     f.referrerPolicy = "origin";
     document.body.appendChild(f);
+    }
     // A source can fail inside a cross-origin frame without notifying this page.
     // Keep a source switcher available rather than guessing playback success.
     var sourceSelect = document.createElement("select");
@@ -239,6 +274,9 @@
       '.tbb-pf-dim:hover{opacity:1 !important}' +
       '.tbb-pf-hidden{opacity:0 !important;pointer-events:none !important}' +
       '.tbb-source-picker{position:fixed;top:max(16px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:10020;max-width:calc(100vw - 260px);padding:10px 12px;border:1px solid #34403e;border-radius:12px;background:#101916;color:#e7fff5;font:14px system-ui}' +
+      '.tbb-external-player{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:110px 24px 32px;text-align:center;color:#e7fff5;font:16px system-ui;background:radial-gradient(ellipse at top,#142923,#060a08 65%);box-sizing:border-box;overflow:auto}' +
+      '.tbb-external-player h1{font-size:clamp(24px,5vw,40px);margin:0 0 16px}.tbb-external-player p{max-width:480px;line-height:1.6;color:#a9bbb4}' +
+      '.tbb-external-open{display:inline-block;background:#a9efd3;color:#06130e;font-weight:650;padding:14px 28px;border-radius:12px;text-decoration:none;margin:12px 0 20px}.tbb-external-fallback{color:#bcefd9;text-underline-offset:4px}.tbb-external-note{font-size:13px}' +
       '@media(max-width:560px){.tbb-pf{width:42px;height:42px}.tbb-pf svg{width:20px;height:20px}.tbb-source-picker{top:calc(max(16px,env(safe-area-inset-top)) + 54px);max-width:calc(100vw - 32px)}}';
     var s = document.createElement("style");
     s.id = "tbbPlayerFsStyles";
